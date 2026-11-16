@@ -4,6 +4,8 @@
 
 Back up Flash, EEPROM, and Option Bytes before any update. EEPROM includes board-specific factory thresholds and user settings; do not copy EEPROM from another keyboard.
 
+This page describes the Classic (untested with ECK on hardware). On the Hybrid, `tools/hybrid_update.py backup DIR` (or the web flasher's Back up) saves the data EEPROM and Bank 2 over USB, `restore-eeprom` writes an EEPROM backup back, and the boot stub install saves the original Bank 1: see [Hybrid updates](hybrid-update.md).
+
 ## STM32 ROM DFU
 
 STM32 system-ROM DFU is independent of ECK, Bank 1, and the installed Bank 2 image. It works without a debugger.
@@ -47,7 +49,7 @@ dfu-util -a 2 -s 0x08080000 -D hhkb-eeprom_6k.bin
 dfu-util -a 1 -s 0x1FF80000 -D hhkb-option-bytes.bin
 ```
 
-Writing a ECK Bank 2 image directly is possible:
+Writing an ECK Bank 2 image directly is possible:
 
 ```bash
 dfu-util -a 0 -s 0x08010000 -D build/classic/hhkb_ec_classic.bin
@@ -146,6 +148,6 @@ DFU or SWD can restore a saved Bank 2 image. Restoring all Flash, EEPROM, or Opt
 
 ## SW6 recovery
 
-With `HHKB_SW6_REBOOT_TO_BANK1=1`, starting ECK with SW6 ON invalidates Bank 2 and erases its first 128-byte vector page, then resets into Bank 1. The erased page contains the initial stack pointer and reset vector, so Bank 1 cannot transfer execution to Bank 2 again. Bank 2 will remain unbootable across power cycles until a complete compatible firmware image is written back to Bank 2 through the PFU updater, DFU, or SWD.
+On the Classic (`HHKB_SW6_REBOOT_TO_BANK1` is 1 there and 0 on the Hybrid, `stm32/board/config.h`), starting ECK with SW6 ON invalidates Bank 2 and erases its first 128-byte vector page, then resets into Bank 1. The erased page contains the initial stack pointer and reset vector, so Bank 1 cannot transfer execution to Bank 2 again. Bank 2 will remain unbootable across power cycles until a complete compatible firmware image is written back to Bank 2 through the PFU updater, DFU, or SWD.
 
 After this transition, Bank 1 can install the latest matching stock firmware from the [official HHKB download centre](https://happyhackingkb.com/download/) through Keymap Tool or `hhkb_flasher.py`. Select the correct Classic or Classic Type-S HFB. Keep SW6 OFF during normal use.

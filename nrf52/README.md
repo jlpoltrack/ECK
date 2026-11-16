@@ -19,10 +19,10 @@ Output: `_build/nrf52832_xxaa.bin` and `.hex`, linked at `0x26000` after the Sof
 
 Normally over USB, through ECK:
 
-1. The Hybrid firmware build (`./build.sh hybrid` at the repository root) packs `nrf52/_build/nrf52832_xxaa.bin` with Nordic's S132 v6.0.0 SoftDevice from `../nRF5_SDK_15.0.0` into the Hybrid `.hfb` (CMake cache variables `HHKB_HYBRID_NRF_APP` and `HHKB_HYBRID_SOFTDEVICE`); no PFU file is needed. Without them the build makes only the STM32 `.bin`. A ECK `.hfb` never carries PFU's app, which with ECK's STM32 firmware would make both chips drive the link as SPI master.
+1. The Hybrid firmware build (`./build.sh hybrid` at the repository root) packs `nrf52/_build/nrf52832_xxaa.bin` with Nordic's S132 v6.0.0 SoftDevice from `../nRF5_SDK_15.0.0` into the Hybrid `.hfb` (CMake cache variables `HHKB_HYBRID_NRF_APP` and `HHKB_HYBRID_SOFTDEVICE`); no PFU file is needed. Without the SDK the build makes only the STM32 `.bin`. An ECK `.hfb` never carries PFU's app, which with ECK's STM32 firmware would make both chips drive the link as SPI master.
 2. `uv run --with hidapi python3 tools/hybrid_update.py nrf <.hfb>` (from the repository root) sends the nRF52 part through ECK on the STM32 to this app, which stages it; PFU's bootloader installs it at the next nRF52 reset. Bonds survive.
 
-Fallback over SWD (probe on the two vias below the module, photo below):
+Fallback over SWD (probe on the two vias below the module, photo below), from this directory:
 
 ```
 uv run --with pyocd python3 tools/nrf_flash.py --nrf <probe uid>
@@ -34,7 +34,7 @@ It erases only the app's sectors, writes, verifies and resets (`make flash` does
 
 ## Link protocol
 
-`common/ble_link.h` defines the SPI link to the STM32 (32-byte frames, STM32 master, nRF52 slave); both builds include it. Bump `BLE_LINK_VERSION` (now 5) on any frame change. The nRF52 sends its version in every status reply; the STM32 does not check it yet.
+`common/ble_link.h` defines the SPI link to the STM32 (32-byte frames, STM32 master, nRF52 slave); both builds include it. Bump `BLE_LINK_VERSION` (now 6) on any frame change. The nRF52 sends its version in every status reply; the STM32 does not check it yet.
 
 ## Licence
 

@@ -11,7 +11,7 @@ extern "C" {
 #endif
 
 /**
- * @brief Initialize keyboard core subsystems, timers, and driver queues.
+ * @brief Initialize layers, hold-tap, one-shot, the VIA keymap and the board indicators.
  */
 void keyboard_init(void);
 
@@ -29,19 +29,11 @@ void keyboard_task(void *pvParameters);
 void keyboard_send_key(uint16_t keycode, bool pressed);
 
 /**
- * @brief Send modifier bitmask update directly to USB report task.
+ * @brief Queue a modifier bitmask update to the USB report task.
  * @param mod_mask 8-bit modifier mask
  * @param pressed True on press, false on release
  */
 void keyboard_send_modifiers(uint8_t mod_mask, bool pressed);
-
-/**
- * @brief Core event processor for resolving matrix coordinate into keycode action.
- * @param row Matrix row index
- * @param col Matrix col index
- * @param key Resolved 32-bit keycode
- * @param pressed True on press, false on release
- */
 
 /**
  * @brief Record a resolved keycode for a pressed physical switch so release uses the same keycode even if layers change.

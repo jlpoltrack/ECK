@@ -4,7 +4,7 @@ steps the supply down while macOS reports the battery level the keyboard sends o
 
 Uses the PPK2 library from the Tools-PPK2 repo next to ECK. The keyboard must be on (hold the
 switch once the supply is up) and connected to the Mac. Prints one line per step.
-Run: ../Tools-PPK2/.venv/bin/python tools/battery_sweep.py --start 3200 --stop 1900 --step 100
+Run: ../Tools-PPK2/.venv/bin/python tools/bench/battery_sweep.py --start 3200 --stop 1900 --step 100
 """
 import argparse
 import os

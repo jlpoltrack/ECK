@@ -105,7 +105,7 @@ void usb_init(void) {
 }
 
 /**
- * @brief Zero-Queue Fast Path: processes a key event, updates the active HID report, and transmits to host.
+ * @brief Apply a key event to the HID report and send it if it changed (flushes any batched keys first).
  * @param keycode 16-bit USB HID / Consumer keycode.
  * @param pressed True for press, false for release.
  */

@@ -627,14 +627,14 @@
     ((val) < 32 ? (KIND_OS | 0x20000 | (val))                                                                           \
                 : (KIND_OS | 0x10000 | (((val) >= 0xE0 && (val) <= 0xE7 ? (1 << ((val) - 0xE0)) : (val)) << 8)))
 #define OS_LAYER(layer) OS(layer)
-#define OS_MOD(mod_mask) OS(mod_mask)
+#define OS_MOD(mod_mask) (KIND_OS | 0x10000 | ((uint32_t)(mod_mask) << 8)) // masks < 32 would read as layers in OS()
 
 // OSM (One Shot Modifiers) short aliases
-#define OS_SHIFT OS(MOD_LSHIFT)
-#define OS_CTRL OS(MOD_LCTRL)
-#define OS_ALT OS(MOD_LALT)
-#define OS_GUI OS(MOD_LGUI)
-#define OS_HYPER OS(MOD_HYPER)
+#define OS_SHIFT OS_MOD(MOD_LSHIFT)
+#define OS_CTRL OS_MOD(MOD_LCTRL)
+#define OS_ALT OS_MOD(MOD_LALT)
+#define OS_GUI OS_MOD(MOD_LGUI)
+#define OS_HYPER OS_MOD(MOD_HYPER)
 
 // Transparent key alias
 #define K_TRNS 0x00000000

@@ -17,6 +17,7 @@ bootloader installs it at the next nRF52 reset. Commands:
   backup DIR        save the data EEPROM (keymap, macros, settings) and Bank 2 (ECK) to DIR
   restore-eeprom F  write a saved data EEPROM back (keeps the current boot tag; for a rollback, also
                     write the matching Bank 2 with stm32)
+  dfu               start ST's USB DFU loader and leave it running
 Run: uv run --with hidapi python3 tools/hybrid_update.py <command> ...
 """
 import argparse

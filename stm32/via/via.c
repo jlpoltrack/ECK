@@ -10,7 +10,7 @@
 
 via_storage_t via_storage __attribute__((aligned(4)));
 
-// Declarations of static layout structures and counts from keyboard.c/config.h
+// Default keymap from config.h (compiled in layers.c)
 extern const uint32_t keymap[][NUM_KEYS];
 extern const size_t keymap_layers;
 extern int16_t keyboard_get_flat_key_index(uint8_t row, uint8_t col);
@@ -46,8 +46,10 @@ enum {
     VIA_SUB_FIRMWARE_VERSION = 0x04
 };
 
+static uint8_t mask_to_via(uint8_t mod);
+
 static uint8_t to_via_mods(uint8_t mod) {
-    // If given an HID modifier keycode (0xE0..0xE7), map to single VIA modifier value
+    // A legacy HT() hold byte may be an HID modifier keycode (0xE0..0xE7): one VIA modifier
     switch (mod) {
     case HID_KEY_CONTROL_LEFT: return 0x01;
     case HID_KEY_SHIFT_LEFT:   return 0x02;
@@ -57,9 +59,11 @@ static uint8_t to_via_mods(uint8_t mod) {
     case HID_KEY_SHIFT_RIGHT:   return 0x12;
     case HID_KEY_ALT_RIGHT:     return 0x14;
     case HID_KEY_GUI_RIGHT:     return 0x18;
-    default: break;
+    default: return mask_to_via(mod);
     }
+}
 
+static uint8_t mask_to_via(uint8_t mod) {
     uint8_t via_mod = 0;
     if (mod & MOD_LCTRL)
         via_mod |= 0x01;
@@ -113,6 +117,8 @@ uint16_t to_via_keycode(uint32_t key) {
     }
     if (key == K_BOOTLOADER)
         return 0x7C00;
+    if (key == K_LYRUP || key == K_LYRDWN) // no VIA keycode; kept as-is so EEPROM keeps them
+        return (uint16_t)key;
     if (key >= 0xC0 && key <= 0xDF)
         return 0x7700 + (key - 0xC0);
     if ((key & 0xFF000000) == KIND_MO)
@@ -123,11 +129,12 @@ uint16_t to_via_keycode(uint32_t key) {
     if ((key & 0xFF000000) == KIND_HT) {
         uint8_t layer_or_mod = (key >> 8) & 0xFF;
         uint8_t kc = key & 0xFF;
-        return HT_IS_LAYER(key) ? (0x4000 | (layer_or_mod << 8) | kc)
-                                : (0x2000 | (to_via_mods(layer_or_mod) << 8) | kc);
+        if (HT_IS_LAYER(key)) return 0x4000 | (layer_or_mod << 8) | kc;
+        uint8_t mods = (key & HT_MODS_FLAG) ? mask_to_via(layer_or_mod) : to_via_mods(layer_or_mod);
+        return 0x2000 | (mods << 8) | kc;
     }
     if ((key & 0xFF000000) == KIND_MK) {
-        return (uint16_t)((to_via_mods((key >> 8) & 0xFF) << 8) | (key & 0xFF));
+        return (uint16_t)((mask_to_via((key >> 8) & 0xFF) << 8) | (key & 0xFF));
     }
     if (key >= L_0 && key <= L_15)
         return 0x5220 | (key - L_0);
@@ -146,6 +153,8 @@ uint32_t from_via_keycode(uint16_t via_key) {
         return via_key;
     if (via_key == 0x7C00 || via_key == 0x5C00)
         return K_BOOTLOADER;
+    if (via_key == K_LYRUP || via_key == K_LYRDWN)
+        return via_key;
     if (via_key >= 0x7700 && via_key <= 0x771F)
         return 0xC0 + (via_key - 0x7700);
 
@@ -160,8 +169,10 @@ uint32_t from_via_keycode(uint16_t via_key) {
         return K_NULL; // system sleep/wake: ECK has no system report
     if (via_key >= 0x0002 && via_key <= 0x00FF)
         return via_key;
-    if (via_key >= 0x0100 && via_key <= 0x1FFF)
-        return MK(from_via_mods((via_key >> 8) & 0xFF), (via_key & 0xFF));
+    if (via_key >= 0x0100 && via_key <= 0x1FFF) {
+        uint8_t mods = from_via_mods((via_key >> 8) & 0xFF);
+        return mods ? (uint32_t)MK(mods, (via_key & 0xFF)) : from_via_keycode(via_key & 0xFF); // 0x10xx: no modifier
+    }
     if (via_key >= 0x2000 && via_key <= 0x3FFF)
         return MT(from_via_mods((via_key >> 8) & 0x1F), (via_key & 0xFF));
     if (via_key >= 0x4000 && via_key <= 0x4FFF)

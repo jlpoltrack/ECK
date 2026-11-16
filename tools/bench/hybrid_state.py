@@ -2,7 +2,7 @@
 """Print the HHKB Hybrid's Bluetooth bridge state on both chips over SWD, without halting.
 
 Symbol addresses come from the ELF files, so rebuild before use.
-Run: uv run --with pyocd python3 tools/hybrid_state.py --stm <uid> --nrf <uid>
+Run: uv run --with pyocd python3 tools/bench/hybrid_state.py --stm <uid> --nrf <uid>
 """
 import argparse
 import subprocess

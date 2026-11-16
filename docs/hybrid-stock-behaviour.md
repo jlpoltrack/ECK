@@ -18,7 +18,7 @@ From static analysis of the owner's dumps (`backups/hybrid-2026-11-14/`, not in 
 
 ## Power, battery and LED (stock STM32 app and PFU nRF app; ECK follows them)
 
-Source: stock Bank 2 (STM32 section of `HHKB800_FW_A048.hfb`, base `0x08010000`); `backups/hybrid-2026-11-14/bank2.bin` is a ECK build (no PFU link code, different bytes), so it was not used. Ticks are TIM21 ticks of about 1 ms (stock Bank 2 has the same two TIM21 set-ups, `0x080152a4` ARR 40 and `0x08015304` ARR 160, PSC 99). The 1 ms tick is also what makes the LED timings below match the manual.
+Source: stock Bank 2 (STM32 section of `HHKB800_FW_A048.hfb`, base `0x08010000`); `backups/hybrid-2026-11-14/bank2.bin` is an ECK build (no PFU link code, different bytes), so it was not used. Ticks are TIM21 ticks of about 1 ms (stock Bank 2 has the same two TIM21 set-ups, `0x080152a4` ARR 40 and `0x08015304` ARR 160, PSC 99). The 1 ms tick is also what makes the LED timings below match the manual.
 
 ### Battery
 

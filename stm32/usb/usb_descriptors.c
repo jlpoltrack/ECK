@@ -54,7 +54,7 @@ uint8_t const desc_via_report[] = {
     0xc0              // End Collection
 };
 
-// QMK / VIA Debug Console descriptor (Usage Page 0xFF31, Usage 0x0074)
+// QMK-style debug console descriptor (Usage Page 0xFF31, Usage 0x0074; hid_listen, QMK Toolbox)
 uint8_t const desc_console_report[] = {
     0x06, 0x31, 0xFF, // Usage Page (Vendor Defined 0xFF31)
     0x09, 0x74,       // Usage (Vendor Defined 0x0074)
@@ -166,7 +166,7 @@ uint8_t const desc_configuration[] = {
 #ifndef EPNUM_CONSOLE_IN
 #define EPNUM_CONSOLE_IN 0x83
 #endif
-    // Interface 2: QMK / VIA Debug Console HID Descriptor (IN endpoint)
+    // Interface 2: debug console HID descriptor (IN endpoint)
     TUD_HID_DESCRIPTOR(ITF_NUM_CONSOLE,
                        0,
                        HID_ITF_PROTOCOL_NONE,
@@ -184,9 +184,9 @@ uint8_t const desc_configuration[] = {
 // String Descriptors
 char const *string_desc_arr[] = {
     (const char[]){0x09, 0x04}, // Supported language (English - 0x0409)
-    "eck",                      // Manufacturer string
+    "ECK",                      // Manufacturer string
     KEYBOARD_NAME,         // Product string
-    FW_VERSION,             // Firmware version string for VIA builds
+    FW_VERSION,             // Serial number string: the firmware version
 };
 
 uint16_t _desc_str[32];

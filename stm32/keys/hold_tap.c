@@ -42,6 +42,13 @@ bool hold_tap_has_active(void) {
     return s_active_ht_count > 0;
 }
 
+/* Hold modifiers as a mask: keymap HT() may name one modifier by keycode (0xE0..0xE7); MT() holds a mask. */
+static uint8_t ht_mod_mask(uint32_t keycode) {
+    uint8_t target = (keycode >> 8) & 0xFF;
+    if (!(keycode & HT_MODS_FLAG) && target >= 0xE0 && target <= 0xE7) return (uint8_t)(1U << (target - 0xE0));
+    return target;
+}
+
 static void activate_hold(HTTracker *tracker) {
     if (tracker->state == HT_STATE_PRESSED && s_active_ht_count > 0) {
         s_active_ht_count--;
@@ -51,7 +58,7 @@ static void activate_hold(HTTracker *tracker) {
     if (HT_IS_LAYER(tracker->keycode))
         layers_on(target);
     else
-        keyboard_send_modifiers(target, true);
+        keyboard_send_modifiers(ht_mod_mask(tracker->keycode), true);
 }
 
 void hold_tap_permissive_resolve(uint8_t except_row, uint8_t except_col) {
@@ -162,7 +169,7 @@ bool hold_tap_process_event(uint8_t row, uint8_t col, uint32_t key, bool pressed
                     if (HT_IS_LAYER(ht_trackers[i].keycode))
                         layers_off(target);
                     else
-                        keyboard_send_modifiers(target, false);
+                        keyboard_send_modifiers(ht_mod_mask(ht_trackers[i].keycode), false);
                     s_last_release.valid = false;
                 }
                 ht_trackers[i].state = HT_STATE_IDLE;

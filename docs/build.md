@@ -59,11 +59,13 @@ Bank 2 provides 65,536 bytes of Flash and the STM32L072 20,480 bytes of RAM. Cur
 
 | Variant | Raw Bank 2 image | RAM at link time |
 | --- | --- | --- |
-| Hybrid | 44,724 bytes (68.2 %) | 17,768 bytes (86.8 %) |
-| Classic, Type-S | 35,540 bytes (54.2 %) | 16,600 bytes (81.1 %) |
+| Hybrid | 43,132 bytes (65.8 %) | 17,312 bytes (84.5 %) |
+| Classic, Type-S | 34,556 bytes (52.7 %) | 16,288 bytes (79.5 %) |
 
-RAM counts the code run from RAM (the key scan), `.data`, `.bss` (task stacks, queues, the 512-byte FreeRTOS heap, the keymap) and the 2 KB start-up stack; it is a build-time layout, not a measured worst-case stack depth. The 65,570-byte `.hfb` holds the padded Bank 2 payload and 34 bytes of container metadata (the Hybrid `.hfb` also carries the nRF52 app and SoftDevice).
+RAM counts the code run from RAM (the key scan), `.data`, `.bss` (statically allocated task stacks and queues, the keymap; FreeRTOS has no heap) and the 2 KB start-up stack; it is a build-time layout, not a measured worst-case stack depth. The 65,570-byte `.hfb` holds the padded Bank 2 payload and 34 bytes of container metadata (the Hybrid `.hfb` also carries the nRF52 app and SoftDevice).
 
 ## GitHub Actions
 
-The [CI workflow](../.github/workflows/ci.yml) runs on every push and pull request: the host tests, then `./build.sh hybrid -c`, `./build.sh classic -c`, `./build.sh type_s -c` and the Hybrid boot stub (`make -C stm32/boot`). It has no nRF5 SDK, so its Hybrid build makes the STM32 `.bin` only. It publishes no artifacts: build locally to get firmware, and load [via.json](../stm32/via/via.json) in the [VIA web app](https://www.usevia.app/) Design tab for the HHKB Settings menu.
+The [CI workflow](../.github/workflows/ci.yml) runs on every push and pull request: the host tests, then `./build.sh hybrid -c` (with the nRF5 SDK 15.0.0, fetched and SHA-256 checked, so the Hybrid `.hfb` is built too), `./build.sh classic -c`, `./build.sh type_s -c` and the Hybrid boot stub (`make -C stm32/boot`). Each run uploads the Hybrid `.bin`, `.hfb` and nRF52 app as a workflow artifact.
+
+A `v*` tag also publishes a GitHub release with the three `.hfb` files, `hybrid_boot.bin`, and `eck-web-flasher-<tag>.zip` (the web flasher in `web/` with those images bundled, via `tools/web_bundle.sh`). Load [via.json](../stm32/via/via.json) in the [VIA web app](https://www.usevia.app/) Design tab for the HHKB Settings menu.

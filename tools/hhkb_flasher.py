@@ -3,20 +3,20 @@
 HHKB Flasher CLI (Open-Source Firmware Updater for Happy Hacking Keyboard)
 ========================================================================
 
-Communicates directly with HHKB Classic / Classic Type-S via USB Raw HID
-(Vendor ID: 0x04FE, UsagePage: 0xFF00, Usage: 0x01) to read device info
-and flash firmware into STM32L072 Bank 2 (0x08010000).
+Communicates directly with PFU's updater on the HHKB Classic / Classic Type-S (and the Hybrid,
+whose updater needs PFU's nRF52 app) via USB Raw HID (Vendor ID: 0x04FE, UsagePage: 0xFF00,
+Usage: 0x01) to read device info and flash firmware into STM32L072 Bank 2 (0x08010000).
 
 Supports:
-- Flashing official .hfb containers (65,570 bytes) via authentic PFU E1/E2 protocol.
-- Flashing raw .bin firmware (64 KB) by packaging it on the fly into .hfb.
+- Flashing .hfb containers (65,570 bytes; Hybrid 282,672) via authentic PFU E1/E2 protocol.
+- Flashing raw .bin firmware (64 KB, Classic only) by packaging it on the fly into .hfb.
 - Bypassing official PFU version downgrade restrictions.
 - Local CRC and model compatibility checks before starting an update.
 
 Protocol Notes (from tmk research & reverse engineering):
 - Cmd 0x02: Read ID & Version (response: 55 55 02 00 00 39 [data...])
 - Cmd 0xE0: Enter Firmup Mode
-- Cmd 0xE1: Firmup Start (Length: 65,570 [22 00 01 00], CRC16, erase Bank 2)
+- Cmd 0xE1: Firmup Start (container length, e.g. 65,570 [22 00 01 00], CRC16, erase Bank 2)
 - Cmd 0xE2: Send chunk (Header: E2 00 <len> <seq_lo> <seq_hi> [payload])
 - Cmd 0xE3: Firmup End (device verification/reboot; response status unverified)
 """
@@ -239,7 +239,7 @@ class HHKBDevice:
     def flash_firmware(self, hfb_container: bytes, progress_cb=None, skip_end=False):
         """
         Execute authentic firmware update sequence:
-        0xE0 -> 0xE1 (size=65570, crc) -> 0xE2 (send chunks) -> 0xE3
+        0xE0 -> 0xE1 (container size, crc) -> 0xE2 (send chunks) -> 0xE3
         """
         if len(hfb_container) < CLASSIC_HFB_SIZE:
             raise ValueError(f"Firmware container must be at least 65,570 bytes (got {len(hfb_container)})")
@@ -341,7 +341,7 @@ def main():
 
     if not dev_info:
         print("Error: No compatible HHKB device found via USB HID.", file=sys.stderr)
-        print("Make sure your HHKB Classic is plugged in and recognized by the OS.", file=sys.stderr)
+        print("Make sure your HHKB is plugged in and recognized by the OS.", file=sys.stderr)
         sys.exit(1)
 
     print(f"Found HHKB: {dev_info.get('product_string', 'Keyboard')} (PID: 0x{dev_info['product_id']:04X})")

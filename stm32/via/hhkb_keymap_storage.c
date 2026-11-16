@@ -1,5 +1,5 @@
 /* Two independently validated EEPROM snapshots of the VIA keymap and macros.
- * 0x08080600..0x08080d9f were zero in the supplied stock EEPROM backup.
+ * Both slots (0x08080600..0x08080fff) were zero in the stock Hybrid EEPROM dump.
  * Never overwrite a slot containing data that is not ours. */
 #include "via.h"
 #include "eeprom.h"
@@ -12,22 +12,25 @@
 #ifndef SLOT_ADDRESS
 #define SLOT_ADDRESS 0x08080600UL
 #endif
-#define SLOT_MAGIC     0x324b4345UL // 'ECK2': keymap + reserved + macros
-#define SLOT_MAGIC_OLD 0x324b4d44UL // same layout, tag from before the ECK rename: read, then rewritten
+#define SLOT_MAGIC     0x334b4345UL // 'ECK3': keys as 16-bit VIA codes + macros
+#define SLOT_MAGIC_V2  0x324b4345UL // 'ECK2': 32-bit keys + 80 zero bytes + 224 B macros; read, then rewritten
+#define SLOT_MAGIC_OLD 0x324b4d44UL // format 2 under its tag from before the ECK rename
 #define SLOT_MAGIC_V1  0x314b4d44UL // format 1 (keymap only), from before the ECK rename
 #define SLOT_COMMIT   0x54494d43UL // 'CMIT'
 
-#define V1_KEYMAP_WORDS 240U
-#define V1_SLOT_WORDS   (4U + V1_KEYMAP_WORDS)
+#define NUM_SLOT_KEYS (DYNAMIC_KEYMAP_MAX_LAYERS * NUM_KEYS)
+#define V1_SLOT_WORDS (4U + NUM_SLOT_KEYS)
+#define V2_PAYLOAD_WORDS (NUM_SLOT_KEYS + 20U + 224U / 4U)
+#define V2_MACRO_WORD (NUM_SLOT_KEYS + 20U)
 
-#define KEYMAP_WORDS  (DYNAMIC_KEYMAP_MAX_LAYERS * NUM_KEYS)
-/* Held Vial combos (8 x 10 bytes) before VIA-only: written as zero, ignored on load. */
-#define RESERVED_WORDS 20U
+#define KEYMAP_WORDS  (NUM_SLOT_KEYS / 2U) // two 16-bit VIA codes per word
 #define MACRO_WORDS   ((DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE + 3U) / 4U)
-#define PAYLOAD_WORDS (KEYMAP_WORDS + RESERVED_WORDS + MACRO_WORDS)
-#define SLOT_WORDS    (4U + PAYLOAD_WORDS)
+#define PAYLOAD_WORDS (KEYMAP_WORDS + MACRO_WORDS)
+#define SLOT_WORDS    (4U + V2_PAYLOAD_WORDS) // slot stride, fixed since format 2 so slots never move
 
 _Static_assert(DYNAMIC_KEYMAP_MAX_LAYERS == 4 && NUM_KEYS == 60, "HHKB EEPROM layout requires 4 x 60 keys");
+_Static_assert(4U + PAYLOAD_WORDS <= SLOT_WORDS, "keymap + macros must fit a slot");
+_Static_assert(DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE >= 224U, "format-2 macros must fit on migration");
 _Static_assert(2 * SLOT_WORDS * 4 <= 0xa00, "keymap slots overlap factory sensor data");
 
 static uint32_t snapshot[PAYLOAD_WORDS];
@@ -46,30 +49,30 @@ static uint32_t hash_word(uint32_t hash, uint32_t word) {
     for (unsigned n = 0; n < 4; n++) { hash ^= word & 0xffU; hash *= 16777619U; word >>= 8; }
     return hash;
 }
-static uint32_t slot_hash(volatile const uint32_t *p) {
+static uint32_t slot_hash(volatile const uint32_t *p, unsigned words) {
     uint32_t h = hash_word(2166136261U, p[1]);
-    for (unsigned i = 0; i < PAYLOAD_WORDS; i++) h = hash_word(h, p[4 + i]);
+    for (unsigned i = 0; i < words; i++) h = hash_word(h, p[4 + i]);
     return h;
 }
-static uint32_t slot_v1_hash(volatile const uint32_t *p) {
-    uint32_t h = hash_word(2166136261U, p[1]);
-    for (unsigned i = 0; i < V1_KEYMAP_WORDS; i++) h = hash_word(h, p[4 + i]);
-    return h;
+static bool is_v2(uint32_t magic) {
+    return magic == SLOT_MAGIC_V2 || magic == SLOT_MAGIC_OLD;
 }
 static bool valid(unsigned n) {
     volatile const uint32_t *p = slot(n);
-    return (p[0] == SLOT_MAGIC || p[0] == SLOT_MAGIC_OLD) && p[3] == SLOT_COMMIT && p[2] == slot_hash(p);
+    if (p[3] != SLOT_COMMIT) return false;
+    if (p[0] == SLOT_MAGIC) return p[2] == slot_hash(p, PAYLOAD_WORDS);
+    return is_v2(p[0]) && p[2] == slot_hash(p, V2_PAYLOAD_WORDS);
 }
 static bool valid_v1(unsigned n) {
     volatile const uint32_t *p = slot_v1(n);
-    return p[0] == SLOT_MAGIC_V1 && p[3] == SLOT_COMMIT && p[2] == slot_v1_hash(p);
+    return p[0] == SLOT_MAGIC_V1 && p[3] == SLOT_COMMIT && p[2] == slot_hash(p, NUM_SLOT_KEYS);
 }
 static bool has_valid_v1(void) {
     return valid_v1(0) || valid_v1(1);
 }
 static bool writable(unsigned n) {
     volatile const uint32_t *p = slot(n);
-    if (p[0] == SLOT_MAGIC || p[0] == SLOT_MAGIC_OLD) return true;
+    if (p[0] == SLOT_MAGIC || is_v2(p[0])) return true;
     if (n == 0 && p[0] == SLOT_MAGIC_V1) return true;
     if (valid(1 - n)) return true;
     if (has_valid_v1()) return true;
@@ -96,20 +99,29 @@ void via_keymap_load(void) {
         volatile const uint32_t *p = slot_v1((unsigned)v1_slot);
         generation = p[1];
         uint32_t *dst = &dynamic_keymap[0][0];
-        for (unsigned i = 0; i < KEYMAP_WORDS; i++) dst[i] = v1_keycode(p[4 + i]);
+        for (unsigned i = 0; i < NUM_SLOT_KEYS; i++) dst[i] = v1_keycode(p[4 + i]);
         memset(dynamic_macro_buffer, 0, sizeof(dynamic_macro_buffer)); // format 1 had no macros
         pending = true;
         return;
     }
     volatile const uint32_t *p = slot((unsigned)active_slot);
     generation = p[1];
-    if (p[0] == SLOT_MAGIC_OLD) pending = true; // rewrite under the ECK tag
     uint32_t *dst = &dynamic_keymap[0][0];
-    for (unsigned i = 0; i < KEYMAP_WORDS; i++) dst[i] = p[4 + i];
-
-    uint8_t *macro_dst = dynamic_macro_buffer;
-    const volatile uint8_t *macro_src = (const volatile uint8_t *)&p[4 + KEYMAP_WORDS + RESERVED_WORDS];
-    for (size_t i = 0; i < sizeof(dynamic_macro_buffer); i++) macro_dst[i] = macro_src[i];
+    const volatile uint8_t *macro_src;
+    size_t macro_len;
+    if (p[0] == SLOT_MAGIC) {
+        for (unsigned i = 0; i < NUM_SLOT_KEYS; i++)
+            dst[i] = from_via_keycode((uint16_t)(p[4 + i / 2] >> (16 * (i & 1))));
+        macro_src = (const volatile uint8_t *)&p[4 + KEYMAP_WORDS];
+        macro_len = DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE;
+    } else { // format 2: internal codes; rewrite as format 3
+        for (unsigned i = 0; i < NUM_SLOT_KEYS; i++) dst[i] = p[4 + i];
+        macro_src = (const volatile uint8_t *)&p[4 + V2_MACRO_WORD];
+        macro_len = 224;
+        pending = true;
+    }
+    memset(dynamic_macro_buffer, 0, sizeof(dynamic_macro_buffer));
+    for (size_t i = 0; i < macro_len; i++) dynamic_macro_buffer[i] = macro_src[i];
 }
 void via_keymap_save(void) { pending = true; }
 
@@ -124,8 +136,10 @@ void via_keymap_poll(void) {
             candidate = 1;
         }
         memset(snapshot, 0, sizeof(snapshot));
-        memcpy(&snapshot[0], dynamic_keymap, sizeof(dynamic_keymap));
-        memcpy(&snapshot[KEYMAP_WORDS + RESERVED_WORDS], dynamic_macro_buffer, sizeof(dynamic_macro_buffer));
+        const uint32_t *keys = &dynamic_keymap[0][0];
+        for (unsigned i = 0; i < NUM_SLOT_KEYS; i++)
+            snapshot[i / 2] |= (uint32_t)to_via_keycode(keys[i]) << (16 * (i & 1));
+        memcpy(&snapshot[KEYMAP_WORDS], dynamic_macro_buffer, sizeof(dynamic_macro_buffer));
         generation++;
         checksum = hash_word(2166136261U, generation);
         for (unsigned i = 0; i < PAYLOAD_WORDS; i++) checksum = hash_word(checksum, snapshot[i]);

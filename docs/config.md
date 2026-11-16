@@ -4,7 +4,7 @@
 
 ## Build presets
 
-`./build.sh hybrid`, `./build.sh classic` or `./build.sh type_s` picks the keyboard; Classic and Type-S differ only in the `.hfb` model ID. `-d` adds bench options (`HHKB_ADC_DIAGNOSTICS`, `HHKB_SCAN_DIAGNOSTICS`, `HHKB_HYBRID_TEST_CMD`); see [Build](build.md). Everything else is a runtime [VIA](https://www.usevia.app/) setting: Rapid Trigger, custom calibration, ×4 ADC oversampling (applies at 50–500 Hz; 1000 Hz always uses ×1), scan rate, LEDs and hold-tap timing. For the Hybrid see [Hybrid port](hybrid-port.md) and [Hybrid updates](hybrid-update.md).
+`./build.sh hybrid`, `./build.sh classic` or `./build.sh type_s` picks the keyboard; Classic and Type-S differ only in the `.hfb` model ID and version. `-d` adds bench options (`HHKB_ADC_DIAGNOSTICS`, `HHKB_SCAN_DIAGNOSTICS`, `HHKB_HYBRID_TEST_CMD`); see [Build](build.md). Everything else is a runtime [VIA](https://www.usevia.app/) setting: Rapid Trigger, custom calibration, ×4 ADC oversampling (applies at 50–500 Hz; 1000 Hz and Hybrid batteries always use ×1), scan rate, LEDs and hold-tap timing. For the Hybrid see [Hybrid port](hybrid-port.md) and [Hybrid updates](hybrid-update.md).
 
 ## Matrix scanning
 

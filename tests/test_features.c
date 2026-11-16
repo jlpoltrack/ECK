@@ -33,6 +33,7 @@ int main(void) {
     oneshot_on_key_release();
     assert(layer_state == 0);
     assert(!oneshot_has_active());
+    assert(OS_SHIFT == OS(K_LSFT) && OS_CTRL == OS(K_LCTL)); // mask aliases are one-shot mods
     assert(oneshot_process_event(OS(K_LCTL), true));
     g_mock_ticks = 20;
     assert(oneshot_process_event(OS(K_LCTL), false));

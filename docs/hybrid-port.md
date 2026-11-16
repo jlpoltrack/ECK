@@ -2,7 +2,7 @@
 
 # HHKB Professional Hybrid port: status and ToDo
 
-Work in progress on branch `hhkb-hybrid`. The test keyboard is a Hybrid Type-S (PD-KB800BS, USB `04FE:0021`, stock firmware A0.48). Everything below the "Findings" heading comes from static analysis of PFU's `HHKB800_FW_A048.hfb` (Hybrid) and `HHKB401_FW_A803.hfb` (Classic Type-S), unless marked as tested.
+Port notes and open work. The test keyboard is a Hybrid Type-S (PD-KB800BS, USB `04FE:0021`, stock firmware A0.48). Everything below the "Findings" heading comes from static analysis of PFU's `HHKB800_FW_A048.hfb` (Hybrid) and `HHKB401_FW_A803.hfb` (Classic Type-S), unless marked as tested.
 
 ## Current state of the test keyboard (2026-11-15)
 
@@ -116,8 +116,8 @@ Not done or guessed: stock's 10 s hold on wake (blue off, orange 3 s) is not cop
 ## Builds
 
 - `./build.sh hybrid`: ECK for the Hybrid. Produces `build/hybrid/hhkb_ec_hybrid.hfb` from ECK's own parts and Nordic's S132 v6.0.0 SoftDevice (`HHKB_HYBRID_SOFTDEVICE`, default `../nRF5_SDK_15.0.0/.../s132_nrf52_6.0.0_softdevice.hex`) plus ECK's nRF52 app (`nrf52/_build/nrf52832_xxaa.bin`, which `build.sh` builds first). No PFU file is needed: PFU's copy of the SoftDevice is byte-identical to Nordic's, and the output matched the earlier PFU-based build byte for byte. Installing it from stock through PFU's updater with `hhkb_flasher.py` was tested end to end (both chips).
-- Without PFU's `.hfb` (CI, fresh clones) the Hybrid build makes only `build/hybrid/hhkb_ec_hybrid.bin`, which `hybrid_update.py stm32` installs.
-- Never run a ECK STM32 build against PFU's nRF52 app: both act as SPI master on the same lines.
+- Without the nRF5 SDK at `../nRF5_SDK_15.0.0` the Hybrid build makes only `build/hybrid/hhkb_ec_hybrid.bin`, which `hybrid_update.py stm32` installs. CI fetches the SDK and builds the `.hfb`.
+- Never run an ECK STM32 build against PFU's nRF52 app: both act as SPI master on the same lines.
 - EEPROM: ECK's Classic slots (`0x08080600..0x08080D9F`, `0x08081500`) were all zero in this keyboard's dump, and the factory calibration at `0x08081100`/`0x08081200` uses the Classic layout, so the Hybrid shares the Classic storage code. Stock keymap saves at `0x08081400 + n*0x100` would overlap `0x08081500`, which only matters when returning to stock.
 
 ## ToDo
@@ -138,7 +138,7 @@ OFF at 3.0 V: ECK 197 µA, stock 198 µA (a ~130-140 µA base plus boost-convert
 ### Smaller items
 
 1. **HSI48 start (fixed, untested as a cause).** Bank 1 leaves HSI48 running with `ENREF_HSI48` set on the Hybrid, so it did not cause the original hang. The fix matches ST's HAL and stays; verify it on a Classic.
-2. **ADC diagnostics (resolved).** `./build.sh hybrid -d HHKB_ADC_DIAGNOSTICS` fits again (the STM32L072 FreeRTOS heap is now 512 bytes). All keys, columns 5 and 6 included, rest at 25-690 counts against factory press thresholds of 1560-2190; the earlier zeros were most likely the SWD read glitch.
+2. **ADC diagnostics (resolved).** `./build.sh hybrid -d HHKB_ADC_DIAGNOSTICS` fits again (FreeRTOS now allocates everything statically, with no heap). All keys, columns 5 and 6 included, rest at 25-690 counts against factory press thresholds of 1560-2190; the earlier zeros were most likely the SWD read glitch.
 3. **Housekeeping.** The module datasheet is in `backups/vendor-docs/`, the SDK zip next to the unpacked SDK.
 4. **Restoring stock** is `hybrid_update.py nrf` then `restore-stm32` (tested); it needs the user's own Bank 1 backup.
 5. **Link version:** the STM32 never checks `BLE_LINK_VERSION`. Left so: the `.hfb` always packs matching firmware, and refusing a mismatched nRF52 would also block the update that fixes it.
@@ -193,7 +193,6 @@ Rows B0/B1/B2/B10 (B11 is an unused fifth row slot on both models), mux address 
 ## Tools
 
 Bench, measurement and reverse-engineering tools are in `tools/bench/` (most need SWD, so the case open); installing and building need only `tools/make_hfb.py`, `hhkb_flasher.py` and `hybrid_update.py`.
-
 
 - The Hybrid container needs the nRF52 app and Nordic's SoftDevice `.hex` (`-DHHKB_HYBRID_NRF_APP=...`, `-DHHKB_HYBRID_SOFTDEVICE=...`); without them the build makes only the STM32 `.bin`. PFU's own file is needed only to go back to stock.
 - `tools/make_hfb.py --nrf-app --softdevice`, `tools/bench/nrf_reset_probe.py` (PD2 test), `tools/bench/nrf_pc_monitor.py` (which nRF52 image runs, without halting), `tools/bench/hybrid_state.py` (bridge state on both chips), `tools/hhkb_flasher.py` (Hybrid size, MD5 and model checks, longer waits); `hybrid_update.py boot` saves Bank 1 and the EEPROM before its first write.

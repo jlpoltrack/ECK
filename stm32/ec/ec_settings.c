@@ -254,7 +254,7 @@ void hhkb_calibration_load(void) {
             s_led_mode[0] = led0 <= HHKB_LED_MODE_MAX ? led0 : k_led_default[0];
             s_led_mode[1] = led1 <= HHKB_LED_MODE_MAX ? led1 : k_led_default[1];
         } else {
-            s_led_mode[0] = (cal->flags >> 6) & 3; // v1 kept LED 1 modes 0..3 only
+            s_led_mode[0] = (cal->flags >> 6) & 3; // v1 kept LED 0 modes 0..3 only
         }
 
         load_rt_cfg(&cal->rt);
@@ -617,7 +617,7 @@ void hhkb_cal_record_peak(uint8_t col, uint8_t row, uint16_t val) {
             debug_console_printf("[CAL] [%s] %u%% (%u/60) | Key C%u R%u peak: %u\r\n",
                                  bar, pct, count, col, row, s_capture_peak[col][row]);
             if (count >= 60) {
-                debug_console_printf("[CAL] >>> All 60 keys calibrated! Click 'Save calibration' in VIA. <<<\r\n");
+                debug_console_printf("[CAL] >>> All 60 keys calibrated! Click 'Finish and save' in VIA. <<<\r\n");
             }
         }
     } else if (is_down && val < release_thresh) {

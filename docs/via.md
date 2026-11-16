@@ -6,7 +6,7 @@
 
 1. Open the [VIA web app](https://www.usevia.app/).
 2. Open **Settings** and enable **Show Design tab**.
-3. Open the new **Design** tab, choose **Load Draft Definition**, and select `via.json` from this directory or the release assets.
+3. Open the new **Design** tab, choose **Load Draft Definition**, and select `stm32/via/via.json` from this repository (the same file for all three keyboards).
 4. Connect the keyboard and open **HHKB Settings**.
 
 > [!TIP]
@@ -15,7 +15,7 @@
 
 ## Chromium on Linux sees the HHKB, but VIA cannot connect
 
-If VIA detects **HHKB Professional Classic** with VID/PID `cafe:4010` but reports that the keyboard is not responding, try granting Chromium access to its `/dev/hidraw*` devices. This rule grants the active local session user access to devices with this VID/PID.
+If VIA detects **HHKB Professional Hybrid** or **HHKB Professional Classic** with VID/PID `cafe:4010` (a test ID; a real one is still to come) but reports that the keyboard is not responding, try granting Chromium access to its `/dev/hidraw*` devices. This rule grants the active local session user access to devices with this VID/PID.
 
 ```bash
 sudo tee /etc/udev/rules.d/70-hhkb-via.rules >/dev/null <<'EOF'
@@ -40,8 +40,8 @@ With the updated firmware and `via.json`, assign **System 1** or **System 2** in
 
 ## Settings
 
-- Scan rate: 50, 125, 250, 500, or 1000 Hz.
-- ADC oversampling ×4: a toggle in Scan Rate. At 50–500 Hz it averages four hardware conversions per key; at 1000 Hz the ADC always uses ×1. The preference is saved and applies again when the rate drops to 500 Hz or less.
+- Scan rate: 50, 125, 250, 500, or 1000 Hz (default 1000 Hz). The Hybrid has a separate Bluetooth scan rate (default 250 Hz), used while reports go to Bluetooth.
+- ADC oversampling ×4: a toggle in Scan Rate. At 50–500 Hz it averages four hardware conversions per key; at 1000 Hz, and on Hybrid batteries, the ADC always uses ×1. The preference is saved and applies again when the rate drops to 500 Hz or less.
 - Tapping term: 50–500 ms in 10 ms steps; default 220 ms.
 - Quick tap: 0–500 ms in 10 ms steps; default 150 ms; zero disables it.
 - Actuation, classic hysteresis, and RT press/release sensitivity: 0.1–4.0 mm in 0.1 mm steps.
@@ -76,4 +76,4 @@ The **HHKB Settings** → **Debug** submenu provides granular toggles for diagno
 
 For a complete guide on configuring the VIA HID Console, inspecting real-time matrix logs, and Topre sensor response curves, see [Debugging and HID Console](debug.md).
 
-Settings and calibration are stored in EEPROM at `0x08081500`. The [VIA](https://www.usevia.app/) keymap and macros (224 bytes for all 16) are kept together in two alternating, checksummed EEPROM slots at `0x08080600`, saved about half a second after the last edit. Keymaps saved by the earlier Vial-capable firmware load unchanged (the slot format is the same; the words that held Vial combos are now left zero).
+Settings and calibration are stored in EEPROM at `0x08081500`. The [VIA](https://www.usevia.app/) keymap (as 16-bit VIA keycodes) and macros (512 bytes for all 16) are kept together in two alternating, checksummed EEPROM slots at `0x08080600`, saved about half a second after the last edit. Slots are tagged `ECK3`; slots saved by earlier firmware (tags `ECK2`, `DMK1`/`DMK2`, including the Vial-capable versions) are read and rewritten in the new format, keeping their keymap and their 224 bytes of macros. `KC_NO` (0x0000) blocks the key; `KC_TRNS` (0x0001) falls through to the layer below.

@@ -56,7 +56,7 @@ static uint32_t pop_pressed_key(uint8_t row, uint8_t col) {
 }
 
 /**
- * @brief Dispatch a single key event (press/release) directly to the USB HID report engine (Zero-Queue Fast Path).
+ * @brief Apply one key event to the HID report and send it (USB task queue or Bluetooth).
  * @param keycode 16-bit USB HID / Consumer keycode.
  * @param pressed True for keydown, false for keyup.
  */
@@ -65,16 +65,11 @@ void keyboard_send_key(uint16_t keycode, bool pressed) {
 }
 
 /**
- * @brief Send modifier keys (Ctrl, Shift, Alt, GUI) based on a bitmask or HID modifier keycode.
- * @param mod_mask Bitmask (MOD_LCTRL, etc.) or HID modifier code (0xE0..0xE7).
+ * @brief Send modifier keys (Ctrl, Shift, Alt, GUI).
+ * @param mod_mask Bitmask (MOD_LCTRL, etc.); 0xE0..0xE7 are masks here too (e.g. RShift+RAlt+RGUI).
  * @param pressed True for keydown, false for keyup.
  */
 void keyboard_send_modifiers(uint8_t mod_mask, bool pressed) {
-    // If given a HID modifier keycode (0xE0 - 0xE7), convert to standard bitmask
-    if (mod_mask >= 0xE0 && mod_mask <= 0xE7) {
-        mod_mask = 1 << (mod_mask - 0xE0);
-    }
-
     usb_process_modifiers(mod_mask, pressed);
 }
 
@@ -120,6 +115,7 @@ static bool process_system_key(uint32_t key, bool pressed) {
  * @param col Matrix column index.
  * @param key 32-bit composite keycode.
  * @param pressed True for press, false for release.
+ * @param batched True for keys from a scan snapshot: plain HID keys share one report per scan.
  */
 static void process_matrix_action(uint8_t row, uint8_t col, uint32_t key, bool pressed, bool batched) {
     if (!batched || key >= 0xe0) usb_flush_batched_keys();

@@ -4,7 +4,7 @@
 PFU's app (stock A0.48) is the SPI master and runs a legacy SPI0 driver: transfer start at
 0x2b9a8 (r0 = TX buffer; other arguments logged raw) and completion at 0x2ba6c.
 Hardware breakpoints there pause only the master, so no byte is lost. Prints one line per frame.
-Run: uv run --with pyocd python3 tools/nrf_spi_trace.py --nrf <uid> [--seconds N] [--out f]
+Run: uv run --with pyocd python3 tools/bench/nrf_spi_trace.py --nrf <uid> [--seconds N] [--out f]
 """
 import argparse
 import time

@@ -38,7 +38,7 @@ typedef struct {
 // Permissive Hold configuration:
 // - PERMISSIVE_HOLD: 1 enables permissive hold (immediate hold resolution when another key is pressed)
 // - HOLD_TAP_TAP_PREFERRED: 1 forces tap-preferred mode (disables permissive hold)
-// Default is tap-preferred (PERMISSIVE_HOLD = 0) for safe fast typing without accidental modifiers.
+// config.h enables permissive hold; the VIA settings (ec_settings.c) override both at run time.
 #if defined(PERMISSIVE_HOLD) && (PERMISSIVE_HOLD != 0) && (!defined(HOLD_TAP_TAP_PREFERRED) || (HOLD_TAP_TAP_PREFERRED == 0))
 #define PERMISSIVE_HOLD_ENABLED 1
 #else

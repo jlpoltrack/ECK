@@ -8,7 +8,7 @@
 #endif
 
 /**
- * HHKB Classic DIP Switches:
+ * HHKB DIP switches (all models):
  * SW1: PA3
  * SW2: PA4
  * SW3: PA5
@@ -86,9 +86,8 @@ static void erase_bank2_vector_page_ram(void) {
     // 5. Wait for erase operation to complete
     while (FLASH->SR & FLASH_SR_BSY);
 
-    // 6. Check for flash errors (useful for debugging via J-Link / SWD readout)
-    // Errors are non-fatal here: EEPROM flags and the erase itself provide redundancy.
-    // On error, s_flash_erase_error is readable via debugger at the SRAM address.
+    // 6. Check for flash errors: non-fatal, the EEPROM flags also stop Bank 1 booting Bank 2.
+    // On error, FLASH->SR is left at 0x20004FF0 for a debugger to read.
     volatile uint32_t sr = FLASH->SR;
     if (sr & (FLASH_SR_WRPERR | FLASH_SR_PGAERR | FLASH_SR_SIZERR
             | FLASH_SR_NOTZEROERR | FLASH_SR_FWWERR)) {

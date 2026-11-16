@@ -2,7 +2,7 @@
 
 # Debug and HID Console
 
-ECK firmware for HHKB Classic provides real-time diagnostic logging via standard USB HID Console interface. This enables tracking Topre capacitive matrix state, measuring raw ADC values, monitoring matrix scan rates, and inspecting VIA configurator communication.
+ECK always provides a USB HID Console interface (the QMK console usage) for diagnostic logs: key sensor readings, calibration progress, scan rates and VIA link counters. It is USB only; nothing is logged over Bluetooth.
 
 By default, all debug logging channels are **disabled** to avoid unnecessary MCU and USB bus overhead.
 
@@ -20,13 +20,13 @@ By default, all debug logging channels are **disabled** to avoid unnecessary MCU
 1. Navigate to the **Configure** tab.
 2. Open **HHKB Settings** → **Debug** submenu.
 3. Toggle the desired logging flags:
-   - **EC Matrix Stream** — prints state transition events (press/release) with matrix coordinates `(col, row)`, raw ADC count (`raw`), normalized value (`norm` from 0 to 1000 permille), and current key status.
-   - **Calibration Monitor** — real-time progress bar and calibration stream: baseline capture, peak registration per key (`[CAL] Key C3 R2 peak updated: 2650 -> 2890`), completion percentage `[====>    ] X% (N/60)`, and save readiness notifications.
+   - **EC Matrix Stream** — prints key readings as `[Topre] C<col> R<row>: raw=… base=… peak=… travel=…% DN|UP`: raw ADC count, the key's calibrated rest and peak, travel in percent, and pressed (DN) or released (UP).
+   - **Calibration Monitor** — real-time progress bar and calibration stream: baseline capture, peak registration per key (`[CAL] Key C3 R2 peak updated: 2650 -> 2890`), completion `[CAL] [====>    ] X% (N/60)`, and a note when all 60 keys have a peak.
      
      > [!NOTE]
      > Switching between the **Configure** tab and **HID Console** does not interrupt or reset calibration — the state remains active in MCU RAM until *Finish and save* is clicked. Console monitoring provides uninterrupted real-time visibility without having to manually refresh the status counter in the calibration menu.
-   - **Polling Rate Monitor** — outputs periodic reports of the actual matrix scan rate and USB task frequency (e.g. `[RATE] Matrix: 1000 Hz, USB: 500 Hz`).
-   - **VIA Telemetry Diag** — prints incoming VIA requests, commands, and parameter modifications.
+   - **Polling Rate Monitor** — prints the measured matrix scan rate against its target and the USB task loop rate (`[RATE] matrix=1000 Hz (target: 1000 Hz), usb_loop=… Hz`). A `-d HHKB_SCAN_DIAGNOSTICS` build prints `[SCAN]` lines with scan times, missed scans and queue overflows instead.
+   - **VIA Telemetry Diag** — prints VIA link counters: requests received, responses submitted, completed and failed, and whether a response is pending (`[VIA_DIAG] rx=… tx_sub=… tx_cpl=… tx_fail=… pend=…`).
 
 > [!TIP]
 > You can save logs to a text file or clear the output area directly using the buttons in the upper-right corner of the **HID Console** tab in VIA.
@@ -35,7 +35,7 @@ By default, all debug logging channels are **disabled** to avoid unnecessary MCU
 
 ## Non-linear Topre Capacitive Sensor Response
 
-The Topre capacitive switch relies on a conical spring compressing against PCB sensing pads. The resulting capacitance change follows a distinctly non-linear response relative to physical key travel:
+The Topre capacitive switch relies on a conical spring compressing against PCB sensing pads. The resulting capacitance change is non-linear in key travel. The table is an approximate illustration, not measured with ECK:
 
 | Physical Key Travel | Sensor Value (% / ‰) | Mechanism Behavior & Physics |
 |---|---|---|
@@ -46,6 +46,7 @@ The Topre capacitive switch relies on a conical spring compressing against PCB s
 | **4 mm** | **99%** (990–1000 ‰) | Bottom-out; maximum measurable capacitance (peak). |
 
 ### ECK Defaults:
-- **Default Actuation Point:** **75% of travel** (750 ‰, approximately 2.8 mm). The key triggers reliably right after collapsing the tactile dome, avoiding accidental triggers on light key rests.
-- **Release Hysteresis:** **0.4 mm** (100 ‰). Provides a solid deadband preventing chatter or repeated triggers near the actuation boundary.
+- **Factory thresholds:** with custom calibration and Rapid Trigger off (the defaults), each key uses PFU's factory press threshold and releases 50 counts below it. The two settings below apply only with custom calibration or Rapid Trigger on.
+- **Actuation Point:** 75 % of the calibrated signal range (750 ‰, shown as 3.0 mm in VIA).
+- **Release Hysteresis:** 10 % (100 ‰, shown as 0.4 mm).
 - **Rapid Trigger:** Disabled by default. Can be enabled on demand under **HHKB Settings → Rapid Trigger**.

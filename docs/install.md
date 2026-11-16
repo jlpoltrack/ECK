@@ -1,13 +1,14 @@
 **Documentation:** [Install](install.md) • [Backup & restore](backup-restore.md) • [Build](build.md) • [Config](config.md) • [Models](models.md) • [VIA](via.md) • [Debug](debug.md)
 
-# Install
+# Install (Classic and Classic Type-S)
+
+This page covers the Classic and Classic Type-S, which build but are untested on hardware. For the Hybrid see [Hybrid updates](hybrid-update.md). The web flasher (`web/`, Chrome or Edge) offers the same first install for all three.
 
 > [!WARNING]
 > You flash the keyboard and use DFU/SWD at your own risk. The author accepts no responsibility for keyboard damage, data loss, or consequences of selecting an incorrect firmware image, model, or recovery method.
 
 > [!TIP]
-> **Recommended initial key calibration after first flashing:**
-> While the firmware includes robust default capacitive baseline thresholds, it is strongly recommended to calibrate all 60 keys after initial flashing to match your specific PCB and conical spring tolerances. Step-by-step instructions and visual verification via the *Key Tester* (*Test Matrix*) tab are provided in the [VIA guide](via.md#key-calibration-process).
+> A fresh install uses PFU's factory thresholds from the keyboard's own EEPROM, so no calibration is needed. Custom calibration (needed for your own actuation point or Rapid Trigger) is described in the [VIA guide](via.md#key-calibration-process).
 
 ## Before flashing
 
@@ -49,7 +50,7 @@ Confirm with `--info` that the PFU updater sees the expected keyboard model.
 
 The local flasher validates the container strictly before transmission by default:
 - **Two CRC-16 checksums:** validates both the outer container CRC-16/MCRF4XX (first 2 bytes) and the inner payload CRC-16 over the 64 KB binary.
-- **Keyboard model:** validates that the hardware model (e.g. `AHHX01` for Classic, `AHHS01` for Type-S) matches the model string in the container header/trailer.
+- **Keyboard model:** validates that the hardware model (e.g. `AHHX01` for Classic, `AHHS01` for Type-S) matches the model string in the container trailer.
 - **Reset vector address:** validates that the reset vector points into the Flash Bank 2 range (`0x08010000 <= (reset_vector & ~1) < 0x08020000`) with the Thumb bit set.
 
 Optional CLI flags:
@@ -76,14 +77,14 @@ The PFU firmware update sequence over USB Raw HID has been fully analyzed and ve
 
 The `.hfb` container is exactly **65,570 bytes**:
 - `0x0000–0x0001`: outer CRC-16 (MCRF4XX) of the remaining container bytes.
-- `0x0002–0x0003`: offset / header.
+- `0x0002–0x0003`: inner CRC-16 (MCRF4XX) of the 64 KB payload.
 - `0x0004–0x10003`: 64 KB firmware payload (Flash Bank 2).
-- `0x10004–0x10005`: inner CRC-16 (MCRF4XX) of the 64 KB payload.
-- `0x10006–0x1000B`: ASCII model identifier (`AHHX01` for Classic, `AHHS01` for Classic Type-S).
-- `0x1000C–0x1000F`: 4-byte BCD firmware version. The current build scripts (`make_hfb.py`) emit **A4.50** for `AHHX01` and **A8.50** for `AHHS01`.
-- `0x10010–0x10021`: 18 bytes of 0xFF padding.
+- `0x10004–0x10011`: 14 bytes of 0xFF.
+- `0x10012–0x10017`: ASCII model identifier (`AHHX01` for Classic, `AHHS01` for Classic Type-S).
+- `0x10018–0x1001B`: 4-byte BCD firmware version. `make_hfb.py` emits **A4.50** for `AHHX01` and **A8.50** for `AHHS01`.
+- `0x1001C–0x10021`: 6 bytes of 0xFF.
 
-For full layout breakdown and manual packaging commands, see [Build](build.md#hfb-container-format-for-hhkb-classic).
+For manual packaging commands, see [Build](build.md#hfb-container-and-model-variants).
 
 ## DFU and SWD
 

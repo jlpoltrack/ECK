@@ -3,7 +3,7 @@
 
 Polls the window over SWD as fast as the probe allows and prints each change with a
 timestamp. Used to see PFU's app message buffers during Bank 1 updater traffic.
-Run: uv run --with pyocd python3 tools/nrf_ram_watch.py --nrf <uid> --addr 0x20002900 --size 0x100
+Run: uv run --with pyocd python3 tools/bench/nrf_ram_watch.py --nrf <uid> --addr 0x20002900 --size 0x100
 """
 import argparse
 import time

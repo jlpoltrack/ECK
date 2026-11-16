@@ -30,6 +30,17 @@ void via_keymap_poll(void) {}
 bool hhkb_via_command(uint8_t const *request, uint8_t *response) { (void)request; (void)response; return false; }
 
 int main(void) {
+    // EEPROM keeps keys as 16-bit VIA codes: every internal code VIA can set, and every kind
+    // in the default keymap, must come back unchanged
+    for (uint32_t v = 0; v <= 0xFFFF; v++) {
+        uint32_t k = from_via_keycode((uint16_t)v);
+        assert(from_via_keycode(to_via_keycode(k)) == k);
+    }
+    const uint32_t defaults[] = {K_TRNS, K_NULL, K_A, K_LSFT, K_RGUI, K_POWER, K_VOLU, K_VOLD, K_MUTE, K_PSCR,
+                                 MO(1), MO(2), MO(3), M(0), M(15), K_BOOTLOADER, K_LYRUP, K_LYRDWN};
+    for (size_t i = 0; i < sizeof defaults / sizeof defaults[0]; i++)
+        assert(from_via_keycode(to_via_keycode(defaults[i])) == defaults[i]);
+
     // 0. KC_NO and KC_TRNS stay distinct both ways
     assert(K_NULL != K_TRNS);
     assert(from_via_keycode(0x0000) == K_NULL && to_via_keycode(K_NULL) == 0x0000);

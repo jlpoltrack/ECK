@@ -11,7 +11,7 @@
 #define DYNAMIC_KEYMAP_MAX_LAYERS 4
 
 /* Two slots of keymap + macros must fit 0x08080600..0x08081000 (hhkb_keymap_storage.c). */
-#define DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE 224
+#define DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE 512
 
 
 #define TAPPING_TERM_DEFAULT 220
@@ -61,7 +61,7 @@
  *                cannot jump into Bank 2 regardless of its own validation logic.
  *             4. System reset via NVIC_SystemReset().
  *             The stock Bank 1 bootloader then stays in firmware update mode
- *             until Bank 2 is reflashed (PFU Keymap Tool or hhkb_flasher.py).
+ *             until Bank 2 is reflashed (PFU Keymap Tool or tools/hhkb_flasher.py).
  *             NOTE: In normal operation, SW6 MUST ALWAYS BE OFF!
  *   - SW6 OFF: Normal operation; ECK boots in Bank 2.
  *
@@ -93,7 +93,7 @@ enum layers {
 
 // clang-format off
 /**
- * 60-key HHKB Classic Layout:
+ * 60-key HHKB layout (all models):
  * Row 0 (15): Esc, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, -, =, \, `
  * Row 1 (14): Tab, Q, W, E, R, T, Y, U, I, O, P, [, ], Backspace
  * Row 2 (13): LCtrl, A, S, D, F, G, H, J, K, L, ;, ', Enter
@@ -122,6 +122,9 @@ const uint32_t keymap[][NUM_KEYS] = {
         ___,    ___,    ___,    ___,    ___,    ___,    K_PPLS, K_PMNS, K_END,  K_PGDN, K_DOWN, ___,    ___,
                 ___,    ___,                    ___,                    ___,    ___
     },
+    // -------------------------------------------------------------------------
+    // LAYER 2: BASE_2 (System 2 base layer)
+    // -------------------------------------------------------------------------
     [BASE_2] = {
         K_ESC,  K_1,    K_2,    K_3,    K_4,    K_5,    K_6,    K_7,    K_8,    K_9,    K_0,    K_MINS, K_EQL,  K_BKSL, K_GRAV,
         K_TAB,  K_Q,    K_W,    K_E,    K_R,    K_T,    K_Y,    K_U,    K_I,    K_O,    K_P,    K_LBRC, K_RBRC, K_BSPC,
@@ -131,7 +134,7 @@ const uint32_t keymap[][NUM_KEYS] = {
     },
 
     // -------------------------------------------------------------------------
-    // LAYER 1: HHKB (Fn Layer)
+    // LAYER 3: HHKB_2 (System 2 Fn layer)
     // -------------------------------------------------------------------------
     [HHKB_2] = {
         K_POWER, K_F1,   K_F2,   K_F3,   K_F4,   K_F5,   K_F6,   K_F7,   K_F8,   K_F9,   K_F10,  K_F11,  K_F12,  K_INS,  K_DEL,

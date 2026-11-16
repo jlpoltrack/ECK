@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Dump a SEGGER RTT up-buffer from RAM over SWD (pyOCD), no interactive terminal needed.
 
-Usage: rtt_dump.py --uid <probe> --cb <_SEGGER_RTT address> [--target nrf52832] [--channel 0]
+Only the nRF52 app has RTT, and only when built with `make NRF_LOG=1`.
+Run: uv run --with pyocd python3 tools/bench/rtt_dump.py --uid <probe> --cb <_SEGGER_RTT address> [--channel 0]
 """
 import argparse
 import struct

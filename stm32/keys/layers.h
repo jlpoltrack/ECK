@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-// Current active layer index (maintained for backward compatibility)
+// Highest active layer index, cached for layers_get_active()
 extern uint8_t layer;
 
 // Initialize the layer subsystem and layout mapping table

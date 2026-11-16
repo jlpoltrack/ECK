@@ -6,7 +6,7 @@
 #ifdef HHKB_HYBRID
 #include "hybrid_ble.h"
 #include "ble_link.h"
-/* Hybrid and diagnostic IDs follow upstream's 1..28. */
+/* Hybrid and diagnostic IDs follow the shared IDs 1..28. */
 #define HHKB_ID_BLE_SCAN_RATE 29
 #define HHKB_ID_NRF_UPDATE 30 /* tools/hybrid_update.py nrf */
 #define NRF_INSTALL_QUIET_MS 30000U
@@ -52,7 +52,7 @@ static bool nrf_update_command(uint8_t const *request, uint8_t *response) {
 #endif
 #define HHKB_ID_ADC_DIAG 31 /* tools/bench/key_depth.py (HHKB_ADC_DIAGNOSTICS builds) */
 
-/* Channel 0: calibration, actuation and LEDs. Values 1..6 retain their IDs. */
+/* Channel 0, the via.json "HHKB Settings" menu: IDs 1..28 on every model, 29..31 as above. */
 bool hhkb_via_command(uint8_t const *request, uint8_t *response) {
     if (request[1] != 0) return false;
     uint8_t id = request[2];

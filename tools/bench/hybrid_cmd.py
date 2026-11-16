@@ -4,7 +4,7 @@
 Writes g_hybrid_test_cmd, which ECK's link task forwards to the nRF52 as a BLE_LINK_CMD_* frame.
 Needs a build with it: ./build.sh hybrid -d HHKB_HYBRID_TEST_CMD
 Commands: pair N, cancel, delete N, clear, select N, disconnect.
-Run: uv run --with pyocd python3 tools/hybrid_cmd.py --stm <uid> pair 2
+Run: uv run --with pyocd python3 tools/bench/hybrid_cmd.py --stm <uid> pair 2
 """
 import argparse
 import subprocess

@@ -4,7 +4,7 @@
 Drives PC5 (switch to ground, active low) as an output low for --hold ms, which is what the
 switch does electrically, then returns it to an input. Logs PA8 (blue) / PA9 (orange) changes.
 --stop-debug first sets DBGMCU DBG_STOP so SWD keeps working in STOP (raises STOP current).
-Run: uv run --with pyocd python3 tools/power_switch.py --sn <st-link uid> --hold 300 --watch 3
+Run: uv run --with pyocd python3 tools/bench/power_switch.py --sn <st-link uid> --hold 300 --watch 3
 """
 import argparse
 import time

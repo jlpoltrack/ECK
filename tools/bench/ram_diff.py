@@ -3,7 +3,7 @@
 
 Takes RAM snapshots over SWD: two at rest (to mask counters that change anyway), then
 runs --cmd (e.g. a flasher request) and takes another; prints changed ranges with bytes.
-Run: uv run --with pyocd --with hidapi python3 tools/ram_diff.py --stm <uid> --cmd "..."
+Run: uv run --with pyocd --with hidapi python3 tools/bench/ram_diff.py --stm <uid> --cmd "..."
 """
 import argparse
 import shlex

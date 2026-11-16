@@ -12,7 +12,7 @@ Rules and lessons for AI agents (and people) working in this repo. Layout and bu
 
 Reason: renaming orphans data already in keyboards' EEPROM, or breaks tool matching.
 
-- EEPROM magics: `ECK2` keymap slot tag, `CMIT` commit word, `HKCx` settings records, settings words, the nRF52 bond slot tag. To change one, keep reading the old value and rewrite it, as `hhkb_keymap_storage.c` does for the pre-ECK slot tags.
+- EEPROM magics: `ECK3` keymap slot tag, `CMIT` commit word, `HKCx` settings records, settings words, the nRF52 bond slot tag. To change one, keep reading the old value and rewrite it, as `hhkb_keymap_storage.c` does for `ECK2` and the pre-ECK slot tags.
 - "HHKB" in the USB product string: `tools/hybrid_update.py` and the bench tools find the keyboard by it.
 - Code identifiers carry no project prefix. Everything says ECK (renamed from DMK 2026-11-16), including the keymap slot tag; only the aroum/dmk credit keeps the old name.
 
@@ -29,7 +29,7 @@ Reason: renaming orphans data already in keyboards' EEPROM, or breaks tool match
 - The test keyboard is assembled: no SWD or PPK2. The owner types on it. Flash and measure over USB without asking; never ask for keypresses (if presses are truly needed, run the recorder ~40 s and tell the owner to start right away).
 - Flash: `uv run -q --with hidapi python3 tools/hybrid_update.py stm32 build/hybrid/hhkb_ec_hybrid.bin` (~20-30 s), `nrf <.hfb>` (~40 s + 10 s install). Wrap USB/probe commands in `timeout`, and check any long command within 30 s.
 - Before risky flashes (EEPROM layout, storage code): `hybrid_update.py backup backups/<name>/` (git-ignored).
-- Checks without keypresses: `tools/bench/key_depth.py scantime 5` (baseline 407 µs since 2026-11-16), `noise 8` (median p-p ~12-13 counts), `tools/bench/eeprom_save_test.py` (all three EEPROM writers persist across resets), `tools/bench/via_keymap_check.py` (VIA keycode round trips and keymap reset; restores the keymap). `scantime`/`noise` need a `-d HHKB_ADC_DIAGNOSTICS` build.
+- Checks without keypresses: `tools/bench/key_depth.py scantime 5` (longest interrupts-off scan half; baseline 407 µs since 2026-11-16), `noise 8` (median p-p ~12-13 counts), `tools/bench/eeprom_save_test.py` (all three EEPROM writers persist across resets), `tools/bench/via_keymap_check.py` (VIA keycode round trips and keymap reset; restores the keymap). `scantime`/`noise` need a `-d HHKB_ADC_DIAGNOSTICS` build.
 - Most other `tools/bench/` tools need SWD (case open): ask first.
 - **Never commit raw EEPROM dumps or print the macro area**: the owner's macro may be a password. Use `tools/scrub_eeprom_fixture.py` for fixtures; report only address ranges.
 

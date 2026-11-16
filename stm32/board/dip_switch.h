@@ -57,9 +57,8 @@ uint8_t dip_switch_read(void);
 bool dip_switch_get(dip_switch_num_t sw);
 
 /**
- * @brief Check if Power Saving mode is active (when SW6 is used for power saving).
- * OFF = Power Saving Enabled (USB Remote Wakeup disabled / low power).
- * ON  = Power Saving Disabled (Full speed / responsive wakeup).
+ * @brief Power Saving: SW6 OFF = on (no USB remote wakeup by key; Hybrid: auto power-off on batteries).
+ * Always false where SW6 is the Bank 1 recovery switch (Classic, Type-S).
  */
 bool hhkb_is_power_saving_enabled(void);
 

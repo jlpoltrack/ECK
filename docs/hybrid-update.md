@@ -2,7 +2,9 @@
 
 # HHKB Professional Hybrid: installing, updating and going back to stock
 
-The Hybrid has two chips: the STM32 (keyboard, USB) and the nRF52 (Bluetooth). One ECK `.hfb` (`build/hybrid/hhkb_ec_hybrid.hfb`, from `./build.sh hybrid`) carries firmware for both. All steps below run over USB and were tested end to end on a PD-KB800BS. You need `dfu-util` (e.g. `brew install dfu-util`) and `uv`.
+The Hybrid has two chips: the STM32 (keyboard, USB) and the nRF52 (Bluetooth). One ECK `.hfb` (`build/hybrid/hhkb_ec_hybrid.hfb`, from `./build.sh hybrid`) carries firmware for both. All steps below run over USB and were tested end to end on a PD-KB800BS (other Hybrid models are unverified, [Supported models](models.md)). You need `dfu-util` (e.g. `brew install dfu-util`) and `uv`. A `v*` release also carries the built `.hfb` files and `hybrid_boot.bin`.
+
+The web flasher (`web/`, Chrome or Edge) offers the same steps from a page: unzip a release's `eck-web-flasher-<tag>.zip`, which bundles that release's images, run `python3 -m http.server` in it and open the page. It has not yet been run on a keyboard; the command-line tools below have.
 
 ## 1. First install (from stock)
 
@@ -14,7 +16,7 @@ uv run --with hidapi python3 tools/hhkb_flasher.py build/hybrid/hhkb_ec_hybrid.h
 
 Keep it plugged in until the tool says the Bluetooth module wait has finished (about 15 s).
 
-Then replace PFU's updater in the STM32's first flash bank with ECK's small boot stub; this enables recovery (section 4). Build the stub first (`arm-none-eabi-gcc`; output `_build/hybrid_boot.bin`):
+Then replace PFU's updater in the STM32's first flash bank with ECK's small boot stub; this enables recovery (section 4). Build the stub first (`arm-none-eabi-gcc`; output `stm32/boot/_build/hybrid_boot.bin`, which `boot` writes by default; `--stub FILE` picks another):
 
 ```sh
 make -C stm32/boot
@@ -36,6 +38,13 @@ uv run --with hidapi python3 tools/hybrid_update.py nrf $H     # Bluetooth firmw
 - **STM32:** ECK starts ST's USB DFU loader, built into the chip (VIA's bootloader command, or the bootloader key). The tool writes the image, verifies it, and only then writes the tag that lets it boot. It refuses unless Bank 1 holds the boot stub (section 1), since without it a failed write has no USB recovery; `--force` overrides.
 - **nRF52:** ECK passes the image to its nRF52 app, which stops Bluetooth, stores the image, and checks its MD5. On the following restart PFU's nRF52 bootloader (unchanged in the chip) installs it. Bluetooth pairings are kept.
 - Update the nRF52 only when its part changed. If both changed, either order works.
+
+Back up the keymap, macros and settings (data EEPROM) and the installed Bank 2 before risky changes, and write an EEPROM backup back later (it keeps the boot tag, so the installed firmware still boots):
+
+```sh
+uv run --with hidapi python3 tools/hybrid_update.py backup backups/mine/   # eeprom.bin, bank2.bin
+uv run --with hidapi python3 tools/hybrid_update.py restore-eeprom backups/mine/eeprom.bin
+```
 
 ## 3. Going back to stock
 

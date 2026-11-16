@@ -9,12 +9,12 @@
 #define SPIS_ENABLED 1
 #define SPIS1_ENABLED 1
 
-/* No UART on the Hybrid: logs go to RTT */
+/* No UART on the Hybrid: logs go to RTT, only in a `make NRF_LOG=1` build */
 #define UART_ENABLED 0
 #define NRF_LOG_BACKEND_UART_ENABLED 0
 #define NRF_LOG_BACKEND_RTT_ENABLED 1
 
-/* Vendor UUID base for the battery-voltage service */
+/* No vendor-specific UUIDs: only standard services */
 #define NRF_SDH_BLE_VS_UUID_COUNT 0
 
 /* LE Secure Connections: P-256 ECDH in Nordic's Oberon library, random numbers from the

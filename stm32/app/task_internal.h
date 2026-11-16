@@ -7,8 +7,8 @@
 #define TASK_PRIO_DEF 1
 
 // Prioritized FreeRTOS task levels:
-// Matrix scanner runs at highest priority to minimize latency and contact bounce jitter.
-// Keyboard logic processes queued events next.
+// The matrix scanner runs highest so scans keep their timing; keyboard logic, USB and the
+// Hybrid Bluetooth link task share the next level.
 #define TASK_PRIO_KEYBOARD 2
 #define TASK_PRIO_USBD 2
 #define TASK_PRIO_MATRIX 3

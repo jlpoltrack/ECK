@@ -5,7 +5,7 @@
                  which the firmware registered it (actuation) and released it, and the peak
   noise [SEC]    hands off: per-key noise at rest (worst keys, and a map by matrix position)
   record SEC F   hands off: raw readings of keys c0r0..c3r0 (13 keys) at scan rate, as JSON, for
-                 tools/rt_noise_sim.c
+                 tools/bench/rt_noise_sim.c
   press [SEC]    press keys fully a few times: per key the rest and full-press ADC readings and the
                  readings at which the firmware registered each press
   cal            each key's rest level and range (calibration) and its reading now

@@ -32,7 +32,7 @@ extern QueueHandle_t matrix_queue;
 void matrix_task(void *pvParameters);
 
 /**
- * @brief Query current debounced press state of a matrix switch coordinate.
+ * @brief Query the current press state (after thresholds or Rapid Trigger) of a matrix position.
  * @param row Matrix row index
  * @param col Matrix col index
  * @return true if switch is currently pressed, false otherwise

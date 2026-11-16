@@ -2,6 +2,8 @@
 
 Open firmware for the HHKB Professional Hybrid (and Classic / Classic Type-S) that runs on the keyboard's own STM32L072 and, on the Hybrid, its nRF52832 Bluetooth module. No hardware changes: it installs over USB through PFU's updater.
 
+Tested on hardware: the Hybrid (PD-KB800BS). Classic and Classic Type-S build but are untested on hardware ([docs/models.md](docs/models.md)).
+
 - STM32 side: electrostatic-capacitive key sensing, rapid trigger, VIA, USB HID, Hybrid power and battery handling, SPI link to the nRF52.
 - nRF52 side ([`nrf52/`](nrf52/README.md)): BLE HID keyboard on PFU's S132 SoftDevice, staged updates through the STM32.
 
@@ -23,7 +25,8 @@ Documentation: [docs/overview.md](docs/overview.md) and the rest of [docs/](docs
 | `stm32/vendor/` | FreeRTOS kernel; TinyUSB 0.18.0 subset; ST CMSIS and LL headers |
 | `common/` | `ble_link.h`, shared by the STM32 and nRF52 builds |
 | `nrf52/` | nRF52832 Bluetooth app (Makefile, nRF5 SDK 15.0.0) |
-| `tools/` | `.hfb` builder, PFU-updater flasher, Hybrid USB updater, build hash check; `tools/bench/` bench tools |
+| `tools/` | `.hfb` builder, PFU-updater flasher, Hybrid USB updater, build hash check, web flasher bundler; `tools/bench/` bench tools |
+| `web/` | Web flasher (Chrome/Edge, WebHID/WebUSB): first install, boot stub, Hybrid updates and backup |
 | `tests/` | Host unit tests (C and Python) |
 | `docs/` | Documentation |
 
@@ -39,7 +42,9 @@ tests/run_all_tests.sh
 uv run --with hidapi python3 tools/hybrid_update.py stm32 build/hybrid/hhkb_ec_hybrid.bin
 ```
 
-`-c` cleans first; `-d HHKB_ADC_DIAGNOSTICS,...` adds bench options ([docs/build.md](docs/build.md)). `tools/build_hashes.sh <source> <out>` builds every variant with a fixed version string and prints their hashes, to check that a refactor leaves the binaries unchanged.
+`-c` cleans first (including `nrf52/_build`); `-d HHKB_ADC_DIAGNOSTICS,...` adds bench options ([docs/build.md](docs/build.md)). `tools/build_hashes.sh <source> <out>` builds every variant with a fixed version string and prints their hashes, to check that a refactor leaves the binaries unchanged. Installing and updating the Hybrid: [docs/hybrid-update.md](docs/hybrid-update.md).
+
+A `v*` tag makes CI publish a GitHub release with the three `.hfb` files, `hybrid_boot.bin` and `eck-web-flasher-<tag>.zip` (the web flasher with those images bundled; serve it locally, e.g. `python3 -m http.server`).
 
 ## Origin and licence
 

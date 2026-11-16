@@ -22,7 +22,7 @@ extern "C" {
 typedef struct __attribute__((aligned(4))) {
     uint32_t magic;
     uint8_t  version;
-    uint8_t  led_modes;                          // v2: LED 1 low nibble, LED 2 high nibble
+    uint8_t  led_modes;                          // v2: LED 0 (PA8) low nibble, LED 1 (PA9) high nibble
     uint16_t crc16;
     uint16_t baseline[MATRIX_COLS][MATRIX_ROWS]; // 120 bytes
     uint16_t peak[MATRIX_COLS][MATRIX_ROWS];     // 120 bytes

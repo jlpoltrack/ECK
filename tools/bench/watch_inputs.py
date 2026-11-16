@@ -3,7 +3,7 @@
 
 For identifying buttons and lines by hand (press the power switch, plug USB...). Reads IDR/IN
 registers over SWD without halting; ignores pins listed with --ignore (e.g. the matrix mux).
-Run: uv run --with pyocd python3 tools/watch_inputs.py --stm <uid> --nrf <uid> [--seconds 60]
+Run: uv run --with pyocd python3 tools/bench/watch_inputs.py --stm <uid> --nrf <uid> [--seconds 60]
 """
 import argparse
 import time

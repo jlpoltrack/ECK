@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-HHKB Classic Firmware Container (.hfb) Tool
-===========================================
+HHKB Firmware Container (.hfb) Tool
+===================================
 
-Wraps a raw binary into a standard 65,570-byte HHKB firmware update container (.hfb).
+Wraps a raw binary into a standard 65,570-byte HHKB Classic/Type-S firmware update container (.hfb),
+or, with --nrf-app and --softdevice, into a Hybrid container (make_hybrid_hfb) that adds the nRF52 image.
 Computes the authentic CRC-16/MCRF4XX (poly 0x1021 reflected 0x8408, init 0xFFFF, no final XOR).
 
 Format breakdown (65,570 bytes total):
@@ -17,6 +18,7 @@ Format breakdown (65,570 bytes total):
 
 Usage:
     python3 make_hfb.py input.bin output.hfb [--model AHHX01] [--version A4.50]
+    python3 make_hfb.py input.bin output.hfb --nrf-app nrf52832_xxaa.bin --softdevice s132_nrf52_6.0.0_softdevice.hex
 """
 
 import sys

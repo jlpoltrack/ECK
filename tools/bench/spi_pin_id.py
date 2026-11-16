@@ -6,6 +6,7 @@ a unique number of times (PB3=1, PB5=2, PA15=3, PB6=4). Pins the nRF52 may drive
 (PB4, PC5) are never made outputs: their pull-up/pull-down is cycled instead
 (PB4=5, PC5=6 cycles), which only moves a line nothing else is driving.
 Uses pyOCD (attach, no reset), then resets the STM32 so ECK restarts.
+Run: uv run --with pyocd --with numpy python3 tools/bench/spi_pin_id.py --stm <uid>
 """
 import argparse
 import configparser

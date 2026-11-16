@@ -1,5 +1,5 @@
-/* HHKB Hybrid: send key reports to the nRF52 Bluetooth bridge (nrf52/) over SPI1
- * whenever no USB host is connected. Protocol: ble_link.h. */
+/* HHKB Hybrid: send key reports to the nRF52 Bluetooth bridge (nrf52/) over SPI1 while no USB
+ * host is connected or Bluetooth is selected (Fn+Ctrl+1..4). Protocol: ble_link.h. */
 #ifdef HHKB_HYBRID
 #include "hybrid_ble.h"
 #include "hybrid.h"
@@ -451,7 +451,7 @@ static bool enqueue(uint8_t type, const void *data, uint8_t len) {
     return true;
 }
 
-/* Overrides the weak USB-layer hooks: used only while no USB host is connected. */
+/* Overrides the weak USB-layer hooks: used while no USB host is connected or Bluetooth is selected. */
 bool hid_alt_send_keyboard(const USB_HID_KeyboardReport_TypeDef *report) {
     uint8_t r[8] = {report->Modifier, 0};
     memcpy(&r[2], report->Keycodes, 6);

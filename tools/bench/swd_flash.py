@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Flash a ECK Bank 2 image to an HHKB over SWD (STM32CubeProgrammer + ST-Link, NRST wired).
+"""Flash an ECK Bank 2 image to an HHKB over SWD (STM32CubeProgrammer + ST-Link, NRST wired).
 
 Writes the 64 KB Bank 2 section, then the EEPROM words PFU's Bank 1 checks before
 booting Bank 2 (0x08080360 = 1, 0x08080370 = CRC-16/MCRF4XX of the section), and resets.
 Accepts a .hfb (uses its STM32 section) or a raw .bin (padded with 0xFF to 64 KB).
+Run: python3 tools/bench/swd_flash.py [--sn <ST-Link serial>] <.hfb|.bin>
 """
 import argparse
 import os

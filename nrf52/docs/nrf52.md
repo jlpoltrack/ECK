@@ -1,6 +1,6 @@
 # HHKB Hybrid nRF52 notes
 
-Taken from `docs/hybrid-port.md` and `hybrid-stock-behaviour.md` (branch `hhkb-hybrid`), which keep the STM32 side, power handling and the full analysis of PFU's stock link. Tested on a Hybrid Type-S (PD-KB800BS, stock firmware A0.48) unless marked otherwise.
+Taken from `docs/hybrid-port.md` and `docs/hybrid-stock-behaviour.md`, which keep the STM32 side, power handling and the full analysis of PFU's stock link. Tested on a Hybrid Type-S (PD-KB800BS, stock firmware A0.48) unless marked otherwise.
 
 ## SWD
 

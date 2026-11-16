@@ -3,7 +3,7 @@
 
 Prints a line whenever the sampled PC moves between regions (MBR, SoftDevice, app,
 PFU bootloader) or the probe loses the chip (held in reset or SWD busy).
-Run: uv run --with pyocd python3 tools/nrf_pc_monitor.py --nrf <uid> [--seconds N]
+Run: uv run --with pyocd python3 tools/bench/nrf_pc_monitor.py --nrf <uid> [--seconds N]
 """
 import argparse
 import time

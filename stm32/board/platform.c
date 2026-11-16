@@ -11,7 +11,7 @@ void USB_IRQHandler(void) {
 }
 
 void platform_init(void) {
-    // 0. Early check: If SW6 is ON, branch immediately to Bank 1 (stock factory firmware)
+    // 0. Hybrid: clear Bank 1 state. Classic/Type-S: SW6 ON erases Bank 2's vectors, resets into Bank 1
     hhkb_early_dip_check();
 
 #ifndef HHKB_HYBRID // Hybrid boots on MSI 2.1 MHz: this blink would take ~3 s, on every reset

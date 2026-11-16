@@ -90,6 +90,6 @@ int main(void) {
     // Start FreeRTOS preemptive multitasking scheduler
     vTaskStartScheduler();
 
-    // Should never reach here unless heap memory was exhausted
+    // Returns only if the scheduler could not start (all objects are static, so not expected)
     platform_system_reset();
 }

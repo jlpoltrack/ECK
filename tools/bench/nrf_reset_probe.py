@@ -5,7 +5,7 @@ Attaches to both running chips without halting, clears the nRF52 RESETREAS, driv
 high for --hold ms from the STM32 side, drives it low again, then reads RESETREAS:
 RESETPIN (bit 0) means PD2 reaches the nRF52 reset pin; a power-on reset clears all bits.
 
-Run: uv run --with pyocd python3 tools/nrf_reset_probe.py --stm <uid> --nrf <uid>
+Run: uv run --with pyocd python3 tools/bench/nrf_reset_probe.py --stm <uid> --nrf <uid>
 """
 import argparse
 import time

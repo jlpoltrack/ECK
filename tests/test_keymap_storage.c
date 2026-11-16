@@ -10,6 +10,19 @@ flash_t *FLASH = &flash;
 via_storage_t via_storage;
 static uint32_t mock_eeprom[768];
 #define SLOT_ADDRESS ((uintptr_t)mock_eeprom)
+/* Stand-in VIA conversion: each distinct internal code gets its own 16-bit id (via.c is tested apart). */
+static uint32_t codes[2048];
+static unsigned n_codes;
+uint16_t to_via_keycode(uint32_t key) {
+    for (unsigned i = 0; i < n_codes; i++) if (codes[i] == key) return (uint16_t)i;
+    assert(n_codes < 2048);
+    codes[n_codes] = key;
+    return (uint16_t)n_codes++;
+}
+uint32_t from_via_keycode(uint16_t via_key) {
+    assert(via_key < n_codes);
+    return codes[via_key];
+}
 #include "hhkb_keymap_storage.c"
 
 static void restart(void) {
@@ -36,7 +49,7 @@ static void load_fixture(void) {
 }
 
 /* The owner's Hybrid EEPROM (two slots under the pre-ECK tag, generations 19 and
- * 20, written by the Vial firmware): load the newest keymap and macros, rewrite them under 'ECK2'. */
+ * 20, written by the Vial firmware): load the newest keymap and macros, rewrite them as format 3 ('ECK3'). */
 static void test_owner_eeprom(void) {
     load_fixture();
     const uint8_t *newest = &fixture[FIXTURE_SLOTS_OFFSET + SLOT_WORDS * 4]; /* slot 1 */
@@ -45,33 +58,32 @@ static void test_owner_eeprom(void) {
     assert(gen == 20);
     restart();
     assert(active_slot == 1);
-    assert(memcmp(dynamic_keymap, newest + 16, KEYMAP_WORDS * 4) == 0);
-    assert(memcmp(dynamic_macro_buffer, newest + 16 + (KEYMAP_WORDS + RESERVED_WORDS) * 4,
-                  DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE) == 0);
+    const uint8_t *old_macros = newest + 16 + V2_MACRO_WORD * 4;
+    assert(memcmp(dynamic_keymap, newest + 16, NUM_SLOT_KEYS * 4) == 0);
+    assert(memcmp(dynamic_macro_buffer, old_macros, 224) == 0);
+    for (unsigned i = 224; i < DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE; i++) assert(dynamic_macro_buffer[i] == 0);
     /* Spot checks against the keymap VIA shows on that keyboard. */
     assert(dynamic_keymap[0][54] == 0x10000001); /* Fn: MO(1) */
     assert(dynamic_keymap[1][53] == 0x10000002); /* Fn layer right Shift: MO(2) */
     assert(dynamic_keymap[1][43] == 0xC0);       /* Fn+Z: macro 0 */
     assert(memcmp(dynamic_macro_buffer, "exampleex\x01\x01\x28\x00", 13) == 0);
 
-    /* Loading an old-tag slot rewrites it into the older slot: same data, 'ECK2', reserved words zero. */
+    /* Loading a format-2 slot rewrites it into the older slot as format 3, with the same data. */
     poll_all();
     assert(active_slot == 0 && mock_eeprom[0] == SLOT_MAGIC && mock_eeprom[1] == 21);
     assert(valid(0) && valid(1));
-    assert(memcmp(&mock_eeprom[4], newest + 16, KEYMAP_WORDS * 4) == 0);
-    for (unsigned i = 0; i < RESERVED_WORDS; i++) assert(mock_eeprom[4 + KEYMAP_WORDS + i] == 0);
-    assert(memcmp(&mock_eeprom[4 + KEYMAP_WORDS + RESERVED_WORDS], newest + 16 + (KEYMAP_WORDS + RESERVED_WORDS) * 4,
-                  MACRO_WORDS * 4) == 0);
     restart();
-    assert(active_slot == 0 && memcmp(dynamic_keymap, newest + 16, KEYMAP_WORDS * 4) == 0);
+    assert(active_slot == 0 && memcmp(dynamic_keymap, newest + 16, NUM_SLOT_KEYS * 4) == 0);
+    assert(memcmp(dynamic_macro_buffer, old_macros, 224) == 0);
+    for (unsigned i = 224; i < DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE; i++) assert(dynamic_macro_buffer[i] == 0);
 
     /* A slot whose reserved words still hold Vial combos loads the same keymap and macros. */
     load_fixture();
     uint32_t *s1 = &mock_eeprom[SLOT_WORDS];
-    s1[4 + KEYMAP_WORDS] = 0x00050004U; /* combo inputs A, B */
-    s1[2] = slot_hash(s1);
+    s1[4 + NUM_SLOT_KEYS] = 0x00050004U; /* combo inputs A, B */
+    s1[2] = slot_hash(s1, V2_PAYLOAD_WORDS);
     restart();
-    assert(active_slot == 1 && memcmp(dynamic_keymap, newest + 16, KEYMAP_WORDS * 4) == 0);
+    assert(active_slot == 1 && memcmp(dynamic_keymap, newest + 16, NUM_SLOT_KEYS * 4) == 0);
     assert(memcmp(dynamic_macro_buffer, "exampleex", 9) == 0);
 }
 
@@ -115,6 +127,14 @@ int main(void) {
     restart();
     assert(memcmp(dynamic_macro_buffer, "\x01\x04\x02\x04\x00", 5) == 0);
 
+    // The whole 512-byte macro buffer persists
+    for (unsigned i = 0; i < DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE; i++) dynamic_macro_buffer[i] = (uint8_t)(i * 7 + 1);
+    via_keymap_save();
+    poll_all();
+    restart();
+    for (unsigned i = 0; i < DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE; i++) assert(dynamic_macro_buffer[i] == (uint8_t)(i * 7 + 1));
+    assert(DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE == 512);
+
     memset(mock_eeprom, 0, sizeof mock_eeprom);
     mock_eeprom[12] = 0x1234;
     mock_eeprom[SLOT_WORDS + 12] = 0x5678;
@@ -130,18 +150,18 @@ int main(void) {
     mock_eeprom[0] = SLOT_MAGIC_V1;
     mock_eeprom[1] = 1;
     mock_eeprom[3] = SLOT_COMMIT;
-    for (unsigned i = 0; i < V1_KEYMAP_WORDS; i++) mock_eeprom[4 + i] = 0x1000 + i;
-    mock_eeprom[2] = slot_v1_hash(&mock_eeprom[0]);
+    for (unsigned i = 0; i < NUM_SLOT_KEYS; i++) mock_eeprom[4 + i] = 0x1000 + i;
+    mock_eeprom[2] = slot_hash(&mock_eeprom[0], NUM_SLOT_KEYS);
 
     uint32_t *v1_slot1 = &mock_eeprom[V1_SLOT_WORDS];
     v1_slot1[0] = SLOT_MAGIC_V1;
     v1_slot1[1] = 2;
     v1_slot1[3] = SLOT_COMMIT;
-    for (unsigned i = 0; i < V1_KEYMAP_WORDS; i++) v1_slot1[4 + i] = 0x2000 + i;
+    for (unsigned i = 0; i < NUM_SLOT_KEYS; i++) v1_slot1[4 + i] = 0x2000 + i;
     v1_slot1[4 + 1] = 0xB3;  // old K_BOOTLOADER
     v1_slot1[4 + 2] = 0xA7;  // old K_RGB_TOGG
     v1_slot1[4 + 3] = 0xA5;  // old K_LYRUP
-    v1_slot1[2] = slot_v1_hash(v1_slot1);
+    v1_slot1[2] = slot_hash(v1_slot1, NUM_SLOT_KEYS);
 
     restart();
     assert(dynamic_keymap[0][0] == 0x2000);

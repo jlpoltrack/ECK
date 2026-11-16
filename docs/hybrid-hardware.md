@@ -65,17 +65,20 @@ Flash is two 64 KB banks, 128-byte pages; data EEPROM 6 KB at `0x08080000` in tw
 | `0x20000000`, 20 KB | SRAM | same |
 | `0x1FF00000-0x1FF01FFF` | System memory (8 KB, RM0367): ST's USB DFU loader (`0483:DF11`, "STM32 BOOTLOADER") | `stm32/hybrid/rom_dfu.h` |
 
-Data EEPROM words the Hybrid uses:
+Data EEPROM words the Hybrid uses. `0x08080000-0x080805FF` and `0x08081000-0x080813FF` are PFU's (keep them to return to stock); ECK owns `0x08080600-0x08080FFF` and `0x08081400-0x080817FF`, 756 B of which are free:
 
 | Address | Use | Source |
 | --- | --- | --- |
 | `0x08080310-0x0808034F` | PFU factory info block (returned by stock command 0x02); ECK does not write it on the Hybrid | hybrid-port.md |
 | `0x08080360` | Bank 2 installed = 1 (PFU layout, kept) | `stm32/boot/boot.c` |
 | `0x08080370` | CRC-16/MCRF4XX of the 64 KB Bank 2 (low half-word); 0 keeps Bank 1 in its updater/loader | `stm32/boot/boot.c`, `stm32/hybrid/hybrid.h` |
-| `0x08080600-0x08080FFF` | ECK keymap slots, two copies of keymap + 80 reserved bytes (Vial combos before VIA-only, now zero) + macros (224 B); zero in the stock dump | `stm32/via/hhkb_keymap_storage.c` |
+| `0x08080600-0x08080FFF` | ECK keymap slots: two 1,280-byte copies, each a 16-byte header, 240 keys as 16-bit VIA codes and 512 B of macros (`ECK3`; 272 B per slot unused); zero in the stock dump | `stm32/via/hhkb_keymap_storage.c` |
+| `0x08081000` | Factory rest levels per key (256 B) | `stm32/ec/ec_settings.c` |
 | `0x08081100`, `0x08081200` | Factory press thresholds and offsets per key (index `8*col+row`); used while custom calibration and Rapid Trigger are off (the default for a keyboard with no saved settings) | `stm32/ec/classic_matrix.c` |
 | `0x08081350` | Set by stock E0, cleared by PFU's Bank 1; meaning unknown | hybrid-port.md |
+| `0x08081400-0x080814FF` | Free (the stock firmware's keymap save 0; zero on the bench keyboard) | |
 | `0x08081500` | ECK settings record (264 B: calibration, scan rate, LED modes) | `stm32/ec/ec_settings.c` |
+| `0x08081608-0x080817F7` | Free | |
 | `0x080817F8` | Hybrid Bluetooth settings (slot, transport preference, Bluetooth scan rate) | `stm32/hybrid/hybrid_ble.c` |
 
 Boot: Bank 1 runs first. ECK's stub starts the ROM DFU loader if PC5 is held while PC13 shows USB power, or if Bank 2 fails the rule (sane vectors, `0x360` = 1, CRC at `0x370` matches); otherwise it jumps to `0x08010000` (tested). Option bytes: RDP 0, no write protection, BFB2 off (read over SWD).
@@ -137,7 +140,7 @@ Other stock-only facts: PC5/PC13 falling-edge EXTI in stock too; stock pulses PD
 | Recovery request | PB6 | P0.18 (SENSE in stock) | High while the nRF52 starts: recovery mode (link v6) |
 | Reset | PD2 | P0.21 via inverter | Pulse ~5 ms at 32 MHz (~10 ms at 16 MHz, inferred from the loop) |
 
-Wiring tested with `tools/bench/pin_map.py --drive`. SPI clock: PCLK2/16, 2 MHz at 32 MHz; on batteries (16 MHz) it is 1 MHz (inferred from the code). Frames: 32 bytes each way, magic, sequence, type, length, 27 data bytes, check byte (`stm32/hybrid/ble_link.h`, link version 6). Stock is reversed: the nRF52 is master (legacy SPI0, mode 3, ~125 kbit/s) and pulses on PB6 drive it ([hybrid-stock-behaviour.md](hybrid-stock-behaviour.md)).
+Wiring tested with `tools/bench/pin_map.py --drive`. SPI clock: PCLK2/16, 2 MHz at 32 MHz; on batteries (16 MHz) it is 1 MHz (inferred from the code). Frames: 32 bytes each way, magic, sequence, type, length, 27 data bytes, check byte (`common/ble_link.h`, link version 6). Stock is reversed: the nRF52 is master (legacy SPI0, mode 3, ~125 kbit/s) and pulses on PB6 drive it ([hybrid-stock-behaviour.md](hybrid-stock-behaviour.md)).
 
 The STM32 resets the nRF52 through PD2 when it does not answer within 500 ms of boot (it may be in System OFF), after 5 s without a valid reply (at most once per 30 s), and when it reports an aborted update (`hybrid_ble.c`). Unknown: what P0.11/P0.12 (stock inputs with pull-up) connect to.
 
@@ -161,14 +164,14 @@ Topre switches are capacitive: a key press changes the coupling between a row st
 1. Before the scan: rows deselected (PB0/PB1/PB2/PB10 high), op-amp on (PC7 high); on batteries the ADC is enabled for the scan only (20 us regulator start, then ADEN). Wait 20 us for the op-amp to settle, then hold interrupts off for each mux half (cols 0-7, then 8-14, with a 50 us settle after the switch), since readings depend on the timing between keys. Debug and calibration output runs between and after the halves.
 2. Per column (15): select the mux (PC6 for columns 0-7, PB15 for 8-14) and set the address PB12-PB14.
 3. Per row (4): wait 2 us after the column or previous row (settle), pulse discharge PC8 high for 2 us, drive the row low, wait 3 us, convert PA1 (12 bit, shortest sample time, optional 4x oversampling at rates up to 500 Hz), deselect the row.
-4. Compare with thresholds (calibrated per key, hysteresis 15 % of travel; or rapid trigger). Key index `8*col + row` in PFU's tables.
+4. Compare with thresholds (PFU's factory threshold with a 50-count release margin by default; with custom calibration or Rapid Trigger, the calibrated range, default hysteresis 10 %). Key index `8*col + row` in PFU's tables.
 5. After the scan: op-amp off; on batteries ADC and its regulator off.
 
 The sensor supply PC14 is set high at init and stays on while the keyboard is on; OFF turns it low. Matrix: 4 x 15 (`config.h`).
 
 | Item | Value | Source |
 | --- | --- | --- |
-| Scan rates | 50 / 125 / 250 / 500 / ~1050 Hz (periods 20 / 8 / 4 / 2 / 0.95 ms) | `matrix.c` |
+| Scan rates | 50 / 125 / 250 / 500 / 1000 Hz (periods 20 / 8 / 4 / 2 / 1 ms, TIM2) | `matrix.c` |
 | Hybrid default | 1000 Hz on USB, 250 Hz on Bluetooth (separate settings) | `classic_matrix.c`, `hybrid_ble.c` |
 | 1000 Hz | Chattered on the Hybrid while interrupts could run during a scan; no chatter since the scan holds them off | tested, `classic_matrix.c` |
 | During an nRF52 update | 50 Hz (1000 Hz starved the link task) | `classic_matrix.c` |

@@ -6,7 +6,7 @@ side drives the other. Then, for each STM32 candidate, it switches the STM32's
 internal pull-up/pull-down and reads the nRF52 P0.IN register: nRF pins that follow
 are wired to that STM32 pin. Both chips are reset afterwards.
 
-Run: uv run --with pyocd python3 tools/pin_map.py --stm <uid> --nrf <uid>
+Run: uv run --with pyocd python3 tools/bench/pin_map.py --stm <uid> --nrf <uid>
 """
 import argparse
 import time
