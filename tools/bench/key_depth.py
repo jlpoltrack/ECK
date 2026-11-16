@@ -12,11 +12,15 @@
   scantime [SEC] longest scan with interrupts held off, per second
 
 Depth is permille (1/1000) of the key's calibrated range: 0 at rest, 1000 bottomed out.
-Run: uv run --with hidapi python3 tools/key_depth.py live
+Run: uv run --with hidapi python3 tools/bench/key_depth.py live
 """
+import os
 import statistics
 import sys
 import time
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from via_hid import open_keyboard, send  # noqa: E402
 
 ROWS, COLS = 4, 15
 N = ROWS * COLS
@@ -30,16 +34,10 @@ NAMES = {**{0x04 + i: chr(65 + i) for i in range(26)}, **{0x1E + i: str((i + 1) 
 
 class Kbd:
     def __init__(self):
-        import hid
-        devs = [d for d in hid.enumerate() if d["usage_page"] == 0xFF60 and d["usage"] == 0x61]
-        if not devs:
-            sys.exit("no keyboard with a VIA interface found")
-        self.h = hid.device()
-        self.h.open_path(devs[0]["path"])
+        self.h = open_keyboard()
 
     def q(self, b):
-        self.h.write(bytes([0]) + bytes(b) + bytes(32 - len(b)))
-        r = bytes(self.h.read(32, 1000))
+        r = send(self.h, b)
         if len(r) < 32:
             sys.exit("no reply from the keyboard")
         return r

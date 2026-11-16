@@ -37,15 +37,12 @@ static inline void delay_us_nop(uint32_t us) {
     }
 }
 
+/* TIM2 runs from matrix_task's start on; hhkb_matrix_scan_raw checks it once per scan. */
 static inline void scan_wait_since(uint16_t start, uint16_t us) {
-    if (!(RCC->APB1ENR & RCC_APB1ENR_TIM2EN)) {
-        delay_us_nop(us);
-        return;
-    }
     uint16_t ticks = us * HHKB_SCAN_TIMER_TICKS_PER_US;
     while ((uint16_t)(TIM2->CNT - start) < ticks) {}
 }
-#define scan_delay_us(us) ((RCC->APB1ENR & RCC_APB1ENR_TIM2EN) ? scan_wait_since((uint16_t)TIM2->CNT, (us)) : delay_us_nop(us))
+#define scan_delay_us(us) scan_wait_since((uint16_t)TIM2->CNT, (us))
 
 static bool s_oversampling_applied = false;
 
@@ -140,6 +137,7 @@ static void report_half(uint8_t first, uint8_t end, const matrix_row_t *matrix, 
 
 __attribute__((section(".RamFunc"), optimize("O2")))
 bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
+    if (!(RCC->APB1ENR & RCC_APB1ENR_TIM2EN)) return false; // the settle waits need TIM2
     hhkb_record_matrix_scan();
 #ifdef HHKB_HYBRID
     // On batteries the ADC is off between scans (~1 mA); calibration survives ADEN/ADVREGEN = 0.
@@ -199,7 +197,7 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
     uint32_t primask = __get_PRIMASK();
     __disable_irq();
     if (primask) record_peaks = debug_topre = false; // entered masked (deep-sleep key check): no printing
-#if defined(HHKB_ADC_DIAGNOSTICS) && defined(HHKB_SCAN_1KHZ)
+#ifdef HHKB_ADC_DIAGNOSTICS
     uint16_t masked_start = (uint16_t)TIM2->CNT;
 #endif
 
@@ -208,14 +206,14 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
         rt_key_t *col_keys = s_rt_keys[col];
 
         if (col == 8) {
-#if defined(HHKB_ADC_DIAGNOSTICS) && defined(HHKB_SCAN_1KHZ)
+#ifdef HHKB_ADC_DIAGNOSTICS
             uint16_t half_us = (uint16_t)((uint16_t)TIM2->CNT - masked_start) / HHKB_SCAN_TIMER_TICKS_PER_US;
             if (half_us > s_masked_max_us) s_masked_max_us = half_us;
 #endif
             __set_PRIMASK(primask);
             report_half(0, 8, current_matrix, capture, record_peaks, debug_topre);
             __disable_irq();
-#if defined(HHKB_ADC_DIAGNOSTICS) && defined(HHKB_SCAN_1KHZ)
+#ifdef HHKB_ADC_DIAGNOSTICS
             masked_start = (uint16_t)TIM2->CNT;
 #endif
             GPIOC->BRR  = (1U << 6);
@@ -257,7 +255,9 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
             if (threshold != 0) {
                 if (prev_row & (1U << col)) threshold -= HHKB_FACTORY_HYSTERESIS;
                 is_pressed = val > threshold;
-                rt_key_reset(key);
+                key->ext = 0; // rt_key_reset, inline: it runs from flash
+                key->down = false;
+                key->latched = false;
             } else {
                 if (val <= key->reset_raw) { // reset zone of rt_update: same result, shorter path
                     key->ext = 0;
@@ -278,7 +278,7 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
         }
     }
 
-#if defined(HHKB_ADC_DIAGNOSTICS) && defined(HHKB_SCAN_1KHZ)
+#ifdef HHKB_ADC_DIAGNOSTICS
     uint16_t masked_us = (uint16_t)((uint16_t)TIM2->CNT - masked_start) / HHKB_SCAN_TIMER_TICKS_PER_US;
     if (masked_us > s_masked_max_us) s_masked_max_us = masked_us;
 #endif

@@ -228,15 +228,9 @@ void via_process_packet(uint8_t const *request, uint8_t *response) {
     uint8_t command_id = request[0];
     switch (command_id) {
     case VIA_GET_PROTOCOL_VERSION: {
-#if defined(VIA_PROTOCOL_VERSION)
-        // Explicit protocol version override
-        response[1] = (uint8_t)(((uint16_t)(VIA_PROTOCOL_VERSION) >> 8) & 0xFF);
-        response[2] = (uint8_t)((uint16_t)(VIA_PROTOCOL_VERSION) & 0xFF);
-#else
         // VIA v3 (Protocol 12) for usevia.app Custom UI menus
         response[1] = 0x00;
         response[2] = 0x0C;
-#endif
         break;
     }
 

@@ -10,7 +10,7 @@ Needs the Arm GNU toolchain (`arm-none-eabi-gcc` on PATH) and the nRF5 SDK 15.0.
 
 ```
 make                          # or: make SDK_ROOT=/path/to/nRF5_SDK_15.0.0
-make RELEASE=1                # without the RTT log (about 12 KB smaller)
+make clean && make NRF_LOG=1   # with the RTT log for SWD debugging (about 9 KB larger)
 ```
 
 Output: `_build/nrf52832_xxaa.bin` and `.hex`, linked at `0x26000` after the SoftDevice. It must fit the 64 KB app slot of the update container, hence `-Os`.

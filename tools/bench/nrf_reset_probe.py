@@ -11,7 +11,7 @@ import argparse
 import time
 
 from pyocd.core.exceptions import TransferError
-from pyocd.core.helpers import ConnectHelper
+from swd_attach import attach
 
 GPIOD = 0x50000C00
 MODER, BSRR, BRR = 0x00, 0x18, 0x28
@@ -20,11 +20,7 @@ REASONS = {0: "RESETPIN", 1: "DOG", 2: "SREQ", 3: "LOCKUP", 16: "OFF", 17: "LPCO
 
 
 def session(uid):
-    s = ConnectHelper.session_with_chosen_probe(
-        unique_id=uid, target_override="cortex_m", connect_mode="attach",
-        options={"frequency": 1000000, "resume_on_disconnect": True, "auto_unlock": False})
-    s.open()
-    return s
+    return attach(uid, frequency=1000000, resume_on_disconnect=True, auto_unlock=False)
 
 
 def decode(v):

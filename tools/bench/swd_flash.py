@@ -11,33 +11,13 @@ import subprocess
 import sys
 import tempfile
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from repo_paths import REPO  # noqa: E402
-
-sys.path.insert(0, str(REPO / "tools/hhkb"))
-from make_hfb import compute_crc16_mcrf4xx  # noqa: E402
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from hybrid_update import BANK2, compute_crc16_mcrf4xx, stm32_section  # noqa: E402
 
 CLI_DEFAULT = ("/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/"
                "STM32CubeProgrammer.app/Contents/Resources/bin/STM32_Programmer_CLI")
-BANK2 = 0x08010000
-SECTION = 0x10000
 WORD_VALID = 0x08080360
 WORD_CRC = 0x08080370
-
-
-def section_from(path):
-    data = open(path, "rb").read()
-    if path.endswith(".hfb"):
-        if len(data) < 4 + SECTION or int.from_bytes(data[2:4], "little") != compute_crc16_mcrf4xx(data[4:4 + SECTION]):
-            sys.exit(f"{path}: not a valid .hfb (size or STM32 CRC)")
-        sec = data[4:4 + SECTION]
-        sp, reset = int.from_bytes(sec[0:4], "little"), int.from_bytes(sec[4:8], "little")
-        if sp >> 24 != 0x20 or not BANK2 <= reset < BANK2 + SECTION:
-            sys.exit(f"{path}: Bank 2 vectors look wrong (SP {sp:#x}, reset {reset:#x})")
-        return sec
-    if len(data) > SECTION:
-        sys.exit(f"{path}: {len(data)} bytes exceeds the 64 KB Bank 2")
-    return data + b"\xff" * (SECTION - len(data))
 
 
 SERIAL = []  # ["sn=<ST-Link serial>"] when --sn is given
@@ -62,7 +42,7 @@ def main():
     if a.sn:
         SERIAL.append(f"sn={a.sn}")
 
-    sec = section_from(a.image)
+    sec = stm32_section(a.image)
     crc = compute_crc16_mcrf4xx(sec)
     with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as f:
         f.write(sec)

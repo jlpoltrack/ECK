@@ -35,8 +35,8 @@ static void load_fixture(void) {
     memcpy(mock_eeprom, &fixture[FIXTURE_SLOTS_OFFSET], 2 * SLOT_WORDS * 4);
 }
 
-/* The owner's Hybrid EEPROM (two DMK2 slots, generations 19 and 20, written by the Vial firmware):
- * the VIA-only firmware must load the newest keymap and macros and save them back unchanged. */
+/* The owner's Hybrid EEPROM (two slots under the pre-ECK tag, generations 19 and
+ * 20, written by the Vial firmware): load the newest keymap and macros, rewrite them under 'ECK2'. */
 static void test_owner_eeprom(void) {
     load_fixture();
     const uint8_t *newest = &fixture[FIXTURE_SLOTS_OFFSET + SLOT_WORDS * 4]; /* slot 1 */
@@ -54,10 +54,9 @@ static void test_owner_eeprom(void) {
     assert(dynamic_keymap[1][43] == 0xC0);       /* Fn+Z: macro 0 */
     assert(memcmp(dynamic_macro_buffer, "exampleex\x01\x01\x28\x00", 13) == 0);
 
-    /* Saving writes the older slot: same keymap and macros, reserved words zero. */
-    via_keymap_save();
+    /* Loading an old-tag slot rewrites it into the older slot: same data, 'ECK2', reserved words zero. */
     poll_all();
-    assert(active_slot == 0 && mock_eeprom[0] == SLOT_MAGIC_V2 && mock_eeprom[1] == 21);
+    assert(active_slot == 0 && mock_eeprom[0] == SLOT_MAGIC && mock_eeprom[1] == 21);
     assert(valid(0) && valid(1));
     assert(memcmp(&mock_eeprom[4], newest + 16, KEYMAP_WORDS * 4) == 0);
     for (unsigned i = 0; i < RESERVED_WORDS; i++) assert(mock_eeprom[4 + KEYMAP_WORDS + i] == 0);
@@ -126,7 +125,7 @@ int main(void) {
     assert(mock_eeprom[12] == 0x1234 && mock_eeprom[SLOT_WORDS + 12] == 0x5678);
     assert(active_slot == -1);
 
-    // Verify migration from DMK1 legacy snapshots
+    // Verify migration from format 1 snapshots
     memset(mock_eeprom, 0, sizeof mock_eeprom);
     mock_eeprom[0] = SLOT_MAGIC_V1;
     mock_eeprom[1] = 1;
@@ -151,13 +150,13 @@ int main(void) {
 
     poll_all();
     assert(active_slot == 0);
-    assert(mock_eeprom[0] == SLOT_MAGIC_V2);
+    assert(mock_eeprom[0] == SLOT_MAGIC);
 
     dynamic_keymap[0][0] = 0x9999;
     via_keymap_save();
     poll_all();
     assert(active_slot == 1);
-    assert(mock_eeprom[SLOT_WORDS] == SLOT_MAGIC_V2);
+    assert(mock_eeprom[SLOT_WORDS] == SLOT_MAGIC);
 
     restart();
     assert(dynamic_keymap[0][0] == 0x9999);

@@ -73,8 +73,6 @@ uint8_t hhkb_get_system(void);
 void hhkb_set_system(uint8_t system);
 uint8_t hhkb_rt_get(uint8_t id);
 void hhkb_rt_set(uint8_t id, uint8_t value);
-void hhkb_set_actuation_point_pct(uint8_t pct);
-uint8_t hhkb_get_actuation_point_pct(void);
 
 // Debug Console & Monitoring API
 enum {
@@ -91,8 +89,6 @@ void hhkb_record_matrix_scan(void);
 uint32_t hhkb_get_matrix_rate_hz(void);
 void hhkb_calc_rates(uint32_t elapsed_ms);
 
-bool hhkb_get_debug_enabled(void);
-void hhkb_set_debug_enabled(bool enabled);
 void hhkb_debug_feed_sample(uint8_t col, uint8_t row, uint16_t raw, uint16_t norm, bool is_pressed);
 void hhkb_get_debug_key_str(char *buf, size_t max_len);
 void hhkb_get_debug_raw_str(char *buf, size_t max_len);
@@ -105,14 +101,11 @@ extern rt_key_t s_rt_keys[MATRIX_COLS][MATRIX_ROWS];
 
 // Matrix accessors for scan module
 rt_cfg_t hhkb_get_scan_cfg(void);
-uint16_t hhkb_get_cal_baseline(uint8_t col, uint8_t row);
-uint16_t hhkb_get_cal_peak(uint8_t col, uint8_t row);
 void hhkb_update_dynamic_peak(uint8_t col, uint8_t row, uint16_t val);
 void hhkb_cal_accumulate_baseline(uint8_t col, uint8_t row, uint16_t val);
 void hhkb_cal_record_peak(uint8_t col, uint8_t row, uint16_t val);
 bool hhkb_cal_is_capturing_baseline(void);
 void hhkb_cal_decrement_samples(void);
-rt_key_t *hhkb_get_rt_key(uint8_t col, uint8_t row);
 
 #ifdef __cplusplus
 }

@@ -4,6 +4,8 @@
 #include "tusb.h"
 #include "via.h"
 #include "fmt.h"
+#include "ec_settings.h"
+#include "classic_matrix.h"
 #include <stdarg.h>
 #include <string.h>
 
@@ -52,7 +54,6 @@ uint8_t const desc_via_report[] = {
     0xc0              // End Collection
 };
 
-#ifdef DEBUG_CONSOLE_ENABLE
 // QMK / VIA Debug Console descriptor (Usage Page 0xFF31, Usage 0x0074)
 uint8_t const desc_console_report[] = {
     0x06, 0x31, 0xFF, // Usage Page (Vendor Defined 0xFF31)
@@ -66,14 +67,11 @@ uint8_t const desc_console_report[] = {
     0x81, 0x02,       //   Input (Data, Var, Abs)
     0xc0              // End Collection
 };
-#endif
 
 enum {
     ITF_NUM_KEYBOARD = 0,
     ITF_NUM_VIA,
-#ifdef DEBUG_CONSOLE_ENABLE
     ITF_NUM_CONSOLE,
-#endif
     ITF_TOTAL
 };
 
@@ -99,13 +97,8 @@ tusb_desc_device_t const desc_device = {
     .bNumConfigurations = 0x01 // Number of configurations
 };
 
-#ifdef DEBUG_CONSOLE_ENABLE
 #define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_HID_DESC_LEN + TUD_HID_INOUT_DESC_LEN + TUD_HID_DESC_LEN)
 #define TOTAL_INTERFACES 3
-#else
-#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_HID_DESC_LEN + TUD_HID_INOUT_DESC_LEN)
-#define TOTAL_INTERFACES 2
-#endif
 
 #ifndef USB_REMOTE_WAKEUP_ENABLED
 #define USB_REMOTE_WAKEUP_ENABLED 1
@@ -170,7 +163,6 @@ uint8_t const desc_configuration[] = {
                                   32,                       // Endpoint IN size (32 bytes)
                                   1),                       // Polling interval in milliseconds
 
-#ifdef DEBUG_CONSOLE_ENABLE
 #ifndef EPNUM_CONSOLE_IN
 #define EPNUM_CONSOLE_IN 0x83
 #endif
@@ -182,7 +174,6 @@ uint8_t const desc_configuration[] = {
                        EPNUM_CONSOLE_IN,
                        32,
                        1),
-#endif
 
 };
 
@@ -211,43 +202,15 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index) {
     return desc_configuration;
 }
 
-#if TUD_OPT_HIGH_SPEED
-static tusb_desc_device_qualifier_t const desc_device_qualifier = {
-    .bLength            = sizeof(tusb_desc_device_qualifier_t),
-    .bDescriptorType    = TUSB_DESC_DEVICE_QUALIFIER,
-    .bcdUSB             = 0x0200,
-    .bDeviceClass       = 0x00,
-    .bDeviceSubClass    = 0x00,
-    .bDeviceProtocol    = 0x00,
-    .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
-    .bNumConfigurations = 0x01,
-    .bReserved          = 0x00
-};
-
-static uint8_t desc_other_speed_config[CONFIG_TOTAL_LEN];
-
-uint8_t const *tud_descriptor_device_qualifier_cb(void) {
-    return (uint8_t const *)&desc_device_qualifier;
-}
-
-uint8_t const *tud_descriptor_other_speed_configuration_cb(uint8_t index) {
-    (void)index;
-    memcpy(desc_other_speed_config, desc_configuration, CONFIG_TOTAL_LEN);
-    desc_other_speed_config[1] = TUSB_DESC_OTHER_SPEED_CONFIG;
-    return desc_other_speed_config;
-}
-#endif
 
 // HID report descriptor callback
 uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance) {
     if (instance == ITF_NUM_VIA) {
         return desc_via_report;
     }
-#ifdef DEBUG_CONSOLE_ENABLE
     if (instance == ITF_NUM_CONSOLE) {
         return desc_console_report;
     }
-#endif
     (void)instance;
     return desc_hid_report;
 }
@@ -256,9 +219,7 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance) {
 void tud_mount_cb(void) {
     indicators_leds_off();
     USB_HID_ResyncKeyboard();
-#ifdef DEBUG_CONSOLE_ENABLE
     debug_console_printf("[BOOT] HID console ready\r\n");
-#endif
 }
 
 // Invoked when device is unmounted
@@ -274,12 +235,6 @@ void tud_suspend_cb(bool remote_wakeup_en) {
 void tud_resume_cb(void) {
     indicators_leds_off(); // the keyboard task's next tick relights them
     USB_HID_ResyncKeyboard();
-}
-
-// This callback will be invoked when the host sends a SET_PROTOCOL request to switch between these modes.
-void tud_hid_boot_mode_cb(uint8_t instance, bool boot_mode) {
-    (void)instance;
-    (void)boot_mode;
 }
 
 // This callback is invoked when the host sends a GET_REPORT request.
@@ -319,29 +274,10 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const *report, uint16_
         via_tx_complete_count++;
         via_flush_pending_report();
     }
-#ifdef DEBUG_CONSOLE_ENABLE
     if (instance == ITF_NUM_CONSOLE) {
         debug_console_flush();
     }
-#endif
 }
-
-#ifdef DEBUG_CONSOLE_ENABLE
-__attribute__((weak)) void hhkb_calc_rates(uint32_t elapsed_ms) { (void)elapsed_ms; }
-__attribute__((weak)) uint32_t hhkb_get_matrix_rate_hz(void) { return 0; }
-__attribute__((weak)) bool hhkb_get_debug_flag(uint8_t flag) {
-    (void)flag;
-    return false;
-}
-__attribute__((weak)) uint8_t hhkb_get_scan_rate(void) { return 4; }
-__attribute__((weak)) void hhkb_get_scan_diagnostics(uint32_t *scan_us, uint32_t *scan_max_us, uint32_t *work_max_us, uint32_t *missed, uint32_t *q_full) {
-    if (scan_us) *scan_us = 0;
-    if (scan_max_us) *scan_max_us = 0;
-    if (work_max_us) *work_max_us = 0;
-    if (missed) *missed = 0;
-    if (q_full) *q_full = 0;
-}
-__attribute__((weak)) void hhkb_reset_scan_diagnostics_peaks(void) {}
 
 static uint32_t s_last_diag_tick = 0;
 static uint32_t s_usb_loop_total = 0;
@@ -390,7 +326,6 @@ void usb_diag_task(void) {
         }
     }
 }
-#endif
 
 // This callback is invoked when the host sends a SET_REPORT request.
 void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer,
@@ -483,7 +418,6 @@ void debug_console_printf(const char *fmt, ...) {
 }
 
 void debug_console_flush(void) {
-#ifdef DEBUG_CONSOLE_ENABLE
     if (!tud_mounted() || tud_suspended()) return;
     if (!tud_hid_n_ready(ITF_NUM_CONSOLE)) return;
 
@@ -506,5 +440,4 @@ void debug_console_flush(void) {
     if (count > 0) {
         tud_hid_n_report(ITF_NUM_CONSOLE, 0, packet, sizeof(packet));
     }
-#endif
 }

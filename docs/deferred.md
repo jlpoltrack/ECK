@@ -12,13 +12,10 @@ Work that is decided but not done yet, or waiting on a decision. Update this fil
 - **USB VID/PID.** The firmware uses the test ID `CAFE:4010`. Replace it with a real ID (pid.codes suggested); the exact ID needs the owner's approval. `hybrid_update.py`, the bench tools and `web/` find the keyboard by "HHKB" in the product string, so they keep working.
 - **USB hardware-in-the-loop tests.** Run a test set against the bench keyboard over USB (flash, VIA round trips, EEPROM persistence) in one command, e.g. before tagging a release. Pieces exist in `tools/bench/` (`eeprom_save_test.py`, `via_keymap_check.py`, `key_depth.py scantime`/`noise`).
 
-## Size and performance review (2026-11-16), not yet adopted
+## Held in reserve (size/performance review, 2026-11-16)
 
-Measured on the 2026-11-16 build: STM32 Hybrid 43,988 B flash (67%), ~17.9 KB of 20 KB RAM; Classic/Type-S 35,380 B; nRF52 app 54,980 B of its 64 KB slot (84%).
+The review's other items are done (STM32 Hybrid now 43,016 B flash, Classic/Type-S ~34.4 KB; nRF52 app 45,756 B). Not adopted, for when flash or scan time gets tight:
 
-- **nRF52 release build:** `build.sh` builds the nRF52 app with RTT logging (unreachable on an assembled keyboard). `RELEASE=1` (`nrf52/Makefile`) takes it to 45,756 B (-9.2 KB) and -2.1 KB RAM. Needs an nRF52 flash and recovery check.
-- **Settings load:** `stm32/ec/ec_settings.c` repeats the Rapid Trigger checks and the baseline/peak loop three times; one helper saves ~368 B and ~23 lines. Check with `eeprom_save_test.py` after a backup.
-- **Dead code:** about 150 lines of uncalled functions and `#ifdef`s on always-set options (`MATRIX_REPORT_BATCH`, `HHKB_SCAN_1KHZ`, `DEBUG_CONSOLE_ENABLE`, the TinyUSB high-speed block). Prove with `tools/build_hashes.sh` (binaries unchanged).
-- **FreeRTOS:** mutexes, queue registry and dynamic allocation are unused; turning them off drops `heap_4.c` and its test (~750 lines, -224 B).
-- **Tools:** `tools/bench/swd_flash.py` imports from a missing `tools/hhkb` folder (broken); CRC/container code duplicated between `make_hfb.py` and `hhkb_flasher.py`; the VIA open/send helper exists four times; `web/eck.test.mjs` is not run by the test script or CI.
-- **Scan time (needs a `noise` re-measure):** inlining `rt_key_reset` in the RAM scan loop and dropping the dead counted-loop fallback in `classic_matrix.c`'s delay helpers would save ~100 µs per scan (estimated). Link-time optimisation saves ~3.9 KB but rewrites the scan loop; keep in reserve.
+- **Link-time optimisation:** about -3.9 KB, but it rewrites the scan loop, so rest levels move: re-measure `noise` and the per-key rest readings (`key_depth.py cal`).
+- **Default keymap layers 2-3** repeat layers 0-1 except one key; generating them at start-up saves ~450 B but makes `stm32/board/config.h` harder to read.
+- **Scan restructure:** read all keys with interrupts off, decide presses after; cuts the interrupts-off time further but is a larger, riskier change.

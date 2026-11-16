@@ -300,14 +300,12 @@ static void link_task(void *arg) {
     TickType_t stats_at = xTaskGetTickCount();
     for (;;) {
         link_watchdog();
-#ifdef DEBUG_CONSOLE_ENABLE
         if (xTaskGetTickCount() - stats_at >= pdMS_TO_TICKS(1000)) {
             stats_at = xTaskGetTickCount();
             if (hhkb_get_debug_flag(DEBUG_FLAG_RATE))
                 debug_console_printf("[LINK] frames=%lu bad=%lu lost=%lu ready=%u\r\n", (unsigned long)s_stat_frames,
                                      (unsigned long)s_stat_bad, (unsigned long)s_stat_lost, (unsigned)s_ready);
         }
-#endif
         /* Stock first use: no host paired and no USB host, so pair slot 1 right away. */
         bool recovery = (s_flags & BLE_LINK_ST_RECOVERY) != 0; /* takes update frames only */
         if (!first_use_checked && s_ready && !recovery && xTaskGetTickCount() > pdMS_TO_TICKS(FIRST_USE_MS)) {

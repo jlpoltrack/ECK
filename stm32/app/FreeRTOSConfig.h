@@ -76,11 +76,11 @@ extern uint32_t SystemCoreClock;
 #define configIDLE_SHOULD_YIELD 1
 
 /* Synchronization Related */
-#define configUSE_MUTEXES 1
-#define configUSE_RECURSIVE_MUTEXES 1
+#define configUSE_MUTEXES 0
+#define configUSE_RECURSIVE_MUTEXES 0
 #define configUSE_APPLICATION_TASK_TAG 0
 #define configUSE_COUNTING_SEMAPHORES 0
-#define configQUEUE_REGISTRY_SIZE 8
+#define configQUEUE_REGISTRY_SIZE 0
 #define configUSE_QUEUE_SETS 0
 #define configUSE_TIME_SLICING 1
 #ifndef configUSE_NEWLIB_REENTRANT
@@ -95,19 +95,12 @@ extern uint32_t SystemCoreClock;
 
 /* Memory allocation related definitions. */
 #define configSUPPORT_STATIC_ALLOCATION 1
-#define configSUPPORT_DYNAMIC_ALLOCATION 1
-/* Dynamic module tasks need room for their stacks and FreeRTOS metadata.
- * Override at build time for boards with different RAM budgets. */
-#ifndef configTOTAL_HEAP_SIZE
-// 20 KiB SRAM; its only board (HHKB) allocates tasks and queues statically, so the heap
-// only backs unused fallbacks (measured: never initialised at run time).
-#define configTOTAL_HEAP_SIZE 512
-#endif
-#define configAPPLICATION_ALLOCATED_HEAP 0
+/* Every task and queue is created statically: no heap. */
+#define configSUPPORT_DYNAMIC_ALLOCATION 0
 
 /* Hook function related definitions. */
 #define configCHECK_FOR_STACK_OVERFLOW 2
-#define configUSE_MALLOC_FAILED_HOOK 1
+#define configUSE_MALLOC_FAILED_HOOK 0
 #define configUSE_DAEMON_TASK_STARTUP_HOOK 0
 
 /* Run time and task stats gathering related definitions. */

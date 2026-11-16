@@ -12,9 +12,9 @@ Rules and lessons for AI agents (and people) working in this repo. Layout and bu
 
 Reason: renaming orphans data already in keyboards' EEPROM, or breaks tool matching.
 
-- EEPROM magics: `DMK1`/`DMK2` keymap slot magics, `CMIT` commit word, `HKCx` settings records, settings words, the nRF52 bond slot tag.
+- EEPROM magics: `ECK2` keymap slot tag, `CMIT` commit word, `HKCx` settings records, settings words, the nRF52 bond slot tag. To change one, keep reading the old value and rewrite it, as `hhkb_keymap_storage.c` does for the pre-ECK slot tags.
 - "HHKB" in the USB product string: `tools/hybrid_update.py` and the bench tools find the keyboard by it.
-- Other code identifiers carry no `DMK_`/`dmk_` prefix (and no replacement project prefix). Prose and visible names say ECK (renamed from DMK 2026-11-16); stored markers keep DMK.
+- Code identifiers carry no project prefix. Everything says ECK (renamed from DMK 2026-11-16), including the keymap slot tag; only the aroum/dmk credit keeps the old name.
 
 ## Build and test
 
@@ -29,14 +29,14 @@ Reason: renaming orphans data already in keyboards' EEPROM, or breaks tool match
 - The test keyboard is assembled: no SWD or PPK2. The owner types on it. Flash and measure over USB without asking; never ask for keypresses (if presses are truly needed, run the recorder ~40 s and tell the owner to start right away).
 - Flash: `uv run -q --with hidapi python3 tools/hybrid_update.py stm32 build/hybrid/hhkb_ec_hybrid.bin` (~20-30 s), `nrf <.hfb>` (~40 s + 10 s install). Wrap USB/probe commands in `timeout`, and check any long command within 30 s.
 - Before risky flashes (EEPROM layout, storage code): `hybrid_update.py backup backups/<name>/` (git-ignored).
-- Checks without keypresses: `tools/bench/key_depth.py scantime 5` (baseline 435 µs), `noise 8` (median p-p ~12-13 counts), `tools/bench/eeprom_save_test.py` (all three EEPROM writers persist across resets).
+- Checks without keypresses: `tools/bench/key_depth.py scantime 5` (baseline 407 µs since 2026-11-16), `noise 8` (median p-p ~12-13 counts), `tools/bench/eeprom_save_test.py` (all three EEPROM writers persist across resets), `tools/bench/via_keymap_check.py` (VIA keycode round trips and keymap reset; restores the keymap). `scantime`/`noise` need a `-d HHKB_ADC_DIAGNOSTICS` build.
 - Most other `tools/bench/` tools need SWD (case open): ask first.
 - **Never commit raw EEPROM dumps or print the macro area**: the owner's macro may be a password. Use `tools/scrub_eeprom_fixture.py` for fixtures; report only address ranges.
 
 ## Firmware rules
 
 - **Hybrid timing never uses counted loops**; use SysTick delays. Reason: flash prefetch changed loop timing once and broke Bluetooth.
-- Key readings shift with scan code speed (post-read work overruns the 2 µs settle window), so compiler-flag or hot-path changes move rest levels; re-measure `noise` after such changes. `-O2` globally was evaluated (2026-11-16) and isn't worth it; the hot functions already carry `optimize("O2")` in RAM.
+- Key readings shift with scan code speed (post-read work overruns the 2 µs settle window), so compiler-flag or hot-path changes move rest levels; re-measure `noise` and compare per-key rest readings (`key_depth.py cal`, average several runs) after such changes. Example: trimming the per-key scan work (435 -> 407 µs) lowered rest readings ~16 counts with noise unchanged. `-O2` globally was evaluated (2026-11-16) and isn't worth it; the hot functions already carry `optimize("O2")` in RAM.
 - **Data EEPROM writes go through `stm32/board/eeprom.c`** (`eeprom_write_word`). Reason: writers in different tasks used to lock the EEPROM under each other. Exception: the Classic SW6 erase path, which runs before the scheduler.
 - Unrecoverable errors call `platform_system_reset()` (faults, asserts, start-up failures). Reason: a hung Hybrid on batteries needs the batteries pulled.
 - `hybrid_update.py stm32` refuses unless Bank 1 holds the boot stub (`--force` overrides). Reason: without it a failed write has no USB recovery.
@@ -51,4 +51,6 @@ Reason: renaming orphans data already in keyboards' EEPROM, or breaks tool match
 - Bench scripts must close their HID handle before running `hybrid_update.py backup` (or another tool that opens the keyboard), or that tool fails.
 - Agent sandboxes may refuse to build from a freshly downloaded SDK archive; validate such builds in CI instead.
 - Recovery-mode testing: a `--recovery` run restarts the nRF52 twice, and each restart blinks the orange LED (2/s, "Bluetooth update") for up to 30 s. Tell the owner before running tests that light LEDs.
+- To build while another job uses `build/`, build a `git archive` copy in a sibling folder (the nRF5 SDK must sit at `../`), then delete it. Reason: two builds in one `build/` tree clobber each other.
+- **Keymaps in EEPROM hold internal 32-bit keycodes**, so never change what an existing value means: add new encodings in unused values or flag bits (K_NULL = 0x01, hold-tap `HT_MODS_FLAG` bit 23). Reason: saved keymaps would silently change behaviour.
 - Deferred and open items live in [docs/deferred.md](docs/deferred.md); update it when one is done or added.

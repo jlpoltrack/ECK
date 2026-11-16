@@ -9,7 +9,7 @@ Run: uv run --with pyocd python3 tools/power_switch.py --sn <st-link uid> --hold
 import argparse
 import time
 
-from pyocd.core.helpers import ConnectHelper
+from swd_attach import attach
 
 GPIOA_ODR, GPIOC_MODER, GPIOC_BSRR = 0x50000014, 0x50000800, 0x50000818
 RCC_IOPENR, RCC_APB2ENR, DBGMCU_CR = 0x4002102C, 0x40021034, 0x40015804
@@ -47,9 +47,7 @@ def main():
     ap.add_argument("--watch", type=float, default=3, help="seconds to log LEDs after the press starts")
     ap.add_argument("--stop-debug", action="store_true")
     a = ap.parse_args()
-    s = ConnectHelper.session_with_chosen_probe(unique_id=a.sn, target_override="cortex_m", connect_mode="attach",
-                                                options={"resume_on_disconnect": True})
-    s.open()
+    s = attach(a.sn, resume_on_disconnect=True)
     t = s.board.target
     if a.stop_debug:
         t.halt()

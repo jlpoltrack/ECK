@@ -16,3 +16,4 @@ __pycache__/
 *.npz
 /.vscode/
 /web/firmware/
+/.claude/worktrees/

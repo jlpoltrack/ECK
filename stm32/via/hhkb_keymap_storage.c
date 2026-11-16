@@ -12,9 +12,9 @@
 #ifndef SLOT_ADDRESS
 #define SLOT_ADDRESS 0x08080600UL
 #endif
-#define SLOT_MAGIC_V1 0x314b4d44UL // 'DMK1' (Keymap only)
-#define SLOT_MAGIC_V2 0x324b4d44UL // 'DMK2' (Keymap + reserved + Macros)
-#define SLOT_MAGIC    SLOT_MAGIC_V2
+#define SLOT_MAGIC     0x324b4345UL // 'ECK2': keymap + reserved + macros
+#define SLOT_MAGIC_OLD 0x324b4d44UL // same layout, tag from before the ECK rename: read, then rewritten
+#define SLOT_MAGIC_V1  0x314b4d44UL // format 1 (keymap only), from before the ECK rename
 #define SLOT_COMMIT   0x54494d43UL // 'CMIT'
 
 #define V1_KEYMAP_WORDS 240U
@@ -58,7 +58,7 @@ static uint32_t slot_v1_hash(volatile const uint32_t *p) {
 }
 static bool valid(unsigned n) {
     volatile const uint32_t *p = slot(n);
-    return p[0] == SLOT_MAGIC && p[3] == SLOT_COMMIT && p[2] == slot_hash(p);
+    return (p[0] == SLOT_MAGIC || p[0] == SLOT_MAGIC_OLD) && p[3] == SLOT_COMMIT && p[2] == slot_hash(p);
 }
 static bool valid_v1(unsigned n) {
     volatile const uint32_t *p = slot_v1(n);
@@ -69,14 +69,14 @@ static bool has_valid_v1(void) {
 }
 static bool writable(unsigned n) {
     volatile const uint32_t *p = slot(n);
-    if (p[0] == SLOT_MAGIC) return true;
+    if (p[0] == SLOT_MAGIC || p[0] == SLOT_MAGIC_OLD) return true;
     if (n == 0 && p[0] == SLOT_MAGIC_V1) return true;
     if (valid(1 - n)) return true;
     if (has_valid_v1()) return true;
     for (unsigned i = 0; i < SLOT_WORDS; i++) if (p[i] != 0) return false;
     return true;
 }
-/* DMK1 keymaps hold the internal codes from before keys.h moved them: K_LYRUP/K_LYRDWN
+/* Format 1 keymaps hold the internal codes from before keys.h moved them: K_LYRUP/K_LYRDWN
  * 0xA5/0xA6, RGB keys 0xA7..0xB2 (no RGB: none), K_BOOTLOADER 0xB3. */
 static uint32_t v1_keycode(uint32_t key) {
     if (key == 0xA5 || key == 0xA6) return 0x7C01 + (key - 0xA5); // K_LYRUP, K_LYRDWN
@@ -97,12 +97,13 @@ void via_keymap_load(void) {
         generation = p[1];
         uint32_t *dst = &dynamic_keymap[0][0];
         for (unsigned i = 0; i < KEYMAP_WORDS; i++) dst[i] = v1_keycode(p[4 + i]);
-        memset(dynamic_macro_buffer, 0, sizeof(dynamic_macro_buffer)); // DMK1 had no macros
+        memset(dynamic_macro_buffer, 0, sizeof(dynamic_macro_buffer)); // format 1 had no macros
         pending = true;
         return;
     }
     volatile const uint32_t *p = slot((unsigned)active_slot);
     generation = p[1];
+    if (p[0] == SLOT_MAGIC_OLD) pending = true; // rewrite under the ECK tag
     uint32_t *dst = &dynamic_keymap[0][0];
     for (unsigned i = 0; i < KEYMAP_WORDS; i++) dst[i] = p[4 + i];
 

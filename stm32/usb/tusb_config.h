@@ -12,11 +12,7 @@ extern "C" {
 #define CFG_TUD_ENDPOINT0_SIZE 64
 #define CFG_TUD_ENDPPOINT_MAX 8
 
-#ifdef DEBUG_CONSOLE_ENABLE
 #define CFG_TUD_HID 3
-#else
-#define CFG_TUD_HID 2
-#endif
 #define CFG_TUD_CDC 0
 #define CFG_TUD_MSC 0
 #define CFG_TUD_MIDI 0

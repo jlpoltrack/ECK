@@ -38,7 +38,7 @@ Taken from `docs/hybrid-port.md` and `hybrid-stock-behaviour.md` (branch `hhkb-h
 - **Connection parameters** follow Apple's Accessory Design Guidelines R32 section 57.6 (request 15-30 ms, latency 30, 6 s timeout); a Mac granted 15 ms, latency 22, 2 s. The status reply (link v4) carries the granted values.
 - **Bonds** carry ECK's slot tag; at start-up bonds without it (e.g. PFU's) are deleted. Bonds survive app updates.
 - **Power off:** `BLE_LINK_CMD_POWER_OFF` disconnects, stops advertising and enters System OFF once bond writes finish.
-- Logs go to SEGGER RTT (drop them with `make RELEASE=1`).
+- Logs go to SEGGER RTT, only in a `make NRF_LOG=1` build (after `make clean`); release builds have none.
 
 ## Updates over the link
 

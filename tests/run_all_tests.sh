@@ -14,8 +14,8 @@ echo -e "${BOLD}              HHKB firmware test suite          ${NC}"
 echo -e "${BOLD}====================================================${NC}\n"
 
 # 1. C Core Unit Tests
-echo -e "${BOLD}[1/2] Running Host-Based C Core Unit Tests...${NC}"
-clang -Wall -Wextra -DMATRIX_REPORT_BATCH \
+echo -e "${BOLD}[1/3] Running Host-Based C Core Unit Tests...${NC}"
+clang -Wall -Wextra \
     -I "${SCRIPT_DIR}/tests" \
     -I "${SCRIPT_DIR}/tests/mocks" \
     -I "${SCRIPT_DIR}/stm32/app" \
@@ -35,13 +35,6 @@ clang -Wall -Wextra -I "${SCRIPT_DIR}/tests/mocks" \
     -o "${SCRIPT_DIR}/tests/test_memory_hooks"
 "${SCRIPT_DIR}/tests/test_memory_hooks"
 rm -f "${SCRIPT_DIR}/tests/test_memory_hooks"
-for heap_size in 3072 8192; do
-    clang -Wall -Wextra -DconfigTOTAL_HEAP_SIZE="$heap_size" -I "${SCRIPT_DIR}/tests/heap_mocks" \
-        "${SCRIPT_DIR}/tests/test_heap4_failure.c" "${SCRIPT_DIR}/stm32/app/memory.c" \
-        "${SCRIPT_DIR}/stm32/vendor/freertos/heap_4.c" -o "${SCRIPT_DIR}/tests/test_heap4_failure"
-    "${SCRIPT_DIR}/tests/test_heap4_failure"
-done
-rm -f "${SCRIPT_DIR}/tests/test_heap4_failure"
 clang -Wall -Wextra -I "${SCRIPT_DIR}/tests/mocks" -I "${SCRIPT_DIR}/stm32/app" \
     -I "${SCRIPT_DIR}/stm32/board" -I "${SCRIPT_DIR}/stm32/usb" -I "${SCRIPT_DIR}/stm32/keys" \
     -I "${SCRIPT_DIR}/stm32/via" "${SCRIPT_DIR}/tests/test_features.c" "${SCRIPT_DIR}/stm32/keys/oneshot.c" \
@@ -99,7 +92,15 @@ for hhkb_test in test_keymap_storage test_indicators_system test_hybrid_power; d
 done
 
 # 2. Python Tool Tests
-echo -e "${BOLD}[2/2] Running Python Tool Unit Tests...${NC}"
+echo -e "${BOLD}[2/3] Running Python Tool Unit Tests...${NC}"
 uv run python3 -m unittest discover -s "${SCRIPT_DIR}/tests" -p "test_*.py"
+
+# 3. Web flasher checks (web/eck.js against the Python tools)
+echo -e "${BOLD}[3/3] Running Web Flasher Checks...${NC}"
+if command -v node >/dev/null; then
+    node "${SCRIPT_DIR}/web/eck.test.mjs"
+else
+    echo -e "${YELLOW}node not found: skipping web/eck.test.mjs${NC}"
+fi
 
 echo -e "\n${GREEN}${BOLD}🎉 All test suites completed successfully!${NC}\n"

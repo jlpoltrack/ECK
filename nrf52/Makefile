@@ -249,8 +249,8 @@ LIB_FILES += \
 # Optimization flags
 # -Os: the app must fit the 64 KB slot of the update container (-O3 needed ~12 KB more).
 OPT = -Os -g3
-# RELEASE=1 drops the RTT log (about 12 KB and some idle current).
-ifeq ($(RELEASE),1)
+# No RTT log by default (9 KB smaller, less idle current); NRF_LOG=1 adds it for SWD debugging (make clean first).
+ifneq ($(NRF_LOG),1)
 OPT += -DNRF_LOG_ENABLED=0
 endif
 # Uncomment the line below to enable link time optimization

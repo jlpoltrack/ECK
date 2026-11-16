@@ -19,7 +19,7 @@ while getopts "cd:" opt; do
 done
 JOBS=$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)
 
-if [[ "$CLEAN" == true ]]; then rm -rf "$BUILD_DIR"; fi
+if [[ "$CLEAN" == true ]]; then rm -rf "$BUILD_DIR" "$ROOT/nrf52/_build"; fi
 
 # The Hybrid .hfb packs the nRF52 app; build it first when the nRF5 SDK is present.
 if [[ "$VARIANT" == hybrid ]]; then

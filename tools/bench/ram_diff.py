@@ -10,7 +10,7 @@ import shlex
 import subprocess
 import time
 
-from pyocd.core.helpers import ConnectHelper
+from swd_attach import attach
 
 RAM, SIZE = 0x20000000, 0x5000
 
@@ -25,10 +25,7 @@ def main():
     ap.add_argument("--cmd", required=True)
     ap.add_argument("--out", help="save the after-snapshot here")
     a = ap.parse_args()
-    s = ConnectHelper.session_with_chosen_probe(
-        unique_id=a.stm, target_override="cortex_m", connect_mode="attach",
-        options={"frequency": 4000000, "resume_on_disconnect": True})
-    s.open()
+    s = attach(a.stm, frequency=4000000, resume_on_disconnect=True)
     t = s.board.target
     r1 = snap(t)
     time.sleep(0.5)

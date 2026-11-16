@@ -31,7 +31,7 @@ static uint16_t s_usb_consumer;
 /* The host stopped taking reports while the queue was full: merge instead of waiting. */
 static volatile bool s_usb_stalled;
 #define USB_QUEUE_WAIT_MS 20U
-#if defined(MATRIX_REPORT_BATCH) && defined(HHKB_SCAN_DIAGNOSTICS)
+#ifdef HHKB_SCAN_DIAGNOSTICS
 static volatile uint32_t s_usb_keyboard_queue_peak;
 static volatile uint32_t s_usb_keyboard_queue_full;
 #endif
@@ -76,11 +76,11 @@ static bool usb_enqueue_key_report(const queued_key_report_t *report) {
     /* Bounded: the keyboard task also runs the power switch, battery and LED ticks. */
     TickType_t start = xTaskGetTickCount();
     while (tud_mounted() && !tud_suspended()) {
-#if defined(MATRIX_REPORT_BATCH) && defined(HHKB_SCAN_DIAGNOSTICS)
+#ifdef HHKB_SCAN_DIAGNOSTICS
         if (uxQueueSpacesAvailable(s_keyboard_queue) == 0) s_usb_keyboard_queue_full++;
 #endif
         if (xQueueSend(s_keyboard_queue, report, s_usb_stalled ? 0 : pdMS_TO_TICKS(1)) == pdTRUE) {
-#if defined(MATRIX_REPORT_BATCH) && defined(HHKB_SCAN_DIAGNOSTICS)
+#ifdef HHKB_SCAN_DIAGNOSTICS
             UBaseType_t waiting = uxQueueMessagesWaiting(s_keyboard_queue);
             if (waiting > s_usb_keyboard_queue_peak) s_usb_keyboard_queue_peak = waiting;
 #endif
@@ -98,10 +98,8 @@ static bool usb_enqueue_key_report(const queued_key_report_t *report) {
     return true;
 }
 
-#if (configSUPPORT_STATIC_ALLOCATION == 1)
 static StaticTask_t s_usb_task_tcb;
 static StackType_t s_usb_task_stack[512];
-#endif
 
 void tud_event_hook_cb(uint8_t rhport, uint32_t eventid, bool in_isr) {
     (void)rhport;
@@ -127,10 +125,8 @@ static void usb_device_task(void *param) {
         via_flush_pending_report();
         hhkb_settings_task();
         via_eeprom_task();
-#ifdef DEBUG_CONSOLE_ENABLE
         usb_diag_task();
         debug_console_flush();
-#endif
         ulTaskNotifyTake(pdTRUE, usb_device_poll_ticks());
     }
 }
@@ -141,11 +137,7 @@ bool USB_HID_Init(void) {
     if (!s_keyboard_queue) return false;
 
     tusb_init();
-#if (configSUPPORT_STATIC_ALLOCATION == 1)
     s_usb_task_handle = xTaskCreateStatic(usb_device_task, "usbd", 512, NULL, TASK_PRIO_USBD, s_usb_task_stack, &s_usb_task_tcb);
-#else
-    xTaskCreate(usb_device_task, "usbd", 512, NULL, TASK_PRIO_USBD, &s_usb_task_handle);
-#endif
     return (s_usb_task_handle != NULL);
 }
 

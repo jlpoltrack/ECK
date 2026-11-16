@@ -4,31 +4,16 @@
   get            print the used part of the buffer (hex) and its macros
   set TEXT...    write each TEXT as macro 0, 1, ... (plain characters), rest zeroed
   clear          zero the whole buffer
-Run: uv run --with hidapi python3 tools/via_macros.py get
+Run: uv run --with hidapi python3 tools/bench/via_macros.py get
 """
+import os
 import sys
 import time
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from via_hid import open_keyboard, via  # noqa: E402
+
 GET_SIZE, GET_BUF, SET_BUF = 0x0D, 0x0E, 0x0F
-
-
-def open_keyboard():
-    import hid
-    devs = [d for d in hid.enumerate() if d["usage_page"] == 0xFF60 and d["usage"] == 0x61
-            and "HHKB" in (d["product_string"] or "")]
-    if not devs:
-        sys.exit("no HHKB running ECK found on USB")
-    h = hid.device()
-    h.open_path(devs[0]["path"])
-    return h
-
-
-def via(h, req):
-    h.write(b"\x00" + req + bytes(32 - len(req)))
-    resp = bytes(h.read(32, 1000))
-    if not resp or resp[0] != req[0]:
-        sys.exit(f"no VIA answer (got {resp.hex()})")
-    return resp
 
 
 def size(h):

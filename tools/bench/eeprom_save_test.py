@@ -11,6 +11,9 @@ import sys
 import tempfile
 import time
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from via_hid import open_keyboard, via  # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TAP_ID, SCAN_ID = 14, 29        # VIA custom values: tapping term (10 ms units), Bluetooth scan rate
 KEY = (3, 0, 0)                 # layer, row, col
@@ -18,27 +21,6 @@ KEY = (3, 0, 0)                 # layer, row, col
 # calibration arrays: every save also writes the live rest levels, which drift.
 SETTINGS_HEAD, SETTINGS_TAIL = (0x1500, 0x1506), (0x15F8, 0x1608)
 BLE_WORD = (0x17F8, 0x17FC)     # Hybrid Bluetooth settings word (stm32/hybrid/hybrid_ble.c)
-
-
-def open_kb():
-    import hid
-    for _ in range(40):
-        devs = [d for d in hid.enumerate() if d["usage_page"] == 0xFF60 and d["usage"] == 0x61
-                and "HHKB" in (d["product_string"] or "")]
-        if devs:
-            h = hid.device()
-            h.open_path(devs[0]["path"])
-            return h
-        time.sleep(0.5)
-    sys.exit("no HHKB found on USB")
-
-
-def via(h, req):
-    h.write(b"\x00" + bytes(req) + bytes(32 - len(req)))
-    resp = bytes(h.read(32, 1000))
-    if not resp or resp[0] != req[0]:
-        sys.exit(f"no VIA answer to {req[0]:#04x}")
-    return resp
 
 
 def get(h):
@@ -74,24 +56,24 @@ def ranges(a, b):
 
 
 def main():
-    h = open_kb()
+    h = open_keyboard(wait=20)
     orig = get(h)
     changed = (orig[0] + 1 if orig[0] < 50 else orig[0] - 1, (orig[1] + 1) % 5, 0x0068 if orig[2] != 0x0068 else 0x0069)
     with tempfile.TemporaryDirectory() as tmp:
         h.close()
         e0 = dump(tmp, "e0")
-        h = open_kb()
+        h = open_keyboard(wait=20)
         put(h, *changed)
         time.sleep(5)
         h.close()
         dump(tmp, "e1")
-        h = open_kb()
+        h = open_keyboard(wait=20)
         after_reset = get(h)
         put(h, *orig)
         time.sleep(5)
         h.close()
         e2 = dump(tmp, "e2")
-        h = open_kb()
+        h = open_keyboard(wait=20)
         restored = get(h)
     ok = after_reset == changed and restored == orig
     print(f"changed values survived a reset: {after_reset == changed}; restored values survived: {restored == orig}")

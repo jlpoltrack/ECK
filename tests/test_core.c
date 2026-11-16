@@ -413,7 +413,6 @@ static void test_usb_hid_reports_and_zero_queue(void) {
     printf("  ✔ test_usb_hid_reports_and_zero_queue passed\n");
 }
 
-#ifdef MATRIX_REPORT_BATCH
 static void test_usb_matrix_batch(void) {
     usb_init();
     s_send_report_count = 0;
@@ -437,7 +436,6 @@ static void test_usb_matrix_batch(void) {
     assert(s_send_report_count == 5);
     assert(s_last_sent_report.Modifier == MOD_LSHIFT && s_last_sent_report.Keycodes[1] == 0);
 }
-#endif
 
 int main(void) {
     printf("\n=== Running ECK Host-Based C Core Unit Tests ===\n\n");
@@ -456,9 +454,7 @@ int main(void) {
 
     printf("\n[3/3] Testing USB HID Zero-Queue subsystem...\n");
     test_usb_hid_reports_and_zero_queue();
-#ifdef MATRIX_REPORT_BATCH
     test_usb_matrix_batch();
-#endif
 
     printf("\n🎉 All C core unit tests passed successfully!\n\n");
     return 0;

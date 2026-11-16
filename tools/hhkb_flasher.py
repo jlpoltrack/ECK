@@ -33,12 +33,14 @@ except ImportError:
     print("Error: 'hidapi' package is required.\nRun: pip install hidapi (or: uv run --with hidapi python3 ...)", file=sys.stderr)
     sys.exit(1)
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from make_hfb import CLASSIC_HFB_SIZE, compute_crc16_mcrf4xx, wrap_binary_to_hfb  # noqa: E402
+
 PFU_VID = 0x04FE
 PFU_USAGE_PAGE = 0xFF00
 PFU_USAGE = 0x01
 
 REPORT_SIZE = 64
-CLASSIC_HFB_SIZE = 65570
 HYBRID_HFB_SIZE = 282672
 HYBRID_MD5 = slice(0x10010, 0x10020)  # MD5 of the nRF52 section, 0x10020 up to the 16-byte trailer
 # Bank 1 relays the nRF image; do not unplug meanwhile. The nRF52 bootloader finishes about 4 s
@@ -55,33 +57,6 @@ CMD_FIRMUP_END = 0xE3
 
 REQ_HEADER = bytes([0xAA, 0xAA])
 RESP_HEADER = bytes([0x55, 0x55])
-
-def compute_crc16_mcrf4xx(data: bytes) -> int:
-    """Computes CRC-16/MCRF4XX (poly 0x1021 reflected -> 0x8408, init 0xFFFF, no final XOR)."""
-    crc = 0xFFFF
-    for b in data:
-        cur = (crc ^ b) & 0xFF
-        for _ in range(8):
-            if cur & 1:
-                cur = (cur >> 1) ^ 0x8408
-            else:
-                cur >>= 1
-        crc = (crc >> 8) ^ cur
-    return crc
-
-def wrap_binary_to_hfb(raw_bin: bytes, model: str = "AHHX01", version_bytes: bytes = bytes([0x0A, 0x04, 0x05, 0x00])) -> bytes:
-    """Wraps raw 64 KB binary into standard 65,570-byte .hfb container."""
-    if len(raw_bin) > 65536:
-        raise ValueError(f"Firmware exceeds 64 KB ({len(raw_bin)} bytes)")
-    padded = raw_bin + b"\xFF" * (65536 - len(raw_bin))
-
-    inner_tag = compute_crc16_mcrf4xx(padded).to_bytes(2, "little")
-    model_bytes = model.encode('ascii')[:6].ljust(6, b'\x00')
-    postfix = (b"\xFF" * 14) + model_bytes + version_bytes + (b"\xFF" * 6)
-
-    body = inner_tag + padded + postfix
-    outer_crc = compute_crc16_mcrf4xx(body).to_bytes(2, "little")
-    return outer_crc + body
 
 def device_model(type_number: str):
     """Map recognised physical model numbers to the container model ID."""

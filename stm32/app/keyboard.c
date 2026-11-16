@@ -122,11 +122,7 @@ static bool process_system_key(uint32_t key, bool pressed) {
  * @param pressed True for press, false for release.
  */
 static void process_matrix_action(uint8_t row, uint8_t col, uint32_t key, bool pressed, bool batched) {
-#ifdef MATRIX_REPORT_BATCH
     if (!batched || key >= 0xe0) usb_flush_batched_keys();
-#else
-    (void)batched;
-#endif
     if (key == 0 || key == K_NULL)
         return;
 
@@ -191,20 +187,13 @@ static void process_matrix_action(uint8_t row, uint8_t col, uint32_t key, bool p
     }
 
     // 9. Standard HID Keycode
-#ifdef MATRIX_REPORT_BATCH
     if (batched && key < 0xe0) {
         usb_process_batched_key((uint16_t)key, pressed);
         return;
     }
-#endif
     keyboard_send_key((uint16_t)key, pressed);
 }
 
-void process_key_event(uint8_t row, uint8_t col, uint32_t key, bool pressed) {
-    process_matrix_action(row, col, key, pressed, false);
-}
-
-#ifdef MATRIX_REPORT_BATCH
 static BaseType_t receive_matrix_event(matrix_event_t *event, TickType_t wait) {
     static uint16_t rows[NUM_ROWS];
     static uint16_t pending;
@@ -235,9 +224,6 @@ static BaseType_t receive_matrix_event(matrix_event_t *event, TickType_t wait) {
     first = false;
     return pdTRUE;
 }
-#else
-#define receive_matrix_event(event, wait) xQueueReceive(matrix_queue, (event), (wait))
-#endif
 
 /**
  * @brief Core event processing loop: checks timeouts across all subsystems and dispatches matrix events.
@@ -265,12 +251,8 @@ void keyboard_check(void) {
     matrix_event_t matrix_event;
     if (pdTRUE == receive_matrix_event(&matrix_event, next_deadline)) {
         do {
-#ifdef MATRIX_REPORT_BATCH
             bool batched = matrix_event.batched;
             if (!batched || matrix_event.batch_start) usb_flush_batched_keys();
-#else
-            const bool batched = false;
-#endif
             uint8_t row = matrix_event.row;
             uint8_t col = matrix_event.col;
             bool pressed = matrix_event.pressed;
@@ -303,9 +285,7 @@ void keyboard_check(void) {
                 oneshot_on_key_release();
             }
         } while (pdTRUE == receive_matrix_event(&matrix_event, 0));
-#ifdef MATRIX_REPORT_BATCH
         usb_flush_batched_keys();
-#endif
     }
 }
 

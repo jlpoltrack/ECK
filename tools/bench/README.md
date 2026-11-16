@@ -4,6 +4,8 @@ Bench, measurement and reverse-engineering tools used while porting the firmware
 
 Run them from the repository root, mostly with `uv run --with pyocd python3 tools/bench/<tool>.py ...` (SWD) or `uv run --with hidapi ...` (USB); each file's docstring gives its exact command.
 
+Shared helpers: `tools/via_hid.py` (find the keyboard, VIA requests; also used by `hybrid_update.py`) and `swd_attach.py` (pyOCD attach session). A tool that runs another tool on the keyboard (e.g. `hybrid_update.py backup`) must close its HID handle first.
+
 ## Over USB (keyboard assembled)
 
 | Tool | Purpose |

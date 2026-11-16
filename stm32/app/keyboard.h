@@ -42,7 +42,6 @@ void keyboard_send_modifiers(uint8_t mod_mask, bool pressed);
  * @param key Resolved 32-bit keycode
  * @param pressed True on press, false on release
  */
-void process_key_event(uint8_t row, uint8_t col, uint32_t key, bool pressed);
 
 /**
  * @brief Record a resolved keycode for a pressed physical switch so release uses the same keycode even if layers change.

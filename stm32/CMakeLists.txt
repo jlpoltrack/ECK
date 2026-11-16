@@ -177,7 +177,6 @@ target_sources(${TARGET_NAME} PRIVATE
     "${FREERTOS_DIR}/list.c"
     "${FREERTOS_DIR}/queue.c"
     "${FREERTOS_DIR}/tasks.c"
-    "${FREERTOS_DIR}/heap_4.c"
     "${STM32_ROOT}/board/freertos_port/port.c"
     # Board support and start-up (STM32L0 Low-Layer drivers are header-only here)
     "${STM32_ROOT}/board/platform.c"

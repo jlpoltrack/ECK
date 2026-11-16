@@ -5,9 +5,11 @@ Checks that KC_NO, KC_TRNS and modified keys and mod-taps read back as written, 
 keymap-reset command (0x06) is answered and restores the default keymap.
 Run: uv run --with hidapi python3 tools/bench/via_keymap_check.py
 """
+import os
 import sys
 
-from via_macros import open_keyboard, via
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from via_hid import open_keyboard, via  # noqa: E402
 
 RESET, GET_BUF, SET_BUF = 0x06, 0x12, 0x13
 LAYERS, KEYS = 4, 60

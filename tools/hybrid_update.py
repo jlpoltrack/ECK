@@ -29,6 +29,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from make_hfb import compute_crc16_mcrf4xx  # noqa: E402
+from via_hid import open_keyboard, send, via as via_request  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STUB = os.path.join(ROOT, "stm32/boot/_build/hybrid_boot.bin")
@@ -57,29 +58,8 @@ def dfu_present():
     return "Found DFU" in r.stdout
 
 
-def open_keyboard(required=True):
-    try:
-        import hid
-    except ImportError:
-        sys.exit("run with: uv run --with hidapi python3 ...")
-    devs = [d for d in hid.enumerate() if d["usage_page"] == 0xFF60 and d["usage"] == 0x61
-            and "HHKB" in (d["product_string"] or "")]
-    if not devs:
-        if required:
-            sys.exit("no HHKB running ECK found on USB")
-        return None
-    h = hid.device()
-    h.open_path(devs[0]["path"])
-    return h
-
-
 def via(h, cmd, payload=b""):
-    req = bytes([cmd, 0, NRF_UPDATE_ID]) + payload
-    h.write(b"\x00" + req + bytes(32 - len(req)))
-    resp = bytes(h.read(32, 1000))
-    if len(resp) < 10 or resp[0] != cmd:
-        sys.exit(f"no VIA answer from the keyboard (got {resp.hex()})")
-    return resp
+    return via_request(h, bytes([cmd, 0, NRF_UPDATE_ID]) + payload, min_len=10)
 
 
 def nrf_status(h):
@@ -89,9 +69,7 @@ def nrf_status(h):
 
 def nrf_recovery(h):
     """Restart the nRF52 with PB6 high: its app starts only the link and the update receiver."""
-    req = bytes([VIA_SET, 0, NRF_UPDATE_ID, UPD_RECOVERY])
-    h.write(b"\x00" + req + bytes(32 - len(req)))
-    resp = bytes(h.read(32, 1000))
+    resp = send(h, [VIA_SET, 0, NRF_UPDATE_ID, UPD_RECOVERY])
     if not resp or resp[0] != VIA_SET:
         sys.exit("the keyboard firmware predates nRF52 recovery mode: update the STM32 first (stm32 FILE)")
     deadline = time.monotonic() + 10

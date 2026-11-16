@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Replace the VIA macro text in a Hybrid data-EEPROM dump with dummy text, keeping slots valid.
 
-Usage: scrub_eeprom_fixture.py <in.bin> <out.bin>. Layout: stm32/via/hhkb_keymap_storage.c (DMK2 slots).
+Usage: scrub_eeprom_fixture.py <in.bin> <out.bin>. Layout: stm32/via/hhkb_keymap_storage.c (keymap slots).
 """
 import struct
 import sys
@@ -10,7 +10,7 @@ SLOT_OFFSET = 0x600
 KEYMAP_WORDS, RESERVED_WORDS, MACRO_WORDS = 240, 20, 56
 PAYLOAD_WORDS = KEYMAP_WORDS + RESERVED_WORDS + MACRO_WORDS
 SLOT_WORDS = 4 + PAYLOAD_WORDS
-MAGIC_V2, COMMIT = 0x324B4D44, 0x54494D43
+MAGICS, COMMIT = (0x324B4345, 0x324B4D44), 0x54494D43  # 'ECK2', and the pre-ECK tag
 DUMMY = b"example"
 
 
@@ -34,8 +34,8 @@ def main():
     for n in range(2):
         base = SLOT_OFFSET + n * SLOT_WORDS * 4
         words = list(struct.unpack_from(f"<{SLOT_WORDS}I", data, base))
-        if words[0] != MAGIC_V2 or words[3] != COMMIT or words[2] != slot_hash(words):
-            print(f"slot {n}: not a valid DMK2 slot, left alone")
+        if words[0] not in MAGICS or words[3] != COMMIT or words[2] != slot_hash(words):
+            print(f"slot {n}: not a valid keymap slot, left alone")
             continue
         start = base + (4 + KEYMAP_WORDS + RESERVED_WORDS) * 4
         macro = data[start:start + MACRO_WORDS * 4]

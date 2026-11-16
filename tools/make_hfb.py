@@ -21,9 +21,11 @@ Usage:
 
 import sys
 import argparse
-import struct
-import os
 import hashlib
+
+BANK2_SIZE = 65536
+CLASSIC_HFB_SIZE = 65570
+
 
 def compute_crc16_mcrf4xx(data: bytes) -> int:
     """
@@ -42,84 +44,36 @@ def compute_crc16_mcrf4xx(data: bytes) -> int:
     return crc
 
 def parse_version_bytes(ver_str: str) -> bytes:
-    """
-    Parses a version string like 'A4.29', 'A4.50', or 'A8.50'
-    Format: [Major_Hex, Minor_Hex1, Minor_Hex2, Minor_Hex3]
-    E.g. 'A4.29' -> bytes([0x0A, 0x04, 0x02, 0x09])
-         'A4.50' -> bytes([0x0A, 0x04, 0x05, 0x00])
-         'A8.50' -> bytes([0x0A, 0x08, 0x05, 0x00])
-    """
+    """'A4.29' -> 0A 04 02 09, 'A4.5' -> 0A 04 05 00, 'A4' -> 0A 04 00 00 (hex digits; the A is optional)."""
     ver = ver_str.strip()
-    if ver.startswith('A') or ver.startswith('a'):
-        major = 0x0A
+    if ver[:1] in ("A", "a"):
         ver = ver[1:]
-    else:
-        major = 0x0A
+    parts = ver.split(".")
+    minor = parts[1] if len(parts) > 1 else "00"
+    return bytes([0x0A, int(parts[0], 16), int(minor[0], 16), int(minor[1:2] or "0", 16)])
 
-    parts = ver.split('.')
-    if len(parts) == 1:
-        v1 = int(parts[0], 16)
-        v2 = 0
-        v3 = 0
-    else:
-        v1 = int(parts[0], 16)
-        sub = parts[1]
-        if len(sub) == 1:
-            v2 = int(sub[0], 16)
-            v3 = 0
-        else:
-            v2 = int(sub[0], 16)
-            v3 = int(sub[1], 16)
 
-    return bytes([major, v1, v2, v3])
+def wrap_binary_to_hfb(raw_bin: bytes, model: str = "AHHX01", version_bytes: bytes = bytes([0x0A, 0x04, 0x05, 0x00])) -> bytes:
+    """Classic container: outer CRC, inner CRC, 64 KB Bank 2 image (0xFF padded), 30-byte trailer."""
+    if len(raw_bin) > BANK2_SIZE:
+        raise ValueError(f"Firmware binary size ({len(raw_bin)} bytes) exceeds 64KB bank limit!")
+    padded = raw_bin + b"\xff" * (BANK2_SIZE - len(raw_bin))
+    inner_tag = compute_crc16_mcrf4xx(padded).to_bytes(2, "little")
+    model_bytes = model.encode("ascii")[:6].ljust(6, b"\x00")
+    body = inner_tag + padded + b"\xff" * 14 + model_bytes + version_bytes + b"\xff" * 6
+    return compute_crc16_mcrf4xx(body).to_bytes(2, "little") + body
+
 
 def make_hfb(bin_path: str, out_path: str, model: str = "AHHX01", version_str: str = None):
     with open(bin_path, "rb") as f:
         data = f.read()
-
-    # HHKB Classic firmware bank size is exactly 64KB (65536 bytes)
-    target_size = 65536
-    if len(data) > target_size:
-        raise ValueError(f"Firmware binary size ({len(data)} bytes) exceeds 64KB bank limit!")
-
-    # Pad firmware code with 0xFF up to 64KB
-    padded_data = data + b"\xff" * (target_size - len(data))
-
     if version_str is None:
         version_str = "A8.50" if "S01" in model else "A4.50"
-
-    # Inner tag is the CRC-16 of the 64KB payload (little-endian)
-    inner_crc = compute_crc16_mcrf4xx(padded_data)
-    inner_tag = inner_crc.to_bytes(2, "little")
-
-    # Build 30-byte postfix:
-    # 14 bytes 0xFF
-    # 6 bytes Model ID: 'AHHX01' or 'AHHS01'
-    # 4 bytes Version: e.g. [0x0A, 0x04, 0x03, 0x00]
-    # 6 bytes 0xFF
-    model_bytes = model.encode('ascii')[:6].ljust(6, b'\x00')
-    version_bytes = parse_version_bytes(version_str)
-    postfix = (b"\xff" * 14) + model_bytes + version_bytes + (b"\xff" * 6)
-    assert len(postfix) == 30
-
-    # Body to compute outer CRC over: 2 bytes inner tag + 64KB code + 30B postfix
-    body = inner_tag + padded_data + postfix
-    assert len(body) == 2 + 65536 + 30  # 65568 bytes
-
-    # Outer CRC16 over the entire body (little-endian 2 bytes)
-    outer_crc = compute_crc16_mcrf4xx(body)
-    outer_crc_bytes = outer_crc.to_bytes(2, "little")
-
-    hfb_data = outer_crc_bytes + body
-    assert len(hfb_data) == 65570
-
+    hfb_data = wrap_binary_to_hfb(data, model, parse_version_bytes(version_str))
+    assert len(hfb_data) == CLASSIC_HFB_SIZE
     with open(out_path, "wb") as f:
         f.write(hfb_data)
-
-    print(f"Generated {out_path}: {len(hfb_data)} bytes (Outer CRC: {outer_crc_bytes.hex()}, Inner Tag: {inner_tag.hex()}, Model: {model}, Version: {version_str})")
-
-BANK2_SIZE = 65536
-CLASSIC_HFB_SIZE = 65570
+    print(f"Generated {out_path}: {len(hfb_data)} bytes (Outer CRC: {hfb_data[0:2].hex()}, Inner Tag: {hfb_data[2:4].hex()}, Model: {model}, Version: {version_str})")
 
 
 NRF_SECTION_BASE = 0x1000  # nRF52 address of the container's first nRF52 byte
@@ -185,7 +139,7 @@ def make_hybrid_hfb(bin_path: str, nrf_app_path: str, softdevice_hex: str, out_p
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Wrap binary into HHKB .hfb firmware package")
-    parser.add_argument("input", help="Input raw .bin or .hfb file")
+    parser.add_argument("input", help="Input raw .bin file")
     parser.add_argument("output", help="Output .hfb file")
     parser.add_argument("--model", default="AHHX01", help="Model code (default: AHHX01, e.g. AHHS01 for Classic Type-S)")
     parser.add_argument("--version", default=None, help="Firmware version (default: A4.50 for Classic, A8.50 for Type-S)")
@@ -199,26 +153,4 @@ if __name__ == "__main__":
         make_hybrid_hfb(args.input, args.nrf_app, args.softdevice, args.output, args.version or HYBRID_VERSION)
         sys.exit(0)
 
-    # If input is already an .hfb file (65570 bytes), inspect and extract:
-    with open(args.input, "rb") as f_check:
-        total_len = os.path.getsize(args.input)
-
-    if total_len == 65570:
-        with open(args.input, "rb") as f_in:
-            hfb_raw = f_in.read()
-
-        raw_payload = hfb_raw[4:4+65536]
-        # Preserve model if not explicitly given
-        in_model = hfb_raw[65554:65560].decode('ascii', errors='ignore').strip('\x00')
-        if not args.model or args.model == "AHHX01":
-            if in_model in ["AHHX01", "AHHS01", "AHKS01"]:
-                args.model = in_model
-
-        tmp_bin = args.input + ".extracted.bin"
-        with open(tmp_bin, "wb") as f_tmp:
-            f_tmp.write(raw_payload)
-        make_hfb(tmp_bin, args.output, model=args.model, version_str=args.version)
-        try: os.remove(tmp_bin)
-        except OSError: pass
-    else:
-        make_hfb(args.input, args.output, model=args.model, version_str=args.version)
+    make_hfb(args.input, args.output, model=args.model, version_str=args.version)

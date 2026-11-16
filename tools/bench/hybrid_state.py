@@ -8,7 +8,7 @@ import argparse
 import subprocess
 from pathlib import Path
 
-from pyocd.core.helpers import ConnectHelper
+from swd_attach import attach
 
 from repo_paths import REPO, NRF_APP  # noqa: E402
 
@@ -26,10 +26,7 @@ def symbols(elf):
 
 def dump(uid, elf, wanted):
     syms = symbols(elf)
-    s = ConnectHelper.session_with_chosen_probe(
-        unique_id=uid, target_override="cortex_m", connect_mode="attach",
-        options={"frequency": 1000000, "resume_on_disconnect": True, "auto_unlock": False})
-    s.open()
+    s = attach(uid, frequency=1000000, resume_on_disconnect=True, auto_unlock=False)
     t = s.board.target
     vals = {}
     for name, size in wanted.items():

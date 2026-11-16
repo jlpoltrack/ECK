@@ -24,7 +24,6 @@ static USB_HID_KeyboardReport_TypeDef current_report;
 static uint8_t s_real_mods = 0;
 static uint8_t s_weak_mods = 0;
 
-#ifdef MATRIX_REPORT_BATCH
 static bool add_key_to_report(uint8_t keycode);
 static bool del_key_from_report(uint8_t keycode);
 static uint32_t s_batched_usages[8];
@@ -52,7 +51,6 @@ void usb_process_batched_key(uint16_t keycode, bool pressed) {
         s_batch_pending = true;
     }
 }
-#endif
 
 static bool sync_report_modifiers(void) {
     uint8_t combined = s_real_mods | s_weak_mods;
@@ -112,9 +110,7 @@ void usb_init(void) {
  * @param pressed True for press, false for release.
  */
 void usb_process_key(uint16_t keycode, bool pressed) {
-#ifdef MATRIX_REPORT_BATCH
     usb_flush_batched_keys();
-#endif
     // Handle Consumer / Media keys (Volume, Play/Pause, Brightness, etc.)
     if (keycode & KEY_CONSUMER_FLAG) {
         uint16_t usage = keycode & ~KEY_CONSUMER_FLAG;
@@ -146,9 +142,7 @@ void usb_process_key(uint16_t keycode, bool pressed) {
  * @brief Batch process modifier keys: atomically update modifier bitmask and transmit to host.
  */
 void usb_process_modifiers(uint8_t mod_mask, bool pressed) {
-#ifdef MATRIX_REPORT_BATCH
     usb_flush_batched_keys();
-#endif
     if (mod_mask == 0) {
         return;
     }
@@ -166,9 +160,7 @@ void usb_process_modifiers(uint8_t mod_mask, bool pressed) {
  * @brief Batch process modified key: atomically update modifiers and keycode in a single HID report.
  */
 void usb_process_key_with_modifiers(uint8_t mod_mask, uint8_t keycode, bool pressed) {
-#ifdef MATRIX_REPORT_BATCH
     usb_flush_batched_keys();
-#endif
     if (pressed) {
         s_weak_mods |= mod_mask;
     } else {

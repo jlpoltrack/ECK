@@ -9,7 +9,7 @@ Run: uv run --with pyocd python3 tools/nrf_spi_trace.py --nrf <uid> [--seconds N
 import argparse
 import time
 
-from pyocd.core.helpers import ConnectHelper
+from swd_attach import attach
 
 START, DONE = 0x2B9A8, 0x2BA6C
 DHCSR, DEMCR = 0xE000EDF0, 0xE000EDFC
@@ -19,10 +19,7 @@ LAST_RX = 0x20003104
 
 
 def connect(uid):
-    s = ConnectHelper.session_with_chosen_probe(
-        unique_id=uid, target_override="cortex_m", connect_mode="attach",
-        options={"frequency": 4000000, "resume_on_disconnect": True, "auto_unlock": False})
-    s.open()
+    s = attach(uid, frequency=4000000, resume_on_disconnect=True, auto_unlock=False)
     t = s.board.target
     arm_fpb(t)
     return s, t

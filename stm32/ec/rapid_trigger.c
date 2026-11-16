@@ -1,6 +1,5 @@
 #include "rapid_trigger.h"
 #ifdef __arm__
-#include "config.h" /* HHKB_SCAN_1KHZ: rt_update then runs from RAM like the scan */
 #endif
 
 void rt_cfg_defaults(rt_cfg_t *c) {
@@ -58,7 +57,7 @@ uint16_t rt_normalize(const rt_key_t *k, uint16_t raw) {
     return normalize(k, raw);
 }
 
-#ifdef HHKB_SCAN_1KHZ
+#ifdef __arm__ // runs from RAM like the scan; host tests build it plainly
 __attribute__((section(".RamFunc"), optimize("O2")))
 #endif
 bool rt_update(rt_key_t *k, const rt_cfg_t *c, uint16_t raw) {

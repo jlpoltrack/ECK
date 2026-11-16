@@ -22,10 +22,8 @@ void usb_init(void);
  */
 void usb_process_key(uint16_t keycode, bool pressed);
 
-#ifdef MATRIX_REPORT_BATCH
 void usb_process_batched_key(uint16_t keycode, bool pressed);
 void usb_flush_batched_keys(void);
-#endif
 
 /**
  * @brief Batch process modifier keys: atomically update modifier bitmask and transmit to host.

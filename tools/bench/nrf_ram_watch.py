@@ -8,7 +8,7 @@ Run: uv run --with pyocd python3 tools/nrf_ram_watch.py --nrf <uid> --addr 0x200
 import argparse
 import time
 
-from pyocd.core.helpers import ConnectHelper
+from swd_attach import attach
 
 
 def main():
@@ -26,10 +26,7 @@ def main():
     while time.monotonic() - t0 < a.seconds:
         try:
             if t is None:
-                s = ConnectHelper.session_with_chosen_probe(
-                    unique_id=a.nrf, target_override="cortex_m", connect_mode="attach",
-                    options={"frequency": 8000000, "resume_on_disconnect": True, "auto_unlock": False})
-                s.open()
+                s = attach(a.nrf, frequency=8000000, resume_on_disconnect=True, auto_unlock=False)
                 t = s.board.target
             cur = bytes(t.read_memory_block8(a.addr, a.size))
         except Exception as e:  # nRF52 held in reset (PD2)

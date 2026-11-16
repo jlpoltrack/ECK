@@ -44,7 +44,6 @@ static rt_cfg_t s_rt_cfg = {
     .reset_pm = 50,
 };
 static uint16_t s_classic_release_pm = 100; // Default 10% travel hysteresis (0.4 mm)
-static uint8_t s_actuation_offset_pct = 75;
 
 static uint8_t s_scan_rate = 4; // 1000 Hz
 static bool s_oversampling_requested = false;
@@ -214,16 +213,25 @@ static void load_hkcd_settings(const volatile hhkb_eeprom_hkcd_t *old) {
     s_system = old->system <= 1 ? old->system : 0;
 }
 
+static void load_rt_cfg(const volatile rt_cfg_t *rt) {
+    if (rt->act_pm >= 25 && rt->act_pm <= 1000) s_rt_cfg.act_pm = rt->act_pm;
+    if (rt->press_pm >= 25 && rt->press_pm <= 1000) s_rt_cfg.press_pm = rt->press_pm;
+    if (rt->release_pm >= 25 && rt->release_pm <= 1000) s_rt_cfg.release_pm = rt->release_pm;
+    if (rt->reset_pm <= 150) s_rt_cfg.reset_pm = rt->reset_pm;
+    if (s_rt_cfg.act_pm <= s_rt_cfg.reset_pm) s_rt_cfg.act_pm = s_rt_cfg.reset_pm + 25;
+    s_rt_cfg.rt_enabled = rt->rt_enabled;
+}
+
 void hhkb_calibration_load(void) {
     const volatile hhkb_eeprom_cal_t *cal = (const volatile hhkb_eeprom_cal_t *)USER_EEPROM_ADDR;
     rt_cfg_defaults(&s_rt_cfg);
     s_rt_cfg.act_pm = 750;
-    s_actuation_offset_pct = 75;
     s_classic_release_pm = 100;
     s_rt_cfg.press_pm = 25;
     s_rt_cfg.release_pm = 25;
     s_rt_cfg.rt_enabled = false;
     s_debug_flags = 0;
+    bool stored = false;
 
     // A bad CRC (e.g. power lost mid-save) falls through to the defaults below.
     if (cal->magic == USER_EEPROM_MAGIC && cal->crc16 == compute_crc16((const uint8_t *)&cal->baseline,
@@ -249,52 +257,29 @@ void hhkb_calibration_load(void) {
             s_led_mode[0] = (cal->flags >> 6) & 3; // v1 kept LED 1 modes 0..3 only
         }
 
-        if (cal->rt.act_pm >= 25 && cal->rt.act_pm <= 1000) s_rt_cfg.act_pm = cal->rt.act_pm;
-        if (cal->rt.press_pm >= 25 && cal->rt.press_pm <= 1000) s_rt_cfg.press_pm = cal->rt.press_pm;
-        if (cal->rt.release_pm >= 25 && cal->rt.release_pm <= 1000) s_rt_cfg.release_pm = cal->rt.release_pm;
-        if (cal->rt.reset_pm <= 150) s_rt_cfg.reset_pm = cal->rt.reset_pm;
-        if (s_rt_cfg.act_pm <= s_rt_cfg.reset_pm) s_rt_cfg.act_pm = s_rt_cfg.reset_pm + 25;
-        s_rt_cfg.rt_enabled = cal->rt.rt_enabled;
-        s_actuation_offset_pct = (uint8_t)(s_rt_cfg.act_pm / 10);
+        load_rt_cfg(&cal->rt);
         if (cal->classic_release_pm >= 25 && cal->classic_release_pm <= 1000) s_classic_release_pm = cal->classic_release_pm;
 
-        for (uint8_t col = 0; col < MATRIX_COLS; col++) {
-            for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
-                uint16_t def_b = get_default_baseline(col, row);
-                uint16_t def_p = get_default_peak(col, row);
-                s_cal_baseline[col][row] = (s_custom_calibration && cal->baseline[col][row] >= 100 && cal->baseline[col][row] <= 2000) ? cal->baseline[col][row] : def_b;
-                s_cal_peak[col][row] = (s_custom_calibration && cal->peak[col][row] > s_cal_baseline[col][row] + RT_MIN_RANGE && cal->peak[col][row] <= 4095) ? cal->peak[col][row] : def_p;
-            }
-        }
+        stored = true;
     } else if (cal->magic == USER_EEPROM_LEGACY_MAGIC || cal->magic == USER_EEPROM_C_MAGIC || cal->magic == USER_EEPROM_PREV_MAGIC || cal->magic == USER_EEPROM_OLD_MAGIC) {
         // Legacy fallback
         if (cal->magic != USER_EEPROM_OLD_MAGIC) {
-            if (cal->rt.act_pm >= 25 && cal->rt.act_pm <= 1000) s_rt_cfg.act_pm = cal->rt.act_pm;
-            if (cal->rt.press_pm >= 25 && cal->rt.press_pm <= 1000) s_rt_cfg.press_pm = cal->rt.press_pm;
-            if (cal->rt.release_pm >= 25 && cal->rt.release_pm <= 1000) s_rt_cfg.release_pm = cal->rt.release_pm;
-            if (cal->rt.reset_pm <= 150) s_rt_cfg.reset_pm = cal->rt.reset_pm;
-            if (s_rt_cfg.act_pm <= s_rt_cfg.reset_pm) s_rt_cfg.act_pm = s_rt_cfg.reset_pm + 25;
-            s_rt_cfg.rt_enabled = cal->rt.rt_enabled;
-            s_actuation_offset_pct = (uint8_t)(s_rt_cfg.act_pm / 10);
+            load_rt_cfg(&cal->rt);
         }
         s_custom_calibration = true;
         if (cal->magic == USER_EEPROM_LEGACY_MAGIC) load_hkcd_settings((const volatile hhkb_eeprom_hkcd_t *)cal);
-        for (uint8_t col = 0; col < MATRIX_COLS; col++) {
-            for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
-                uint16_t def_b = get_default_baseline(col, row);
-                uint16_t def_p = get_default_peak(col, row);
-                // HKCD without custom calibration stored placeholders (800/1800): use the defaults.
-                s_cal_baseline[col][row] = (s_custom_calibration && cal->baseline[col][row] >= 100 && cal->baseline[col][row] <= 2000) ? cal->baseline[col][row] : def_b;
-                s_cal_peak[col][row] = (s_custom_calibration && cal->peak[col][row] > s_cal_baseline[col][row] + RT_MIN_RANGE && cal->peak[col][row] <= 4095) ? cal->peak[col][row] : def_p;
-            }
-        }
-    } else {
-        // Defaults: factory baseline + typical travel
-        for (uint8_t col = 0; col < MATRIX_COLS; col++) {
-            for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
-                s_cal_baseline[col][row] = get_default_baseline(col, row);
-                s_cal_peak[col][row] = get_default_peak(col, row);
-            }
+        stored = true;
+    }
+
+    // Stored calibration only with custom calibration on (HKCD without it kept 800/1800 placeholders);
+    // otherwise factory baseline + typical travel.
+    bool custom = stored && s_custom_calibration;
+    for (uint8_t col = 0; col < MATRIX_COLS; col++) {
+        for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
+            uint16_t b = cal->baseline[col][row], p = cal->peak[col][row];
+            s_cal_baseline[col][row] = (custom && b >= 100 && b <= 2000) ? b : get_default_baseline(col, row);
+            s_cal_peak[col][row] = (custom && p > s_cal_baseline[col][row] + RT_MIN_RANGE && p <= 4095)
+                                       ? p : get_default_peak(col, row);
         }
     }
 
@@ -464,7 +449,6 @@ void hhkb_rt_set(uint8_t id, uint8_t value) {
         if (id == 1) {
             if (pm <= s_rt_cfg.reset_pm) pm = s_rt_cfg.reset_pm + 25;
             s_rt_cfg.act_pm = pm;
-            s_actuation_offset_pct = (uint8_t)(pm / 10);
         }
         if (id == 4) s_rt_cfg.press_pm = pm;
         if (id == 5) s_classic_release_pm = pm;
@@ -472,22 +456,6 @@ void hhkb_rt_set(uint8_t id, uint8_t value) {
     }
     taskEXIT_CRITICAL();
     hhkb_settings_mark_dirty();
-}
-
-void hhkb_set_actuation_point_pct(uint8_t pct) {
-    if (pct < 10) pct = 10;
-    if (pct > 90) pct = 90;
-    taskENTER_CRITICAL();
-    s_actuation_offset_pct = pct;
-    uint16_t pm = (uint16_t)pct * 10;
-    if (pm <= s_rt_cfg.reset_pm) pm = s_rt_cfg.reset_pm + 25;
-    s_rt_cfg.act_pm = pm;
-    taskEXIT_CRITICAL();
-    hhkb_settings_mark_dirty();
-}
-
-uint8_t hhkb_get_actuation_point_pct(void) {
-    return (uint8_t)(s_rt_cfg.act_pm / 10);
 }
 
 // Debug API
@@ -522,8 +490,6 @@ void hhkb_calc_rates(uint32_t elapsed_ms) {
     s_matrix_rate_hz = (diff * 1000U + elapsed_ms / 2) / elapsed_ms; // 32-bit: diff is ~1000 per second
 }
 
-bool hhkb_get_debug_enabled(void) { return hhkb_get_debug_flag(DEBUG_FLAG_TOPRE); }
-void hhkb_set_debug_enabled(bool enabled) { hhkb_set_debug_flag(DEBUG_FLAG_TOPRE, enabled); }
 
 void hhkb_debug_feed_sample(uint8_t col, uint8_t row, uint16_t raw, uint16_t norm, bool is_pressed) {
     if (col >= MATRIX_COLS || row >= MATRIX_ROWS) return;
@@ -605,8 +571,6 @@ rt_cfg_t hhkb_get_scan_cfg(void) {
     return cfg;
 }
 
-uint16_t hhkb_get_cal_baseline(uint8_t col, uint8_t row) { return s_cal_baseline[col][row]; }
-uint16_t hhkb_get_cal_peak(uint8_t col, uint8_t row) { return s_cal_peak[col][row]; }
 void hhkb_update_dynamic_peak(uint8_t col, uint8_t row, uint16_t val) {
     s_cal_peak[col][row] = val;
     rt_key_set_range(&s_rt_keys[col][row], s_cal_baseline[col][row], s_cal_peak[col][row], s_rt_cfg.reset_pm);
@@ -684,4 +648,3 @@ void hhkb_cal_decrement_samples(void) {
         }
     }
 }
-rt_key_t *hhkb_get_rt_key(uint8_t col, uint8_t row) { return &s_rt_keys[col][row]; }

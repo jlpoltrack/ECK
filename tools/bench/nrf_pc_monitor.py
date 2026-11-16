@@ -8,7 +8,7 @@ Run: uv run --with pyocd python3 tools/nrf_pc_monitor.py --nrf <uid> [--seconds 
 import argparse
 import time
 
-from pyocd.core.helpers import ConnectHelper
+from swd_attach import attach
 
 DEMCR, DWT_PCSR = 0xE000EDFC, 0xE000101C
 NRF_RESETREAS, NRF_GPREGRET = 0x40000400, 0x4000051C
@@ -36,10 +36,7 @@ def main():
     while time.monotonic() - t0 < a.seconds:
         try:
             if sess is None:
-                sess = ConnectHelper.session_with_chosen_probe(
-                    unique_id=a.nrf, target_override="cortex_m", connect_mode="attach",
-                    options={"frequency": 1000000, "resume_on_disconnect": True, "auto_unlock": False})
-                sess.open()
+                sess = attach(a.nrf, frequency=1000000, resume_on_disconnect=True, auto_unlock=False)
                 t = sess.board.target
                 t.write32(DEMCR, t.read32(DEMCR) | (1 << 24))
                 rr = t.read32(NRF_RESETREAS)

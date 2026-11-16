@@ -1,10 +1,12 @@
 // Node checks of the pure parts against the Python tools: node web/eck.test.mjs [file.hfb ...]
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { crc16mcrf4xx, md5, parseHfb, hasBootStub } from './eck.js';
 
-const py = (code) => execFileSync('python3', ['-c', code]).toString().trim();
+const repo = fileURLToPath(new URL('..', import.meta.url));
+const py = (code) => execFileSync('python3', ['-c', code], { cwd: repo }).toString().trim();
 for (const len of [0, 1, 55, 56, 63, 64, 65, 1000, 70000]) {
     const data = Uint8Array.from({ length: len }, (_, i) => (i * 131 + 7) & 0xff);
     const src = `bytes((i*131+7)&255 for i in range(${len}))`;

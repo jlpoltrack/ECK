@@ -12,7 +12,7 @@ import argparse
 import time
 
 from pyocd.core.exceptions import TransferError
-from pyocd.core.helpers import ConnectHelper
+from swd_attach import attach
 
 # STM32L072 GPIO
 STM_PORT = {"A": 0x50000000, "B": 0x50000400, "C": 0x50000800, "D": 0x50000C00}
@@ -26,11 +26,7 @@ NRF_INPUT_NOPULL = 0x0  # DIR=input, INPUT=connect, PULL=disabled
 
 
 def session(uid):
-    s = ConnectHelper.session_with_chosen_probe(
-        unique_id=uid, target_override="cortex_m", connect_mode="attach",
-        options={"frequency": 4000000, "resume_on_disconnect": False, "auto_unlock": False})
-    s.open()
-    return s
+    return attach(uid, frequency=4000000, resume_on_disconnect=False, auto_unlock=False)
 
 
 def prepare_nrf(nt):

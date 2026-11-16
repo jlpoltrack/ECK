@@ -10,8 +10,6 @@
 #define VIA_FIRMWARE_VERSION 2U
 #define DYNAMIC_KEYMAP_MAX_LAYERS 4
 
-/* VIA runtime keymap and Topre tuning menus are always built in. */
-#define DEBUG_CONSOLE_ENABLE 1
 /* Two slots of keymap + macros must fit 0x08080600..0x08081000 (hhkb_keymap_storage.c). */
 #define DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE 224
 
@@ -20,13 +18,11 @@
 #define PERMISSIVE_HOLD 1
 #define HOLD_TAP_TAP_PREFERRED 0
 #define QUICK_TAP_TERM 150
-#define HHKB_SCAN_1KHZ 1
 // #define HHKB_SCAN_DIAGNOSTICS 1
 
 /* --- Matrix Geometry --- */
 #define MATRIX_ROWS 4
 #define MATRIX_COLS 15
-#define MATRIX_REPORT_BATCH
 #define QUEUE_DEF_SIZE 48
 #define KEYBOARD_REPORT_QUEUE_LENGTH 16
 // Keep numeric for the VIA JSON generator, which reads these defines directly.

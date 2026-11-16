@@ -8,18 +8,14 @@ Run: uv run --with pyocd python3 tools/watch_inputs.py --stm <uid> --nrf <uid> [
 import argparse
 import time
 
-from pyocd.core.helpers import ConnectHelper
+from swd_attach import attach
 
 STM_PORTS = {"A": 0x50000010, "B": 0x50000410, "C": 0x50000810, "D": 0x50000C10}
 NRF_IN = 0x50000510
 
 
 def session(uid):
-    s = ConnectHelper.session_with_chosen_probe(
-        unique_id=uid, target_override="cortex_m", connect_mode="attach",
-        options={"frequency": 4000000, "resume_on_disconnect": True, "auto_unlock": False})
-    s.open()
-    return s
+    return attach(uid, frequency=4000000, resume_on_disconnect=True, auto_unlock=False)
 
 
 def main():
