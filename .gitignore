@@ -1,0 +1,18 @@
+/build
+/.cache
+.DS_Store
+**/.DS_Store
+*.DS_Store
+__pycache__/
+*.pyc
+/PROBLEM.md
+# HHKB Classic local firmware backups and private development notes.
+/binaries/
+/docs/dev/
+# Stock PFU firmware (not redistributable) and per-keyboard memory backups.
+/HHKB*_FW_*.hfb
+/backups/
+*.sr
+*.npz
+/.vscode/
+/web/firmware/

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ECK Flasher</title>
+<style>
+:root { --bg: #f7f7f5; --card: #fff; --ink: #1d1d1b; --muted: #6b6b66; --line: #e2e2dc; --accent: #2f5bd3; --warn: #a3400c; --ok: #237a3b; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #161615; --card: #1f1f1d; --ink: #ececea; --muted: #9a9a93; --line: #33332f; --accent: #7b9cff; --warn: #f0905a; --ok: #6fcf87; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 24px; margin: 0 0 4px; }
+h2 { font-size: 17px; margin: 0 0 6px; }
+p { margin: 6px 0; }
+.muted { color: var(--muted); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 14px 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+button { font: inherit; padding: 7px 14px; border-radius: 7px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+button.secondary { background: transparent; color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+label { display: inline-flex; gap: 6px; align-items: center; }
+select, input[type=file] { font: inherit; max-width: 100%; }
+.warn { color: var(--warn); }
+#status { position: sticky; bottom: 0; }
+#log { white-space: pre-wrap; font: 13px/1.45 ui-monospace, Menlo, Consolas, monospace; max-height: 260px; overflow: auto; margin: 0; }
+progress { width: 100%; height: 10px; margin-top: 8px; }
+#gate { display: none; }
+#gate.on { display: inline-block; }
+.ok { color: var(--ok); }
+</style>
+</head>
+<body>
+<main>
+  <h1>ECK Flasher</h1>
+  <p class="muted">Install and update ECK firmware on the HHKB Professional Hybrid, Classic and Classic Type-S, from Chrome or Edge. Day-to-day settings live in <a href="https://usevia.app">VIA</a>.</p>
+  <p id="support" class="warn"></p>
+
+  <section class="card">
+    <h2>Firmware</h2>
+    <p id="fwinfo" class="muted">Loading the bundled release...</p>
+    <div class="row">
+      <label>Keyboard <select id="variant"><option value="hybrid">Hybrid</option><option value="classic">Classic</option><option value="type_s">Classic Type-S</option></select></label>
+      <label class="muted">or a local .hfb <input type="file" id="hfbfile" accept=".hfb"></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>1. First install (from stock)</h2>
+    <p>Installs ECK through PFU's own updater. For the Hybrid this writes both chips; keep it plugged in until it says done (about 3 min).</p>
+    <p class="muted">Keyboard running stock firmware. A Classic already running ECK: power off, set SW6 ON, plug in, set SW6 OFF.</p>
+    <div class="row"><button id="b-install">Install</button></div>
+  </section>
+
+  <section class="card">
+    <h2>2. Boot stub (Hybrid, once)</h2>
+    <p>Replaces PFU's updater in the first flash bank with ECK's small boot stub, which makes USB updates and recovery possible. The first time it saves your original Bank 1 and data EEPROM: <b>keep both files</b>, going back to stock needs them.</p>
+    <div class="row"><button id="b-stub">Install boot stub</button></div>
+  </section>
+
+  <section class="card">
+    <h2>3. Update (Hybrid)</h2>
+    <p>Keyboard firmware (STM32) through ST's USB DFU loader, Bluetooth firmware (nRF52) through the keyboard. Pairings and settings are kept.</p>
+    <div class="row">
+      <button id="b-stm32">Update keyboard firmware</button>
+      <button id="b-nrf">Update Bluetooth firmware</button>
+      <label class="muted"><input type="checkbox" id="recovery"> Bluetooth recovery mode</label>
+    </div>
+    <p class="muted">Recovery: if the keyboard does not start, hold the power switch while plugging in USB, then update the keyboard firmware. Use Bluetooth recovery mode when the Bluetooth firmware is broken.</p>
+    <p class="muted">Windows: ST's DFU loader needs the WinUSB driver once (Zadig, device "DFU in FS Mode").</p>
+  </section>
+
+  <section class="card">
+    <h2>4. Backup and restore (Hybrid)</h2>
+    <p>Saves the data EEPROM (keymap, macros, calibration, settings) and the keyboard firmware. Restore writes a saved EEPROM back.</p>
+    <div class="row">
+      <button id="b-backup" class="secondary">Back up</button>
+      <label class="muted">Restore EEPROM <input type="file" id="eepromfile" accept=".bin"></label>
+    </div>
+  </section>
+
+  <section class="card" id="status">
+    <div class="row" style="margin-top:0"><b id="state">Ready</b><button id="gate" class="secondary">Continue</button></div>
+    <progress id="progress" value="0" max="1"></progress>
+    <pre id="log"></pre>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>
