@@ -1,4 +1,7 @@
 #include "classic_matrix.h"
+#ifdef HHKB_ADC_DIAGNOSTICS
+#include "task_internal.h"
+#endif
 #include "via.h"
 #include <stdint.h>
 #include <stdbool.h>
@@ -70,7 +73,8 @@ bool hhkb_via_command(uint8_t const *request, uint8_t *response) {
 #endif
 #ifdef HHKB_ADC_DIAGNOSTICS
     if (id == HHKB_ID_ADC_DIAG && request[0] == 0x08) { /* [3] kind, [4] first key */
-        hhkb_adc_diag_read(request[3], request[4], &response[5]);
+        if (request[3] == 5) stack_diag_read(&response[5]);
+        else hhkb_adc_diag_read(request[3], request[4], &response[5]);
         return true;
     }
 #endif

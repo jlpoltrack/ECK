@@ -11,9 +11,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    # workflow_run: only after a successful v* tag run (head_branch is the tag name)
+  # workflow_run: deploy only after a successful CI run of a release tag. head_branch holds the tag
+  # or branch name, so a "v" prefix alone also matches branches (vial-experiment): require a release.
+  gate:
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      release: ${{ steps.check.outputs.release }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] || gh release view "$REF" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo release=true >> "$GITHUB_OUTPUT"
+          else
+            echo "$REF has no release: nothing to deploy"
+          fi
+  deploy:
+    needs: gate
+    if: needs.gate.outputs.release == 'true'
     runs-on: ubuntu-24.04
     permissions:
       contents: read

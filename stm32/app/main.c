@@ -43,12 +43,20 @@ void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer, StackTyp
     *ppxIdleTaskTCBBuffer = &xIdleTaskTCB;
     *ppxIdleTaskStackBuffer = uxIdleTaskStack;
     *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+#ifdef HHKB_ADC_DIAGNOSTICS
+    stack_diag_register(STACK_DIAG_IDLE, uxIdleTaskStack, configMINIMAL_STACK_SIZE);
+#endif
 }
 
 /**
  * @brief Firmware entry point: initializes platform HAL, allocates queues, spawns tasks, and starts RTOS scheduler.
  */
 int main(void) {
+#ifdef HHKB_ADC_DIAGNOSTICS
+    stack_diag_paint_msp();
+    stack_diag_register(STACK_DIAG_MATRIX, s_matrix_task_stack, TASK_STACK_MATRIX);
+    stack_diag_register(STACK_DIAG_KEYBOARD, s_keyboard_task_stack, TASK_STACK_KEYBOARD);
+#endif
     // Platform-specific low-level clock and system peripheral setup
     platform_init();
 

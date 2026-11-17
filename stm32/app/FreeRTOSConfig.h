@@ -58,7 +58,7 @@ void TICKLESS_SLEEP_HOOK(unsigned long expected_ticks);
 #define configUSE_TICK_HOOK 0
 #define configTICK_RATE_HZ ((TickType_t)1000)
 #define configMAX_PRIORITIES 4
-#define configMINIMAL_STACK_SIZE (configSTACK_DEPTH_TYPE)128
+#define configMINIMAL_STACK_SIZE (configSTACK_DEPTH_TYPE)64 /* idle task only: worst case ~150 B */
 #ifndef configTICK_TYPE_WIDTH_IN_BITS
 #define configTICK_TYPE_WIDTH_IN_BITS TICK_TYPE_WIDTH_32_BITS
 #endif

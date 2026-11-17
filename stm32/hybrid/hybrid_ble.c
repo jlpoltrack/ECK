@@ -46,7 +46,7 @@ static QueueHandle_t s_queue;
 static link_msg_t s_held[2];
 static volatile bool s_held_set[2];
 static StaticTask_t s_task_tcb;
-static StackType_t s_task_stack[136]; /* measured high-water ~352 bytes */
+static StackType_t s_task_stack[128]; /* static worst case ~400 B (tools/stack_depth.py) */
 
 static volatile uint8_t s_flags;
 static uint8_t s_host_leds;
@@ -662,6 +662,9 @@ void hybrid_ble_early_init(void) {
     settings_load();
     s_queue = xQueueCreateStatic(sizeof(s_queue_buf) / sizeof(link_msg_t), sizeof(link_msg_t), s_queue_buf,
                                  &s_queue_ctl);
+#ifdef HHKB_ADC_DIAGNOSTICS
+    stack_diag_register(STACK_DIAG_BLE, s_task_stack, sizeof(s_task_stack) / sizeof(StackType_t));
+#endif
     xTaskCreateStatic(link_task, "ble", sizeof(s_task_stack) / sizeof(StackType_t), NULL, TASK_PRIO_USBD,
                       s_task_stack, &s_task_tcb);
 }

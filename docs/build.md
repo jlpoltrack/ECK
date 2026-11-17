@@ -42,14 +42,14 @@ Both CRCs: reflected polynomial `0x8408`, initial `0xFFFF`, no final XOR.
 
 ## Flash and RAM usage
 
-Bank 2 holds 65,536 bytes; the STM32L072 has 20,480 bytes of RAM. At 2026-11-16:
+Bank 2 holds 65,536 bytes; the STM32L072 has 20,480 bytes of RAM. At 2026-11-17 (v0.4.4):
 
 | Variant | Bank 2 image | RAM at link time |
 | --- | --- | --- |
-| Hybrid | 43,132 bytes (65.8 %) | 17,312 bytes (84.5 %) |
-| Classic, Type-S | 34,556 bytes (52.7 %) | 16,288 bytes (79.5 %) |
+| Hybrid | 43,368 bytes (66.2 %) | 15,296 bytes (74.7 %) |
+| Classic, Type-S | 34,840 bytes (53.2 %) | 14,296 bytes (69.8 %) |
 
-RAM is the static layout (RAM code, `.data`, `.bss` with all task stacks; FreeRTOS has no heap) plus the 2 KB start-up stack, not a measured stack depth.
+RAM is the static layout (RAM code, `.data`, `.bss` with all task stacks; FreeRTOS has no heap) plus the 2 KB reserved for the interrupt stack. That stack grows down from the top of RAM into everything unused (5 KB+ more); task stacks are fixed arrays in `.bss`, sized from `tools/stack_depth.py` worst cases.
 
 ## CI and releases
 

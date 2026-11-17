@@ -10,6 +10,8 @@
                  readings at which the firmware registered each press
   cal            each key's rest level and range (calibration) and its reading now
   scantime [SEC] per second: longest scan half with interrupts off, and longest whole scan
+  stacks [SEC]   every SEC seconds (default once): each task stack's and the interrupt stack's size
+                 and peak use since reset
 
 Depth is permille (1/1000) of the key's calibrated range: 0 at rest, 1000 bottomed out.
 Run: uv run --with hidapi python3 tools/bench/key_depth.py live
@@ -153,6 +155,24 @@ def cal(k):
         print(f"{names[i]:>6}: rest {rest[i]:5d} range {rng[i]:5d} now {raw[i]:5d}")
 
 
+STACKS = ["matrix", "keyboard", "usbd", "ble", "idle", "interrupts (MSP)"]
+
+
+def stacks(k, every):
+    while True:
+        r = k.q([0x08, 0, DIAG_ID, 5, 0])
+        v = [int.from_bytes(r[5 + 2 * i:7 + 2 * i], "little") for i in range(2 * len(STACKS))]
+        if not any(v):
+            sys.exit("no stack data: flash a build from ./build.sh hybrid -d HHKB_ADC_DIAGNOSTICS")
+        print(time.strftime("%H:%M:%S"))
+        for i, name in enumerate(STACKS):
+            size, peak = v[2 * i], v[2 * i + 1]
+            print(f"  {name:17} {peak:5} of {size:5} bytes" if size else f"  {name:17}   n/a", flush=True)
+        if not every:
+            return
+        time.sleep(every)
+
+
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "live"
     k = Kbd()
@@ -174,6 +194,8 @@ def main():
             half, full, missed = k.diag_block(4, 0)[:3]
             whole = f"{full} us, missed slots {(missed - missed0) & 0xFFFF}" if full else "n/a (needs HHKB_SCAN_DIAGNOSTICS)"
             print(f"longest scan half with interrupts off: {half} us, longest whole scan: {whole}", flush=True)
+    elif cmd == "stacks":
+        stacks(k, float(sys.argv[2]) if len(sys.argv) > 2 else 0)
     elif cmd == "cal":
         cal(k)
     else:

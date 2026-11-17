@@ -1,6 +1,8 @@
 #ifndef TASK_INTERNAL_H
 #define TASK_INTERNAL_H
 
+#include <stdint.h>
+
 #define TASK_DELAY_DEF 20
 #define TASK_DELAY_FAST 5
 
@@ -13,9 +15,10 @@
 #define TASK_PRIO_USBD 2
 #define TASK_PRIO_MATRIX 3
 
-// Tailored task stack sizes (in words, 1 word = 4 bytes on 32-bit Cortex-M)
-#define TASK_STACK_MATRIX 256
-#define TASK_STACK_KEYBOARD 384
+// Task stack sizes in words (4 bytes). Static worst cases (tools/stack_depth.py, 2026-11-17) plus
+// ~90 B for saved context: matrix ~650 B, keyboard ~780 B (battery wake scan with debug output)
+#define TASK_STACK_MATRIX 192
+#define TASK_STACK_KEYBOARD 256
 #define TASK_STACK_DEF 384
 
 #define TASK_PARAMS_DEF NULL
@@ -24,6 +27,14 @@
 // Sane queue sizes (saving RAM while preventing dropped keys)
 #ifndef QUEUE_DEF_SIZE
 #define QUEUE_DEF_SIZE 16
+#endif
+
+#ifdef HHKB_ADC_DIAGNOSTICS
+// Stack use readout (VIA diag kind 5): each stack's size and peak use, in bytes
+enum { STACK_DIAG_MATRIX, STACK_DIAG_KEYBOARD, STACK_DIAG_USBD, STACK_DIAG_BLE, STACK_DIAG_IDLE, STACK_DIAG_MSP, STACK_DIAG_COUNT };
+void stack_diag_register(uint8_t id, const void *stack, uint32_t words);
+void stack_diag_paint_msp(void);
+void stack_diag_read(uint8_t *out);
 #endif
 
 #define TASK_DEFS TASK_STACK_DEF, TASK_PARAMS_DEF, TASK_PRIO_DEF, TASK_HANDLER_DEF

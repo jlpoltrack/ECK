@@ -99,7 +99,7 @@ static bool usb_enqueue_key_report(const queued_key_report_t *report) {
 }
 
 static StaticTask_t s_usb_task_tcb;
-static StackType_t s_usb_task_stack[512];
+static StackType_t s_usb_task_stack[256]; /* static worst case ~640 B (tools/stack_depth.py) */
 
 void tud_event_hook_cb(uint8_t rhport, uint32_t eventid, bool in_isr) {
     (void)rhport;
@@ -137,7 +137,10 @@ bool USB_HID_Init(void) {
     if (!s_keyboard_queue) return false;
 
     tusb_init();
-    s_usb_task_handle = xTaskCreateStatic(usb_device_task, "usbd", 512, NULL, TASK_PRIO_USBD, s_usb_task_stack, &s_usb_task_tcb);
+#ifdef HHKB_ADC_DIAGNOSTICS
+    stack_diag_register(STACK_DIAG_USBD, s_usb_task_stack, sizeof(s_usb_task_stack) / sizeof(StackType_t));
+#endif
+    s_usb_task_handle = xTaskCreateStatic(usb_device_task, "usbd", sizeof(s_usb_task_stack) / sizeof(StackType_t), NULL, TASK_PRIO_USBD, s_usb_task_stack, &s_usb_task_tcb);
     return (s_usb_task_handle != NULL);
 }
 
