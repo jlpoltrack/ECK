@@ -8,13 +8,15 @@ Settings are changed at runtime in [VIA](via.md); build options are only for ben
 
 Read once at power-on, so change them with the keyboard unplugged (and, on the Hybrid, switched off).
 
+Stock SW6 is power saving on every model (OFF: a key press doesn't wake the computer). The Classic gives that up for [SW6 recovery](backup-restore.md#sw6-recovery), its only recovery without opening the case (it has no power switch), and always lets a key press wake the computer. The Hybrid keeps stock SW6 and recovers with its power switch instead.
+
 | Switch | OFF | ON |
 | --- | --- | --- |
 | SW1, SW2 | Mode select (below) | Mode select (below) |
 | SW3 | Top-right key is Delete; Fn + Delete is Backspace | Top-right key is Backspace; Fn + Delete is Delete |
 | SW4 | Left ◇ is GUI | Left ◇ is Fn |
 | SW5 | Alt and ◇ in their stock places | Alt and ◇ swapped on both sides |
-| SW6 | Classic: normal. Hybrid: auto power-off on batteries | Classic: [Bank 1 recovery](backup-restore.md#sw6-recovery). Hybrid: no auto power-off |
+| SW6 | Classic: normal. Hybrid: power saving (a key press doesn't wake the computer) and auto power-off on batteries | Classic: [Bank 1 recovery](backup-restore.md#sw6-recovery). Hybrid: a key press wakes the computer; no auto power-off |
 
 | SW1 | SW2 | Mode |
 | --- | --- | --- |

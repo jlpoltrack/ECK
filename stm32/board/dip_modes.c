@@ -9,7 +9,6 @@
 #include "hhkb_positions.h"
 #include "keys.h"
 #include "layers.h"
-#include "platform.h"
 
 enum { MODE_HHK, MODE_WIN, MODE_MAC };
 
@@ -92,9 +91,7 @@ bool dip_modes_matrix_change(uint8_t row, uint8_t col, bool pressed) {
 }
 
 void dip_modes_early_init(void) {
-    dip_switch_init();
-    platform_delay_us(50); /* let the pull-ups settle */
-    s_dips = dip_switch_read();
+    s_dips = dip_switch_read(); /* pull-ups on since platform_init's start */
     bool sw1 = dip_on(DIP_SW1), sw2 = dip_on(DIP_SW2);
     s_dip_mode = (sw1 && !sw2) ? MODE_WIN : (!sw1 && sw2) ? MODE_MAC : MODE_HHK;
     s_mode = s_dip_mode;

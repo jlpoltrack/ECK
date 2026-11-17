@@ -296,7 +296,7 @@ static void auto_off_check(TickType_t now, bool usb) {
     s_was_standby = standby;
     pwr_auto_t a = {
         .usb_power = usb,
-        .power_saving = s_boot_usb ? hhkb_is_power_saving_enabled() : s_power_saving,
+        .power_saving = s_power_saving,
         .pairing = pairing,
         .standby = standby,
         .idle_ms = now - s_key_at,
@@ -320,7 +320,7 @@ void hybrid_power_tick(TickType_t now) {
         s_power_saving = hhkb_is_power_saving_enabled();
         if (!s_boot_usb) {
             usb_stop();
-            dip_pins_release(); /* SW1-SW5 were read at start-up, SW6 just now */
+            dip_pins_release(); /* all six were read once at start-up */
         }
         RCC->CSR |= RCC_CSR_RMVF;
         s_step_at = s_key_at = s_pairing_at = s_standby_at = now;

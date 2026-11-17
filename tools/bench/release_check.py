@@ -46,6 +46,7 @@ def run(cmd, timeout, quiet=False):
     try:
         p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
+        LOG.append(f"$ {' '.join(cmd)}  (timed out after {timeout} s)")
         return 124, f"timed out after {timeout} s"
     out = p.stdout + p.stderr
     LOG.append(f"$ {' '.join(cmd)}  (exit {p.returncode})\n{out}")
@@ -65,7 +66,7 @@ def keyboard_info():
     try:
         ver = via(h, [0x08, 0, VERSION_ID])[3:].split(b"\0")[0].decode(errors="replace")
         nrf = via(h, [0x08, 0, NRF_ID], min_len=11)
-        serial = next((d["serial_number"] for d in hid.enumerate(0xCAFE, 0x4010) if d["usage_page"] == 0xFF60), "")
+        serial = next((d["serial_number"] for d in hid.enumerate(0xCAFE, 0x4010) if d["usage_page"] == 0xFF60), "") or ""
         return ver, serial, nrf[9], nrf[10]
     finally:
         h.close()
@@ -91,7 +92,9 @@ def set_oversampling(value):
     h = open_keyboard()
     try:
         old = via(h, [0x08, 0, OVERSAMPLING_ID])[3]
-        via(h, [0x07, 0, OVERSAMPLING_ID, value])
+        if old != value:
+            via(h, [0x07, 0, OVERSAMPLING_ID, value])
+            time.sleep(1)  # the keyboard saves settings 500 ms after a change
         return old
     finally:
         h.close()
@@ -120,21 +123,21 @@ def perf_measure():
         report("scan time", status, f"interrupts-off half {half} us (baseline 408), whole scan {whole} us "
                f"(baseline ~910), missed 1 kHz slots {miss} (baseline 0)")
     code, out = run(py("tools/bench/key_depth.py", "noise", "8"), 60)
-    m = re.search(r"median peak-to-peak (\d+)", out)
+    m = re.search(r"median peak-to-peak ([\d.]+)", out)
     if code or not m:
         report("rest noise", "FAIL", "no readings")
     else:
-        pp = int(m.group(1))
+        pp = float(m.group(1))
         pressed = "pressed during the run" in out
         report("rest noise", "WARN" if pp > NOISE_WARN or pressed else "PASS",
-               f"median peak-to-peak {pp} counts (baseline 12-13)" + ("; keys were pressed" if pressed else ""))
+               f"median peak-to-peak {pp:g} counts (baseline 12-13)" + ("; keys were pressed" if pressed else ""))
 
 
 def nrf_round_trip():
     """Recovery mode and back, as hybrid_update.py's nrf --recovery starts it."""
     h = open_keyboard()
     try:
-        r = via(h, [0x07, 0, NRF_ID, UPD_RECOVERY])
+        via(h, [0x07, 0, NRF_ID, UPD_RECOVERY])
         ok = False
         for _ in range(50):
             time.sleep(0.2)
@@ -150,7 +153,7 @@ def nrf_round_trip():
                 break
     finally:
         h.close()
-    report("nRF52 recovery round trip", "PASS" if r and ok and cleared else "FAIL",
+    report("nRF52 recovery round trip", "PASS" if ok and cleared else "FAIL",
            f"entered recovery: {ok}, left it: {cleared}")
 
 
@@ -161,6 +164,20 @@ def main():
     ap.add_argument("--nrf", action="store_true", help="also flash the nRF52 and test recovery mode")
     a = ap.parse_args()
     t0 = time.monotonic()
+    try:
+        checks(a)
+    except SystemExit as e:  # via_hid and keyboard_info exit when the keyboard is missing or silent
+        report("keyboard", "FAIL", str(e.code))
+    if DIAG_INSTALLED:
+        report("diagnostics build still installed", "FAIL", "flash a normal build before using the keyboard")
+    return finish(t0)
+
+
+DIAG_INSTALLED = False
+
+
+def checks(a):
+    global DIAG_INSTALLED
     minutes = 2 + 2 * a.perf + 2 * a.nrf
     print(f"Don't use the keyboard until the summary prints (about {minutes} min): typing during the run "
           "skews the measurements and can fail the EEPROM check.\n", flush=True)
@@ -172,21 +189,25 @@ def main():
     code, _ = run(py("tools/hybrid_update.py", "backup", backup), 120)
     report("backup", "PASS" if code == 0 else "FAIL", backup)
     if code:
-        return finish(t0)
+        return
+    keyboard_info()  # the backup restarts the keyboard: wait until it is back
 
     if a.perf:
         if build(DIAG_DEFS) and flash_stm32(HFB, "diagnostics"):
-            keyboard_info()  # waits until it is back
+            DIAG_INSTALLED = True
+            keyboard_info()
             print("hands off the keyboard for ~15 s ...", flush=True)
             perf()
 
     hfb = a.hfb
     if not hfb:
         if not build():
-            return finish(t0)
+            return
         hfb = HFB
     if not flash_stm32(hfb, os.path.basename(hfb)):
-        return finish(t0)
+        return
+    DIAG_INSTALLED = False
+    keyboard_info()
     if a.nrf:
         print("nRF52 update: the orange LED blinks while it installs", flush=True)
         code, out = run(py("tools/hybrid_update.py", "nrf", hfb), 240)
@@ -209,7 +230,6 @@ def main():
     if a.nrf:
         print("nRF52 recovery round trip: the orange LED blinks up to 30 s, twice", flush=True)
         nrf_round_trip()
-    return finish(t0)
 
 
 BACKUP = None

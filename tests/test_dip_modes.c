@@ -7,9 +7,7 @@ static uint16_t state = 1;
 static uint8_t dips;
 uint16_t layers_get_state(void) { return state; }
 int16_t keyboard_get_flat_key_index(uint8_t row, uint8_t col) { return (int16_t)(row * 15 + col); }
-void dip_switch_init(void) {}
 uint8_t dip_switch_read(void) { return dips; }
-void platform_delay_us(uint32_t us) { (void)us; }
 #include "dip_modes.c"
 
 #define FN (1U | (1U << 1))

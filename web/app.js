@@ -29,6 +29,7 @@ function progress(f) {
 $('b-clear').onclick = () => (logEl.textContent = '');
 const say = (msg) => {
     stateEl.textContent = msg;
+    stateEl.className = '';
     log(msg);
 };
 
@@ -78,7 +79,13 @@ async function save(name, bytes) {
     await (await pickFile(name))(bytes);
 }
 
+let busy = false; // one action at a time: a stale gate click must not start a second one
+
 async function run(title, fn) {
+    if (busy) return;
+    busy = true;
+    gate.classList.remove('on');
+    gate.onclick = null;
     controls.forEach((b) => (b.disabled = true));
     stateEl.textContent = title;
     stateEl.className = '';
@@ -96,10 +103,11 @@ async function run(title, fn) {
         stateEl.className = 'warn';
         log(`Error: ${e.message}`);
         if (inDfu)
-            log("The keyboard is still in update mode and won't type. Click the same button to try again, or use \"Keyboard doesn't start?\".");
+            log("The keyboard is still in update mode and won't type: use Recover keyboard firmware (below).");
     } finally {
         gate.classList.remove('on');
         controls.forEach((b) => (b.disabled = false));
+        busy = false;
     }
 }
 
@@ -259,13 +267,18 @@ async function redetect() {
     kb = null;
     if (shown) $('kb-sub').textContent = 'Reconnecting…'; // the card stays until the keyboard is back
     controls.forEach((b) => (b.disabled = true));
-    for (let i = 0; i < 20 && !kb; i++) {
+    for (let i = 0; i < 20 && !kb && !inDfu; i++) {
         await sleep(1000);
         await autoDetect();
     }
     controls.forEach((b) => (b.disabled = false));
     if (kb) return;
     render();
+    if (inDfu || (await eck.Dfu.find())) {
+        show('recover', true);
+        say("The keyboard is in update mode: click Recover keyboard firmware.");
+        return;
+    }
     // Firmware with a new USB serial number needs the browser's permission again
     say('The keyboard did not come back by itself: click Select keyboard and pick it.');
     await needGesture('Select keyboard');

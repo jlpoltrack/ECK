@@ -118,18 +118,11 @@ void hhkb_early_dip_check(void) {
 #ifdef HHKB_HYBRID
     hybrid_early_init();
 #endif
-    // Enable GPIOA and GPIOC peripheral clocks
-    RCC->IOPENR |= RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOCEN;
-
-    // Configure PC4 (SW6) as Input with Pull-Up
-    GPIOC->MODER &= ~(3U << (4 * 2));
-    GPIOC->PUPDR &= ~(3U << (4 * 2));
-    GPIOC->PUPDR |=  (1U << (4 * 2)); // 01: Pull-up
-
-    // Small delay to let line settle
-    for (volatile uint32_t i = 0; i < 500; i++) __NOP();
+    /* Pull-ups on now: by dip_modes_early_init's read, start-up has given them milliseconds. */
+    dip_switch_init();
 
 #if defined(HHKB_SW6_REBOOT_TO_BANK1) && (HHKB_SW6_REBOOT_TO_BANK1 == 1)
+    for (volatile uint32_t i = 0; i < 500; i++) __NOP(); /* Classic only: SW6 is read at once */
     bool sw6_on = ((GPIOC->IDR & (1U << 4)) == 0);
 
     if (sw6_on) {
@@ -162,20 +155,22 @@ void dip_switch_init(void) {
     GPIOC->PUPDR |=  (1U << (4 * 2)); // Pull-up
 }
 
+/* The first call reads the pins (dip_modes_early_init); later calls return that reading,
+ * as stock reads the switches once (the Hybrid also turns the pins off on batteries). */
 uint8_t dip_switch_read(void) {
-    uint8_t state = 0;
-    for (uint8_t i = 0; i < DIP_SWITCH_COUNT; i++) {
-        // Active LOW: 0 when closed/ON
-        if ((s_dip_map[i].port->IDR & s_dip_map[i].pin_mask) == 0) {
-            state |= (1U << i);
+    static bool s_read;
+    static uint8_t s_state;
+    if (!s_read) {
+        for (uint8_t i = 0; i < DIP_SWITCH_COUNT; i++) {
+            if ((s_dip_map[i].port->IDR & s_dip_map[i].pin_mask) == 0) s_state |= (1U << i); // ON = low
         }
+        s_read = true;
     }
-    return state;
+    return s_state;
 }
 
 bool dip_switch_get(dip_switch_num_t sw) {
-    if (sw >= DIP_SWITCH_COUNT) return false;
-    return (s_dip_map[sw].port->IDR & s_dip_map[sw].pin_mask) == 0;
+    return sw < DIP_SWITCH_COUNT && ((dip_switch_read() >> sw) & 1U);
 }
 
 bool hhkb_is_power_saving_enabled(void) {

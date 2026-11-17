@@ -4,6 +4,7 @@ Rules and lessons for AI agents (and people) working in this repo. Layout and bu
 
 ## Scope and ownership
 
+- **Keep the Classic and Hybrid code paths as alike as possible:** share code and behaviour, and keep model differences to what the hardware forces (e.g. the Classic has no power switch, so SW6 is its recovery). Reason: owner's rule (2026-11-17); the Classic can't be tested, so shared paths are what keeps it working.
 - **Hybrid is tested; Classic and Type-S are compile-only** (no hardware). Keep them building without warnings, and don't change their behaviour-only paths (e.g. the SW6 Bank 2 erase in `stm32/board/dip_switch.c`). Shared code may change for all three.
 - **Keep `THIRD_PARTY_NOTICES.md` current** when the firmware links new third-party code (e.g. another nRF5 SDK library); CI attaches it to every release. Reason: Nordic's, ST's and SEGGER's licences require their notices with the binaries.
 - **Commit as `41841496+jlpoltrack@users.noreply.github.com`** (set in this repo's git config). Reason: the repo is public-facing; the owner's real email was scrubbed from history on 2026-11-16.

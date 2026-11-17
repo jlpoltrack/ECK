@@ -41,13 +41,13 @@ typedef enum {
 void hhkb_early_dip_check(void);
 
 /**
- * @brief Initialize all 6 DIP switch pins with internal pull-ups.
+ * @brief Pull-ups on all 6 DIP switch pins (hhkb_early_dip_check, at the start of start-up).
  */
 void dip_switch_init(void);
 
 /**
- * @brief Read all DIP switches as a 6-bit bitmask (bit 0 = SW1, bit 5 = SW6).
- * 1 means ON, 0 means OFF.
+ * @brief All DIP switches as a 6-bit bitmask (bit 0 = SW1, bit 5 = SW6; 1 = ON), read once:
+ * the first call reads the pins, later calls return that reading.
  */
 uint8_t dip_switch_read(void);
 
