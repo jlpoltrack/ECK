@@ -9,6 +9,7 @@ uint16_t layers_get_state(void) { return state; }
 int16_t keyboard_get_flat_key_index(uint8_t row, uint8_t col) { return (int16_t)(row * 15 + col); }
 void dip_switch_init(void) {}
 uint8_t dip_switch_read(void) { return dips; }
+void platform_delay_us(uint32_t us) { (void)us; }
 #include "dip_modes.c"
 
 #define FN (1U | (1U << 1))
@@ -36,14 +37,14 @@ int main(void) {
     state = FN;
     assert(map(POS_DEL, K_BSPC) == K_DEL);
 
-    // Win mode: no Stop. Mac mode: SW3 ignored, Fn+F Eject, Fn+Delete Clear.
+    // Win mode: no Stop. Mac mode: SW3 ignored, Fn+Delete forward Delete, Fn+F plain F.
     boot(SW(1));
     state = FN;
     assert(map(POS_RGUI, K_RGUI) == K_RGUI);
     boot(SW(2) | SW(3));
     assert(map(POS_DEL, K_BSPC) == K_BSPC);
     state = FN;
-    assert(map(POS_DEL, K_BSPC) == K_CLEAR && map(POS_F, K_F) == K_EJCT);
+    assert(map(POS_DEL, K_BSPC) == K_DEL && map(POS_F, K_F) == K_F);
     assert(map(POS_F, K_M) == K_M && map(POS_RGUI, K_RGUI) == K_RGUI);
     boot(SW(1) | SW(2)); // both ON is treated as HHK
     state = FN;

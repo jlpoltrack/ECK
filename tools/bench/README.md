@@ -11,6 +11,7 @@ Shared helpers: `tools/via_hid.py` (find the keyboard, VIA requests; also used b
 | Tool | Purpose |
 | --- | --- |
 | `key_depth.py` | Per-key sensor readings over VIA: live depth, rest noise map, recorded presses, calibration, scan time. Needs a build with `HHKB_ADC_DIAGNOSTICS` (`./build.sh hybrid -d HHKB_ADC_DIAGNOSTICS`). |
+| `release_check.py` | One-command check before a release: backs up, builds, flashes, then checks version, USB serial, nRF52 status, VIA keymap and EEPROM persistence; `--perf` adds scan time and noise on a diagnostics build, `--nrf` the nRF52 update and recovery round trip. |
 | `eeprom_save_test.py` | Changes a setting, the Bluetooth scan rate and a key over VIA, checks they survive resets, restores them (no keypresses; prints address ranges only). |
 | `via_keymap_check.py` | Checks KC_NO/KC_TRNS and modifier round trips and the VIA keymap reset (0x06), then restores the keymap. |
 | `via_macros.py` | Reads, writes or clears the VIA macro buffer. `get` prints macro contents, which may hold a password: don't run it on a keyboard with real macros. |

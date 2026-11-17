@@ -9,6 +9,7 @@
 #include "hhkb_positions.h"
 #include "keys.h"
 #include "layers.h"
+#include "platform.h"
 
 enum { MODE_HHK, MODE_WIN, MODE_MAC };
 
@@ -38,11 +39,9 @@ uint32_t dip_modes_map_key(uint8_t row, uint8_t col, uint32_t key) {
     switch (keyboard_get_flat_key_index(row, col)) {
     case POS_DEL:
         if (key != K_BSPC && key != K_DEL) return key;
-        if (s_mode == MODE_MAC) return fn ? K_CLEAR : K_BSPC;
+        if (s_mode == MODE_MAC) return fn ? K_DEL : K_BSPC; /* as Apple keyboards */
         /* SW3 OFF: Delete, Fn+Delete = Backspace. SW3 ON: the reverse. */
         return (fn == dip_on(DIP_SW3)) ? K_DEL : K_BSPC;
-    case POS_F:
-        return (fn && s_mode == MODE_MAC && key == K_F) ? K_EJCT : key;
     case POS_LGUI:
         if (dip_on(DIP_SW4) && key == K_LGUI) return (layers & SYSTEM_2_LAYER) ? MO(3) : MO(1);
         return swap_alt_gui(key);
@@ -94,7 +93,7 @@ bool dip_modes_matrix_change(uint8_t row, uint8_t col, bool pressed) {
 
 void dip_modes_early_init(void) {
     dip_switch_init();
-    for (volatile uint32_t i = 0; i < 500; i++) {} /* let the pull-ups settle */
+    platform_delay_us(50); /* let the pull-ups settle */
     s_dips = dip_switch_read();
     bool sw1 = dip_on(DIP_SW1), sw2 = dip_on(DIP_SW2);
     s_dip_mode = (sw1 && !sw2) ? MODE_WIN : (!sw1 && sw2) ? MODE_MAC : MODE_HHK;

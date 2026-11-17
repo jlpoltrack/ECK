@@ -88,6 +88,23 @@ void platform_init(void) {
     hhkb_matrix_hardware_init();
 }
 
+void platform_delay_us(uint32_t us) {
+    uint32_t ctrl = SysTick->CTRL;
+    if (!(ctrl & SysTick_CTRL_ENABLE_Msk)) {
+        SysTick->LOAD = SysTick_LOAD_RELOAD_Msk;
+        SysTick->VAL = 0;
+        SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
+    }
+    uint32_t load = SysTick->LOAD + 1U, need = us * (SystemCoreClock / 1000000U);
+    uint32_t prev = SysTick->VAL, done = 0;
+    while (done < need) { /* SysTick counts down from LOAD and reloads */
+        uint32_t now = SysTick->VAL;
+        done += (prev >= now) ? prev - now : prev + load - now;
+        prev = now;
+    }
+    if (!(ctrl & SysTick_CTRL_ENABLE_Msk)) SysTick->CTRL = ctrl;
+}
+
 void platform_system_reset(void) {
     __disable_irq();
     NVIC_SystemReset();

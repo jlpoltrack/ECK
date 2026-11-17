@@ -24,7 +24,7 @@ Read once at power-on, so change them with the keyboard unplugged (and, on the H
 | ON | ON | HHK |
 
 - **HHK mode:** Fn + right ◇ sends Stop.
-- **Mac mode:** SW3 has no effect: the top-right key sends Backspace and Fn + Delete sends keypad Clear. Fn + F sends Eject.
+- **Mac mode:** SW3 has no effect: the top-right key sends Backspace and Fn + Delete sends forward Delete, as on Apple keyboards.
 - **Without the switches:** Fn + Ctrl + M selects Mac mode; Fn + Ctrl + W selects Win mode (or HHK when SW1/SW2 select HHK). The change lasts until power-off and isn't sent to the host. The chord goes by key position (the Fn key, or the left ◇ with SW4; left Ctrl; W; M), whatever the keymap holds there.
 
 The rest of the Fn layer (Caps Lock, volume, keypad, Power) is the same in every mode; Fn + Tab is Caps Lock.
