@@ -20,7 +20,13 @@ function log(msg) {
     logEl.textContent += msg + '\n';
     logEl.scrollTop = logEl.scrollHeight;
 }
-const progress = (f) => (bar.value = f);
+let tenth = 0; // last 10% step logged in this action
+function progress(f) {
+    bar.value = f;
+    const t = Math.floor(f * 10 + 1e-9);
+    if (t > tenth) log(`${(tenth = t) * 10}%`);
+}
+$('b-clear').onclick = () => (logEl.textContent = '');
 const say = (msg) => {
     stateEl.textContent = msg;
     log(msg);
@@ -76,7 +82,8 @@ async function run(title, fn) {
     controls.forEach((b) => (b.disabled = true));
     stateEl.textContent = title;
     stateEl.className = '';
-    progress(0);
+    bar.value = 0;
+    tenth = 0;
     inDfu = false;
     log(`\n== ${title}`);
     try {
@@ -257,15 +264,18 @@ async function redetect() {
         await autoDetect();
     }
     controls.forEach((b) => (b.disabled = false));
-    if (!kb) {
-        render();
-        log('Click Connect keyboard to continue.');
-    }
+    if (kb) return;
+    render();
+    // Firmware with a new USB serial number needs the browser's permission again
+    say('The keyboard did not come back by itself: click Select keyboard and pick it.');
+    await needGesture('Select keyboard');
+    await connect();
 }
 
 // ---------- actions ----------
 
-$('b-connect').onclick = () =>
+/** Connect through the browser's device dialog (needs a click). */
+const connect = () =>
     run('Connect', async () => {
         for (const k of [kb?.via, kb?.pfu]) if (k) await k.close();
         kb = null;
@@ -274,6 +284,7 @@ $('b-connect').onclick = () =>
         if (!dev) throw new Error('no HHKB selected');
         await detect(dev);
     });
+$('b-connect').onclick = connect;
 
 $('b-install').onclick = async () => {
     await run('Install ECK', async () => {
@@ -301,7 +312,7 @@ $('b-stm32').onclick = async () => {
         const data = await firmware('AHUX01');
         const stub = await bootStub();
         const dfu = await enterDfu(await openVia());
-        await eck.stm32Update(dfu, data, { log, stub, save, confirm: confirmStub });
+        await eck.stm32Update(dfu, data, { log, progress, stub, save, confirm: confirmStub });
         inDfu = false;
     });
     await redetect();
@@ -362,13 +373,15 @@ $('b-recover').onclick = async () => {
         const data = await firmware('AHUX01');
         const stub = await bootStub();
         let dev = await eck.Dfu.find();
+        if (!dev && (await navigator.hid.getDevices()).some(eck.isEck))
+            throw new Error('the keyboard is running ECK, not in update mode: use Update keyboard firmware, or follow the steps above');
         if (!dev) {
             say('Select "DFU in FS Mode" (STMicroelectronics) in the next dialog.');
             dev = await withGesture('Select update mode device', () => eck.Dfu.request());
         }
         const dfu = await eck.Dfu.open(dev);
         inDfu = true;
-        await eck.stm32Update(dfu, data, { log, stub, save, confirm: confirmStub });
+        await eck.stm32Update(dfu, data, { log, progress, stub, save, confirm: confirmStub });
         inDfu = false;
     });
     await redetect();

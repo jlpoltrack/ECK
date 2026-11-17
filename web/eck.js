@@ -421,7 +421,7 @@ export class Dfu {
         await this.command([0x21, ...le32(addr)]);
     }
     /** As dfu-util: set the address once, then block n (from 2) reads address + (n - 2) * xfer. */
-    async read(alt, addr, n) {
+    async read(alt, addr, n, progress = () => {}) {
         await this.select(alt);
         await this.idle();
         await this.setAddress(addr);
@@ -432,25 +432,35 @@ export class Dfu {
             const part = await this.ctrlIn(REQ.UPLOAD, block, len);
             if (part.length !== len) throw new Error(`short DFU read at ${hex(addr + off)}`);
             out.set(part, off);
+            progress((off + len) / n);
         }
         await this.ctrlOut(REQ.ABORT, 0);
         return out;
     }
     /** Write data at addr; flash pages (128 B) are erased first, the data EEPROM needs no erase. */
-    async write(alt, addr, data, blockSize = this.xfer) {
+    /** progress(f): erasing is the first third of the work for flash. */
+    async write(alt, addr, data, blockSize = this.xfer, progress = () => {}) {
         await this.select(alt);
         await this.idle();
-        if (alt === ALT.FLASH) for (let a = addr; a < addr + data.length; a += 128) await this.command([0x41, ...le32(a)]);
+        const flash = alt === ALT.FLASH;
+        if (flash)
+            for (let a = addr; a < addr + data.length; a += 128) {
+                await this.command([0x41, ...le32(a)]);
+                progress(((a - addr + 128) / data.length) / 3);
+            }
         for (let off = 0; off < data.length; off += blockSize) {
             await this.setAddress(addr + off);
             await this.ctrlOut(REQ.DNLOAD, 2, data.subarray(off, off + blockSize));
             await this.settle();
+            const f = Math.min(off + blockSize, data.length) / data.length;
+            progress(flash ? 1 / 3 + (2 / 3) * f : f);
         }
         await this.ctrlOut(REQ.ABORT, 0);
     }
-    async writeVerified(alt, addr, data, what, log) {
-        await this.write(alt, addr, data, alt === ALT.EEPROM ? 128 : this.xfer);
-        if (!equal(await this.read(alt, addr, data.length), data)) throw new Error(`${what}: verify failed (still in DFU mode: try again)`);
+    /** progress(f): writing is 80% of the work, the verify read the rest. */
+    async writeVerified(alt, addr, data, what, log, progress = () => {}) {
+        await this.write(alt, addr, data, alt === ALT.EEPROM ? 128 : this.xfer, (f) => progress(0.8 * f));
+        if (!equal(await this.read(alt, addr, data.length, (f) => progress(0.8 + 0.2 * f)), data)) throw new Error(`${what}: verify failed (still in DFU mode: try again)`);
         log(`${what}: written and verified`);
     }
     /** Leave the loader: it jumps to Bank 1, whose boot stub then starts the firmware. */
@@ -494,9 +504,9 @@ export async function enterDfu({ via, log, needGesture }) {
     return Dfu.open(dev);
 }
 
-async function writeBank2(dfu, sec, log) {
+async function writeBank2(dfu, sec, log, progress = () => {}) {
     await dfu.writeVerified(ALT.EEPROM, TAG_CRC, new Uint8Array(4), 'boot tag cleared', log); // a half-written Bank 2 never boots
-    await dfu.writeVerified(ALT.FLASH, BANK2, sec, 'firmware (Bank 2)', log);
+    await dfu.writeVerified(ALT.FLASH, BANK2, sec, 'firmware (Bank 2)', log, progress);
     await dfu.writeVerified(ALT.EEPROM, TAG_VALID, le32(1), 'boot flag', log);
     await dfu.writeVerified(ALT.EEPROM, TAG_CRC, le32(crc16mcrf4xx(sec)), 'boot tag', log);
 }
@@ -509,7 +519,7 @@ export function checkBootStub(stub) {
 
 /** STM32 update from a Hybrid .hfb. Without ECK's boot stub in Bank 1 (no USB recovery) it refuses,
  * unless a stub is given: then the stub goes in first (see writeBootStub). */
-export async function stm32Update(dfu, data, { log, stub = null, save, confirm }) {
+export async function stm32Update(dfu, data, { log, progress, stub = null, save, confirm }) {
     const { stm32, hybrid } = parseHfb(data);
     if (!hybrid) throw new Error('this updater handles the Hybrid; install Classic firmware through PFU’s updater');
     const bank1 = await dfu.read(ALT.FLASH, BANK1, SECTION);
@@ -517,7 +527,7 @@ export async function stm32Update(dfu, data, { log, stub = null, save, confirm }
         if (!stub) throw new Error("ECK's boot stub is not installed: finish setup first");
         await writeBootStub(dfu, stub, bank1, { log, save, confirm });
     }
-    await writeBank2(dfu, stm32, log);
+    await writeBank2(dfu, stm32, log, progress);
     await dfu.leave();
 }
 

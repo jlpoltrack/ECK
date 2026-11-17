@@ -203,7 +203,7 @@ Component costs (batteries, 3.0 V): 32 MHz PLL ~2.5 mA; USB + HSI48 + CRS 1.4 mA
 | nRF52 SWD | Two vias below MD1's bottom-right corner, by the "15" silkscreen: SWDCLK upper, SWDIO lower (module pins 15/14, GND 13). pyOCD with a Pico debugprobe: `-t nrf52832 -O auto_unlock=false` (**auto-unlock mass-erases**) | tested |
 | SWD on batteries | Fails on both chips; cause unknown | measured |
 | SWD read glitch | STM32 SRAM/peripheral reads sometimes return 0 while the core sleeps; repeat a surprising read | measured |
-| STM32 recovery | Hold the power switch and plug in USB: ST's DFU loader (`0483:DF11`); also when Bank 2 fails its check | tested |
+| STM32 recovery | Batteries out, hold the power switch and plug in USB: ST's DFU loader (`0483:DF11`); also when Bank 2 fails its check | tested |
 | Logs | nRF52 RTT (`make NRF_LOG=1`); `tools/bench/rtt_dump.py` | code |
 
 ![nRF52 SWD vias below module MD1: SWDCLK (green) and SWDIO (red)](../nrf52/docs/images/hybrid-nrf52-swd.png)

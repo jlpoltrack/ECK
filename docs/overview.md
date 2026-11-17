@@ -28,4 +28,4 @@ ECK follows PFU's manual for the switch, battery and LED:
 - **Batteries:** orange blinks once every ~30 s when low, twice every ~15 s when they need replacing (on batteries, in Bluetooth use). Empty batteries: orange, then off. Hosts see 100, 15, 5 or 0 % (the board has level detectors, not a gauge).
 - **Auto power-off** (batteries, SW6 OFF): 60 min without a key (the manual says 30), 10 min in pairing mode, or 1 min without reaching the paired host. This is a deep sleep: any key wakes it (that key is not typed). Only a 2 s switch hold turns it fully off.
 - **Battery life:** idle but connected 1.50 mA (stock 5.1 mA); deep sleep 0.33 mA, off 0.20 mA. A day of 2 h typing, 6 h idle and 16 h asleep is roughly 2-3 months on two AA cells (estimate). Details: [Hybrid hardware](hybrid-hardware.md#5-power).
-- **Recovery:** hold the power switch while plugging in USB ([Hybrid updates](hybrid-update.md#4-recovery)).
+- **Recovery:** batteries out, then hold the power switch while plugging in USB ([Hybrid updates](hybrid-update.md#4-recovery)).

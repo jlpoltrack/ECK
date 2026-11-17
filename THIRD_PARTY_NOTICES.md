@@ -6,7 +6,7 @@ ECK's own code is under the MIT licence in [LICENSE](LICENSE). The firmware file
 | --- | --- | --- |
 | FreeRTOS Kernel 11.3.3 (`stm32/vendor/freertos`) | STM32 firmware, all models | MIT |
 | TinyUSB 0.21.0 subset (`stm32/vendor/tinyusb`) | STM32 firmware, all models | MIT |
-| STM32L0 LL/HAL headers (`stm32/vendor/st/stm32l0xx_hal_driver`) | STM32 firmware, all models | BSD 3-Clause |
+| STM32L0 LL ADC header (`stm32/vendor/st/stm32l0xx_hal_driver`) | STM32 firmware, all models | BSD 3-Clause |
 | STM32L0 CMSIS device files (`stm32/vendor/st/cmsis_device_l0`) | STM32 firmware, all models | Apache 2.0 |
 | Arm CMSIS Core (`stm32/vendor/st/cmsis_core`; the nRF5 SDK's copy for the nRF52) | STM32 firmware, all models; Hybrid `.hfb` (nRF52) | Apache 2.0 |
 | Nordic S132 SoftDevice 7.2.0 | Hybrid `.hfb` (nRF52) | Nordic 5-Clause |

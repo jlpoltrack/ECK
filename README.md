@@ -15,9 +15,24 @@ Documentation starts at [docs/overview.md](docs/overview.md); open work is in [d
 
 **<https://jlpoltrack.github.io/ECK/>** (Chrome or Edge on a desktop; it needs WebHID and WebUSB). It carries the latest release. Click **Connect keyboard** and it offers what applies to your keyboard: first install from stock (on the Hybrid, followed by ECK's boot stub, which enables USB updates and recovery), updates and settings backup on the Hybrid, the SW6 reinstall steps on a Classic, and recovery for a Hybrid that doesn't start.
 
+Tested on a Hybrid running ECK: keyboard and Bluetooth updates, settings backup and restore, and both recovery buttons. First install from stock firmware is not yet tested.
+
 > On Windows, ST's DFU loader needs the WinUSB driver once (Zadig, device "DFU in FS Mode").
 
 After installing, change keymaps and settings in [VIA](https://www.usevia.app/) with [`stm32/via/via.json`](stm32/via/via.json).
+
+## Hybrid power
+
+Stock firmware is either on (5.1 mA idle on batteries) or off; its auto power-off turns the keyboard fully off, and only the power switch or USB power brings it back. On batteries, ECK steps down instead:
+
+| State | When | Battery current | Wake |
+| --- | --- | --- | --- |
+| Active | In use | 4.3 mA | |
+| Idle | 5 s without a key (Bluetooth) | 1.50 mA | Any key |
+| Deep sleep | 60 min without a key (SW6 OFF), 10 min pairing, 1 min without reaching the host | 0.33 mA | Any key (not typed), switch or USB |
+| Off | Power switch held 2 s | 0.20 mA (stock 0.20 mA) | Switch held 1 s, or USB |
+
+A day of 2 h typing, 6 h idle and 16 h asleep comes to roughly 2-3 months on two AA cells (estimate). Details: [overview](docs/overview.md#hybrid-use), [measurements](docs/hybrid-hardware.md#5-power).
 
 ## Layout
 

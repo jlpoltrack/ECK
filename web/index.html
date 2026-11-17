@@ -7,9 +7,9 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
 /* Purple palette from the logo (docs/logo.svg): lavender keys, violet accent */
-:root { --bg: #f8f5fc; --card: #fff; --ink: #2a2234; --muted: #6e6479; --line: #e6dcf2; --accent: #7a52b3; --on-accent: #fff; --warn: #a3400c; --ok: #237a3b; }
+:root { color-scheme: light dark; --track: #ddd0ee; --bg: #f8f5fc; --card: #fff; --ink: #2a2234; --muted: #6e6479; --line: #e6dcf2; --accent: #7a52b3; --on-accent: #fff; --warn: #a3400c; --ok: #237a3b; }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #17141c; --card: #201b27; --ink: #ece6f4; --muted: #a198ad; --line: #362e40; --accent: #c4ace0; --on-accent: #2a2234; --warn: #f0905a; --ok: #6fcf87; }
+  :root { --track: #4a3f58; --bg: #17141c; --card: #201b27; --ink: #ece6f4; --muted: #a198ad; --line: #362e40; --accent: #c4ace0; --on-accent: #2a2234; --warn: #f0905a; --ok: #6fcf87; }
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -33,7 +33,11 @@ select, input[type=file] { font: inherit; max-width: 100%; }
 .warn { color: var(--warn); }
 #status { position: sticky; bottom: 0; }
 #log { white-space: pre-wrap; font: 13px/1.45 ui-monospace, Menlo, Consolas, monospace; max-height: 260px; overflow: auto; margin: 0; }
-progress { width: 100%; height: 10px; margin-top: 8px; }
+progress { -webkit-appearance: none; appearance: none; width: 100%; height: 12px; margin-top: 8px; border: 0; border-radius: 6px; background: var(--track); overflow: hidden; }
+progress::-webkit-progress-bar { background: var(--track); }
+progress::-webkit-progress-value { background: var(--accent); }
+progress::-moz-progress-bar { background: var(--accent); }
+#b-clear { margin-left: auto; }
 #gate { display: none; }
 #gate.on { display: inline-block; }
 .ok { color: var(--ok); }
@@ -93,8 +97,8 @@ summary { cursor: pointer; font-weight: 600; }
 
   <section class="card" id="recover" hidden>
     <h2>Keyboard doesn't start (Hybrid)</h2>
-    <p><b>Keyboard doesn't type:</b> hold the power switch while plugging in USB, then click Recover keyboard firmware.</p>
-    <p class="muted">This needs ECK's boot stub, which Install sets up.</p>
+    <p><b>Keyboard doesn't type:</b> take the batteries out, then hold the power switch while plugging in USB (hold 2 s).</p>
+    <p class="muted">Then click Recover keyboard firmware. This needs ECK's boot stub, which Install sets up.</p>
     <div class="row"><button id="b-recover">Recover keyboard firmware</button></div>
     <p><b>Bluetooth broken</b> (the keyboard works over USB): click Recover Bluetooth firmware, then pick the keyboard.</p>
     <div class="row"><button id="b-nrf-recover">Recover Bluetooth firmware</button></div>
@@ -108,7 +112,7 @@ summary { cursor: pointer; font-weight: 600; }
   </details>
 
   <section class="card" id="status">
-    <div class="row" style="margin-top:0"><b id="state">Ready</b><button id="gate">Continue</button></div>
+    <div class="row" style="margin-top:0"><b id="state">Ready</b><button id="gate">Continue</button><button id="b-clear">Clear log</button></div>
     <progress id="progress" value="0" max="1"></progress>
     <pre id="log"></pre>
   </section>

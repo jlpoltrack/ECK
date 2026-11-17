@@ -54,7 +54,7 @@ Both chips then hold PFU's firmware byte for byte, and PFU's updater works again
 
 ## 4. Recovery
 
-If ECK doesn't start, **hold the power switch while plugging in USB**: the boot stub starts ST's DFU loader (it also does so whenever Bank 2 fails its check), and `hybrid_update.py stm32 …` writes a working image.
+If ECK doesn't start, **take the batteries out, then hold the power switch while plugging in USB** (keep holding about 2 s). The boot stub checks the switch only at a reset, and with batteries in, plugging in USB doesn't reset a running keyboard. It then starts ST's DFU loader (it also does so whenever Bank 2 fails its check), and `hybrid_update.py stm32 …` writes a working image.
 
 If Bluetooth is broken but USB works, stage an image through the nRF52's recovery mode, which starts without Bluetooth:
 

@@ -6,6 +6,7 @@
 #include "fmt.h"
 #include "ec_settings.h"
 #include "classic_matrix.h"
+#include "stm32l0xx.h"
 #include <stdarg.h>
 #include <string.h>
 
@@ -177,17 +178,25 @@ uint8_t const desc_configuration[] = {
 
 };
 
-#ifndef FW_VERSION
-#define FW_VERSION "unknown"
-#endif
-
 // String Descriptors
 char const *string_desc_arr[] = {
     (const char[]){0x09, 0x04}, // Supported language (English - 0x0409)
     "ECK",                      // Manufacturer string
     KEYBOARD_NAME,         // Product string
-    FW_VERSION,             // Serial number string: the firmware version
+    NULL,                   // Serial number: the chip's unique ID (serial_string)
 };
+
+/* Serial number: the 96-bit unique ID as hex. Constant across updates, so hosts keep the
+ * device's permissions (Chrome) and driver binding (Windows); VIA reports the version. */
+static const char *serial_string(void) {
+    static char s[25];
+    static const uint32_t offs[3] = {0x14, 0x04, 0x00};
+    for (int w = 0; w < 3; w++) {
+        uint32_t v = *(const volatile uint32_t *)(UID_BASE + offs[w]);
+        for (int i = 0; i < 8; i++) s[w * 8 + i] = "0123456789ABCDEF"[(v >> (28 - 4 * i)) & 0xF];
+    }
+    return s;
+}
 
 uint16_t _desc_str[32];
 
@@ -365,7 +374,7 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
         if (!(index < sizeof(string_desc_arr) / sizeof(string_desc_arr[0])))
             return NULL;
 
-        const char *str = string_desc_arr[index];
+        const char *str = index == 3 ? serial_string() : string_desc_arr[index];
         uint8_t chr_count = strlen(str);
         if (chr_count > 31)
             chr_count = 31;

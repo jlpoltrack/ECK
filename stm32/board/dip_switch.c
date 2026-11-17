@@ -1,7 +1,6 @@
 #include "dip_switch.h"
 #include "config.h"
 #include "stm32l0xx.h"
-#include "stm32l0xx_ll_gpio.h"
 #include <stdbool.h>
 #ifdef HHKB_HYBRID
 #include "hybrid.h"
