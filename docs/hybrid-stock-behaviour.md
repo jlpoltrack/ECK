@@ -1,8 +1,8 @@
-**Documentation:** [Install](install.md) • [Backup & restore](backup-restore.md) • [Build](build.md) • [Config](config.md) • [VIA](via.md) • [Hybrid port](hybrid-port.md) • [Hybrid updates](hybrid-update.md) • [Hybrid hardware](hybrid-hardware.md)
+[ECK docs](overview.md)
 
-# HHKB Professional Hybrid: stock behaviour ECK relies on or follows
+# Hybrid stock behaviour
 
-From static analysis of the owner's dumps (`backups/hybrid-2026-11-14/`, not in git) and PFU's `HHKB800_FW_A048.hfb`. Addresses: `0x08xxxxxx` = stock STM32 code, `0x2xxxx`/`0x3xxxx` = PFU nRF52 app, `0x7xxxx` = PFU nRF52 bootloader. **C** = confirmed in code, **I** = inferred. PFU's own STM32 <-> nRF52 link protocol is not documented here: ECK replaces both apps and uses its own link (`common/ble_link.h`).
+What PFU's firmware does where ECK relies on or follows it. From static analysis of the owner's dumps (`backups/hybrid-2026-11-14/`, not in git) and PFU's `HHKB800_FW_A048.hfb`. Addresses: `0x08xxxxxx` = stock STM32 code, `0x2xxxx`/`0x3xxxx` = PFU nRF52 app, `0x7xxxx` = PFU nRF52 bootloader. **C** = confirmed in code, **I** = inferred. PFU's own STM32 <-> nRF52 link protocol is not documented here: ECK replaces both apps and uses its own link (`common/ble_link.h`).
 
 ## nRF52 staging and the PFU bootloader (ECK nRF52 updates use it)
 
@@ -15,10 +15,9 @@ From static analysis of the owner's dumps (`backups/hybrid-2026-11-14/`, not in 
 | Then | `sd_mbr_command(INIT_SD)` (`0x79794`), vector base `0x26000` (`0x796f8`), jump to `0x26000` (`0x7987c`). No app CRC/validity check; app address fixed | `0x797b0` | C |
 | Size limit | the bootloader erases only `0x1000`..`0x36000`; an image over `0x35000` would overwrite the record page (I) | | I |
 
-
 ## Power, battery and LED (stock STM32 app and PFU nRF app; ECK follows them)
 
-Source: stock Bank 2 (STM32 section of `HHKB800_FW_A048.hfb`, base `0x08010000`); `backups/hybrid-2026-11-14/bank2.bin` is an ECK build (no PFU link code, different bytes), so it was not used. Ticks are TIM21 ticks of about 1 ms (stock Bank 2 has the same two TIM21 set-ups, `0x080152a4` ARR 40 and `0x08015304` ARR 160, PSC 99). The 1 ms tick is also what makes the LED timings below match the manual.
+Source: stock Bank 2 (STM32 section of `HHKB800_FW_A048.hfb`, base `0x08010000`; the backup's `bank2.bin` is an ECK build). Ticks are TIM21 ticks of about 1 ms (stock Bank 2 has the same two TIM21 set-ups, `0x080152a4` ARR 40 and `0x08015304` ARR 160, PSC 99). The 1 ms tick is also what makes the LED timings below match the manual.
 
 ### Battery
 

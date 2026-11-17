@@ -114,7 +114,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---------- PFU updater (stock firmware or Bank 1), WebHID ----------
 
-const PFU_FILTER = { vendorId: 0x04fe, usagePage: 0xff00, usage: 0x01 };
+export const PFU_FILTER = { vendorId: 0x04fe, usagePage: 0xff00, usage: 0x01 };
 
 export class Pfu {
     constructor(dev) {
@@ -185,7 +185,8 @@ export async function pfuInstall(pfu, data, { reconnect, log, progress }) {
     try {
         await pfu.cmd([0xe3, 0, 0, 0], hfb.hybrid ? 30000 : 5000);
     } catch (e) {
-        log(`Final step: ${e.message} (expected when the keyboard restarts into the new firmware)`);
+        // Only silence is expected (the keyboard restarts into the new firmware), as in hhkb_flasher.py
+        if (!e.message.startsWith('no answer')) throw e;
     }
     if (hfb.hybrid) {
         log('Waiting while the Bluetooth chip installs its part (15 s): keep the keyboard plugged in.');
@@ -196,8 +197,12 @@ export async function pfuInstall(pfu, data, { reconnect, log, progress }) {
 
 // ---------- ECK firmware over VIA raw HID ----------
 
-const VIA_FILTER = { usagePage: 0xff60, usage: 0x61 };
-const NRF_ID = 30;
+// ECK on every model (stm32/usb/usb_descriptors.c); the product name must also contain "HHKB".
+export const ECK_FILTER = { vendorId: 0xcafe, productId: 0x4010, usagePage: 0xff60, usage: 0x61 };
+export const isEck = (d) =>
+    d.vendorId === 0xcafe && d.productId === 0x4010 && (d.productName || '').includes('HHKB') &&
+    d.collections.some((c) => c.usagePage === 0xff60);
+const NRF_ID = 30, VERSION_ID = 28;
 const UPD = { START: 1, DATA: 2, FINISH: 3, RESTART: 4, RECOVERY: 5 };
 const ST = { ERASING: 1, RECEIVING: 2, STAGED: 3 };
 const ST_ERRORS = { 0x81: 'image size refused', 0x82: 'data out of order', 0x83: 'MD5 mismatch after staging' };
@@ -209,11 +214,26 @@ export class Via {
         dev.addEventListener('inputreport', (e) => this.queue.push(new Uint8Array(e.data.buffer)));
     }
     static async request() {
-        const devs = await navigator.hid.requestDevice({ filters: [VIA_FILTER] });
-        const dev = devs.find((d) => (d.productName || '').includes('HHKB')) || devs[0];
-        if (!dev) throw new Error('no keyboard selected');
+        const dev = (await navigator.hid.requestDevice({ filters: [ECK_FILTER] })).find(isEck);
+        if (!dev) throw new Error('no HHKB running ECK selected');
+        return Via.open(dev);
+    }
+    static async open(dev) {
+        if (!isEck(dev)) throw new Error(`${dev.productName || 'this device'} is not an HHKB running ECK`);
         if (!dev.opened) await dev.open();
         return new Via(dev);
+    }
+    get hybrid() {
+        return (this.dev.productName || '').includes('Hybrid');
+    }
+    /** Installed ECK version (VIA setting 28), or null from firmware too old to report it. */
+    async version() {
+        try {
+            const r = await this.send([0x08, 0, VERSION_ID]);
+            return new TextDecoder().decode(r.subarray(3)).split('\0')[0].trim() || null;
+        } catch {
+            return null;
+        }
     }
     async send(bytes, timeoutMs = 1000) {
         const pkt = new Uint8Array(32);
@@ -400,18 +420,20 @@ export class Dfu {
     async setAddress(addr) {
         await this.command([0x21, ...le32(addr)]);
     }
+    /** As dfu-util: set the address once, then block n (from 2) reads address + (n - 2) * xfer. */
     async read(alt, addr, n) {
         await this.select(alt);
         await this.idle();
+        await this.setAddress(addr);
+        await this.ctrlOut(REQ.ABORT, 0); // back to dfuIDLE: uploads cannot start from dfuDNLOAD-IDLE
         const out = new Uint8Array(n);
-        for (let off = 0; off < n; off += this.xfer) {
-            await this.setAddress(addr + off); // block 2 reads from the address pointer itself
-            await this.ctrlOut(REQ.ABORT, 0);
+        for (let off = 0, block = 2; off < n; off += this.xfer, block++) {
             const len = Math.min(this.xfer, n - off);
-            const part = await this.ctrlIn(REQ.UPLOAD, 2, len);
+            const part = await this.ctrlIn(REQ.UPLOAD, block, len);
             if (part.length !== len) throw new Error(`short DFU read at ${hex(addr + off)}`);
             out.set(part, off);
         }
+        await this.ctrlOut(REQ.ABORT, 0);
         return out;
     }
     /** Write data at addr; flash pages (128 B) are erased first, the data EEPROM needs no erase. */
@@ -450,18 +472,24 @@ export class Dfu {
 export async function enterDfu({ via, log, needGesture }) {
     let dev = await Dfu.find();
     if (!dev && via) {
-        log('Starting the DFU loader...');
+        log('Starting update mode...');
         await via.bootloader();
         await via.close();
-        for (let i = 0; i < 50 && !dev; i++) {
+        // A device granted before shows up within ~2 s; otherwise ask while the click still counts
+        for (let i = 0; i < 15 && !dev; i++) {
             await sleep(200);
             dev = await Dfu.find();
         }
     }
     if (!dev) {
-        log('Select "DFU in FS Mode" (STMicroelectronics) in the next dialog.');
-        await needGesture('Select DFU device'); // the loader appears seconds after the click
-        dev = await Dfu.request();
+        log('Select "DFU in FS Mode" (STMicroelectronics) in the dialog; it may take a moment to appear there.');
+        try {
+            dev = await Dfu.request(); // Chrome's picker lists the device once it enumerates
+        } catch (e) {
+            if (e.name !== 'SecurityError') throw e;
+            await needGesture('Select DFU device'); // the click's permission expired
+            dev = await Dfu.request();
+        }
     }
     return Dfu.open(dev);
 }
@@ -473,38 +501,50 @@ async function writeBank2(dfu, sec, log) {
     await dfu.writeVerified(ALT.EEPROM, TAG_CRC, le32(crc16mcrf4xx(sec)), 'boot tag', log);
 }
 
-/** STM32 update from a Hybrid .hfb: refuses unless Bank 1 holds the boot stub (no USB recovery otherwise). */
-export async function stm32Update(dfu, data, { log, force = false }) {
+/** Checks a boot stub image before anything is written. */
+export function checkBootStub(stub) {
+    if (stub.length > 0x1000) throw new Error('boot stub larger than 4 KB');
+    checkVectors(stub, BANK1, 'boot stub');
+}
+
+/** STM32 update from a Hybrid .hfb. Without ECK's boot stub in Bank 1 (no USB recovery) it refuses,
+ * unless a stub is given: then the stub goes in first (see writeBootStub). */
+export async function stm32Update(dfu, data, { log, stub = null, save, confirm }) {
     const { stm32, hybrid } = parseHfb(data);
     if (!hybrid) throw new Error('this updater handles the Hybrid; install Classic firmware through PFU’s updater');
-    if (!force && !hasBootStub(await dfu.read(ALT.FLASH, BANK1, 0x2000))) {
-        throw new Error("Bank 1 does not hold ECK's boot stub: install it first (Boot stub step)");
+    const bank1 = await dfu.read(ALT.FLASH, BANK1, SECTION);
+    if (!hasBootStub(bank1)) {
+        if (!stub) throw new Error("ECK's boot stub is not installed: finish setup first");
+        await writeBootStub(dfu, stub, bank1, { log, save, confirm });
     }
     await writeBank2(dfu, stm32, log);
     await dfu.leave();
 }
 
-/** Replace PFU's Bank 1 updater with the boot stub. save(name, bytes): offers a download; resolves once saved. */
-export async function installBootStub(dfu, stub, { log, save }) {
-    if (stub.length > 0x1000) throw new Error('boot stub larger than 4 KB');
-    checkVectors(stub, BANK1, 'boot stub');
-    const bank1 = await dfu.read(ALT.FLASH, BANK1, SECTION);
+/** Replace PFU's Bank 1 updater with the boot stub, after saving the original Bank 1 and EEPROM.
+ * save(name, bytes) resolves once the file is written; confirm() resolves when the user agrees. */
+async function writeBootStub(dfu, stub, bank1, { log, save, confirm }) {
+    checkBootStub(stub);
     if (!hasBootStub(bank1)) {
         const eeprom = await dfu.read(ALT.EEPROM, EEPROM, EEPROM_SIZE);
-        log('Saving your original Bank 1 and data EEPROM: keep both files, going back to stock needs them.');
+        log("Saving PFU's updater and your settings as two files: keep both, going back to stock needs them.");
         await save('hybrid-bank1-backup.bin', bank1);
         await save('hybrid-eeprom-backup.bin', eeprom);
+        await confirm();
     }
     const image = new Uint8Array(SECTION).fill(0xff);
     image.set(stub);
-    await dfu.writeVerified(ALT.FLASH, BANK1, image, 'boot stub (Bank 1)', log);
+    await dfu.writeVerified(ALT.FLASH, BANK1, image, 'boot stub', log);
+}
+
+export async function installBootStub(dfu, stub, opts) {
+    await writeBootStub(dfu, stub, await dfu.read(ALT.FLASH, BANK1, SECTION), opts);
     await dfu.leave();
 }
 
+/** The data EEPROM: keymap, macros, calibration and settings. */
 export async function backup(dfu) {
-    const eeprom = await dfu.read(ALT.EEPROM, EEPROM, EEPROM_SIZE);
-    const bank2 = await dfu.read(ALT.FLASH, BANK2, SECTION);
-    return { eeprom, bank2 };
+    return dfu.read(ALT.EEPROM, EEPROM, EEPROM_SIZE);
 }
 
 /** Restore a data EEPROM backup, keeping the chip's boot tag (it belongs to the installed Bank 2). */

@@ -22,6 +22,7 @@ void hhkb_adc_diag_read(uint8_t kind, uint8_t first, uint8_t *out);
 #ifdef HHKB_SCAN_DIAGNOSTICS
 void hhkb_get_scan_diagnostics(uint32_t *scan_us, uint32_t *scan_max_us, uint32_t *work_max_us, uint32_t *missed, uint32_t *q_full);
 void hhkb_reset_scan_diagnostics_peaks(void);
+uint16_t hhkb_take_full_scan_peak_us(void); /* longest whole scan since the last call (HHKB_SCAN_DIAGNOSTICS) */
 #endif
 
 #ifdef __cplusplus

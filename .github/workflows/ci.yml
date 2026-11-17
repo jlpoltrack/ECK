@@ -13,22 +13,37 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.3 # no floating major tag
         with:
           enable-cache: false # no uv.lock to key it on
-      - name: Install toolchain
-        run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi clang cmake zsh zip
+      - name: Install host tools
+        run: sudo apt-get update && sudo apt-get install -y clang cmake zsh zip
+      # Arm GNU Toolchain 15.3.Rel2, the compiler the bench builds use, so releases match tested binaries.
+      - name: Cache Arm GNU Toolchain
+        uses: actions/cache@v6
+        with:
+          path: ~/arm-gnu-toolchain
+          key: arm-gnu-toolchain-15.3.rel2-x86_64
+      - name: Fetch Arm GNU Toolchain
+        run: |
+          if [ ! -d ~/arm-gnu-toolchain/bin ]; then
+            curl -sfL -o /tmp/gcc.tar.xz "https://gitlab.arm.com/api/v4/projects/tooling%2Fgnu-toolchains-for-arm/packages/generic/gnu-toolchain/15.3.rel2/arm-gnu-toolchain-15.3.rel2-x86_64-arm-none-eabi.tar.xz"
+            echo "463df9665c246fa13bab2102115bbf83440661b6eb70b44f3dfd4712ca30037a  /tmp/gcc.tar.xz" | sha256sum -c
+            mkdir -p ~/arm-gnu-toolchain && tar -xJf /tmp/gcc.tar.xz -C ~/arm-gnu-toolchain --strip-components=1
+          fi
+          echo ~/arm-gnu-toolchain/bin >> "$GITHUB_PATH"
+          ~/arm-gnu-toolchain/bin/arm-none-eabi-gcc --version | head -1
       - name: Host tests
         run: tests/run_all_tests.sh
-      # Nordic's nRF5 SDK 15.0.0 (sources and the S132 v6.0.0 SoftDevice), next to the repo where build.sh looks.
+      # Nordic's nRF5 SDK 17.1.1 (sources and the S132 v7.2.0 SoftDevice), next to the repo where build.sh looks.
       - name: Cache nRF5 SDK
         uses: actions/cache@v6
         with:
-          path: ../nRF5_SDK_15.0.0
-          key: nrf5-sdk-15.0.0-a53641a
+          path: ${{ runner.workspace }}/nRF5_SDK_17.1.1 # = ../ (the cache action rejects '..')
+          key: nrf5-sdk-17.1.1-8173c8a
       - name: Fetch nRF5 SDK
         run: |
-          [ -d ../nRF5_SDK_15.0.0 ] && exit 0
-          curl -sfL -o /tmp/sdk.zip https://files.nordicsemi.com/artifactory/nRF5-SDK/external/nRF5_SDK_v15.x.x/nRF5_SDK_15.0.0_a53641a.zip
-          echo "7594138e5bfdcec2c69786491935bedc349b5672751d90fdea461b740f7e65b7  /tmp/sdk.zip" | sha256sum -c
-          unzip -q /tmp/sdk.zip -d /tmp/sdk && mv /tmp/sdk/nRF5_SDK_15.0.0_a53641a ../nRF5_SDK_15.0.0
+          [ -d ../nRF5_SDK_17.1.1 ] && exit 0
+          curl -sfL -o /tmp/sdk.zip https://files.nordicsemi.com/artifactory/nRF5-SDK/external/nRF5_SDK_v17.x.x/nRF5_SDK_17.1.1_8173c8a.zip
+          echo "8c3e6a1b9b70c2fb79180e6d9e05d8cfae35f94bf504f15c5fc1a8a9f1f97e7d  /tmp/sdk.zip" | sha256sum -c
+          unzip -q /tmp/sdk.zip -d ../nRF5_SDK_17.1.1
       - name: Hybrid (nRF52 app, STM32 and .hfb)
         run: ./build.sh hybrid -c && test -f build/hybrid/hhkb_ec_hybrid.hfb
       - uses: actions/upload-artifact@v7
@@ -52,5 +67,9 @@ jobs:
         run: |
           tools/web_bundle.sh "$GITHUB_REF_NAME"
           (cd web && zip -qr "../eck-web-flasher-$GITHUB_REF_NAME.zip" . -x eck.test.mjs)
+          zip -qj "eck-web-flasher-$GITHUB_REF_NAME.zip" LICENSE THIRD_PARTY_NOTICES.md
+          # A re-pushed tag (history squash) keeps its existing release
+          gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1 && exit 0
           gh release create "$GITHUB_REF_NAME" --title "ECK $GITHUB_REF_NAME" --generate-notes \
-            web/firmware/*.hfb web/firmware/hybrid_boot.bin "eck-web-flasher-$GITHUB_REF_NAME.zip"
+            web/firmware/*.hfb web/firmware/hybrid_boot.bin "eck-web-flasher-$GITHUB_REF_NAME.zip" \
+            stm32/via/via.json LICENSE THIRD_PARTY_NOTICES.md

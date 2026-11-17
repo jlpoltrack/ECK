@@ -304,12 +304,22 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
 #ifdef HHKB_ADC_DIAGNOSTICS
 /* Up to 13 keys from `first` (index = col * MATRIX_ROWS + row), one u16 each: kind 0 depth
  * (permille of the calibrated range), 1 raw ADC, 2 rest level, 3 range. For tools/bench/key_depth.py.
- * Kind 4: longest interrupts-off scan half in us since the last kind-4 read. */
+ * Kind 4: longest interrupts-off scan half and longest whole scan (us, since the last kind-4 read), then
+ * missed scan slots since start (low 16 bits); the last two need HHKB_SCAN_DIAGNOSTICS, else 0. */
 void hhkb_adc_diag_read(uint8_t kind, uint8_t first, uint8_t *out) {
     if (kind == 4) {
         out[0] = (uint8_t)s_masked_max_us;
         out[1] = (uint8_t)(s_masked_max_us >> 8);
         s_masked_max_us = 0;
+#ifdef HHKB_SCAN_DIAGNOSTICS
+        uint16_t full = hhkb_take_full_scan_peak_us();
+        out[2] = (uint8_t)full;
+        out[3] = (uint8_t)(full >> 8);
+        uint32_t missed;
+        hhkb_get_scan_diagnostics(NULL, NULL, NULL, &missed, NULL);
+        out[4] = (uint8_t)missed;
+        out[5] = (uint8_t)(missed >> 8);
+#endif
         return;
     }
     uint8_t n = 0;

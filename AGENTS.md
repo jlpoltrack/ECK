@@ -4,9 +4,10 @@ Rules and lessons for AI agents (and people) working in this repo. Layout and bu
 
 ## Scope and ownership
 
-- **A new codeset, not a DMK fork.** It borrows from aroum/dmk (MIT, credited in README and LICENSE) but does not follow upstream. Reason: upstream pushed untested changes that broke builds. Don't port upstream changes without asking.
 - **Hybrid is tested; Classic and Type-S are compile-only** (no hardware). Keep them building without warnings, and don't change their behaviour-only paths (e.g. the SW6 Bank 2 erase in `stm32/board/dip_switch.c`). Shared code may change for all three.
-- **VIA only** (Vial removed). Users load `stm32/via/via.json` into usevia.app. Fresh defaults: factory thresholds, Rapid Trigger off.
+- **Keep `THIRD_PARTY_NOTICES.md` current** when the firmware links new third-party code (e.g. another nRF5 SDK library); CI attaches it to every release. Reason: Nordic's, ST's and SEGGER's licences require their notices with the binaries.
+- **Commit as `41841496+jlpoltrack@users.noreply.github.com`** (set in this repo's git config). Reason: the repo is public-facing; the owner's real email was scrubbed from history on 2026-11-16.
+- **VIA only**; Vial was removed, don't re-add it. Fresh defaults: factory thresholds, Rapid Trigger off.
 
 ## Never rename (persisted or matched by tools)
 
@@ -14,22 +15,23 @@ Reason: renaming orphans data already in keyboards' EEPROM, or breaks tool match
 
 - EEPROM magics: `ECK3` keymap slot tag, `CMIT` commit word, `HKCx` settings records, settings words, the nRF52 bond slot tag. To change one, keep reading the old value and rewrite it, as `hhkb_keymap_storage.c` does for `ECK2` and the pre-ECK slot tags.
 - "HHKB" in the USB product string: `tools/hybrid_update.py` and the bench tools find the keyboard by it.
-- Code identifiers carry no project prefix. Everything says ECK (renamed from DMK 2026-11-16), including the keymap slot tag; only the aroum/dmk credit keeps the old name.
+- Code identifiers carry no project prefix; the name is ECK everywhere except the aroum/dmk credit.
 
 ## Build and test
 
-- `./build.sh hybrid|classic|type_s [-c] [-d DEFS]`; bench build: `./build.sh hybrid -d HHKB_ADC_DIAGNOSTICS,HHKB_SCAN_DIAGNOSTICS`. The Hybrid `.hfb` needs the nRF5 SDK 15.0.0 at `../nRF5_SDK_15.0.0`; CI fetches it (SHA-256 pinned).
+- `./build.sh hybrid|classic|type_s [-c] [-d DEFS]`; bench build: `./build.sh hybrid -d HHKB_ADC_DIAGNOSTICS,HHKB_SCAN_DIAGNOSTICS`. The Hybrid `.hfb` needs the nRF5 SDK 17.1.1 at `../nRF5_SDK_17.1.1`; CI fetches it (SHA-256 pinned).
 - `tests/run_all_tests.sh` runs the C and Python host tests. Host tests compile some modules against mocks in `tests/*_mocks/`: a new `#include` in such a module needs a mock header there.
 - Builds must stay warning-free (`-Wall -Wextra`); fix causes, don't suppress.
+- **One compiler: Arm GNU Toolchain 15.3.Rel2** on the bench and in CI (`ci.yml` pins its URL and SHA-256). Change both together, then re-measure `noise` and rest readings. Reason: releases come from CI, and compiler changes shift scan timing and so key readings.
 - **Refactors must prove binaries unchanged:** `tools/build_hashes.sh <src> <out>` on a `git archive HEAD` copy and on the working tree; every `.bin` hash must match. (`.hfb` lines differ when only one tree has `nrf52/_build`.)
-- `build/compile_commands.json` links to the last variant built, for clangd/IDEs.
+- **History: one commit per release.** Work between releases is committed normally; when tagging `vX.Y.Z`, squash everything since the previous tag into one commit (subject `ECK vX.Y.Z: <summary>`), tag it, and force-push `main` and the tag. Back up first: `git bundle create backups/git-history/<date>.bundle --all`. Reason: the owner wants a short history. No `Co-Authored-By` trailers (owner's rule).
 
 ## Bench (the owner's Hybrid, USB only)
 
 - The test keyboard is assembled: no SWD or PPK2. The owner types on it. Flash and measure over USB without asking; never ask for keypresses (if presses are truly needed, run the recorder ~40 s and tell the owner to start right away).
 - Flash: `uv run -q --with hidapi python3 tools/hybrid_update.py stm32 build/hybrid/hhkb_ec_hybrid.bin` (~20-30 s), `nrf <.hfb>` (~40 s + 10 s install). Wrap USB/probe commands in `timeout`, and check any long command within 30 s.
 - Before risky flashes (EEPROM layout, storage code): `hybrid_update.py backup backups/<name>/` (git-ignored).
-- Checks without keypresses: `tools/bench/key_depth.py scantime 5` (longest interrupts-off scan half; baseline 407 µs since 2026-11-16), `noise 8` (median p-p ~12-13 counts), `tools/bench/eeprom_save_test.py` (all three EEPROM writers persist across resets), `tools/bench/via_keymap_check.py` (VIA keycode round trips and keymap reset; restores the keymap). `scantime`/`noise` need a `-d HHKB_ADC_DIAGNOSTICS` build.
+- Checks without keypresses: `tools/bench/key_depth.py scantime 5` (longest interrupts-off half, baseline 408 µs; longest whole scan ~910 µs and missed 1 kHz slots, which need `HHKB_SCAN_DIAGNOSTICS` too), `noise 8` (median p-p ~12-13 counts), `tools/bench/eeprom_save_test.py` (all three EEPROM writers persist across resets), `tools/bench/via_keymap_check.py` (VIA keycode round trips and keymap reset; restores the keymap). `scantime`/`noise` need a `-d HHKB_ADC_DIAGNOSTICS` build.
 - Most other `tools/bench/` tools need SWD (case open): ask first.
 - **Never commit raw EEPROM dumps or print the macro area**: the owner's macro may be a password. Use `tools/scrub_eeprom_fixture.py` for fixtures; report only address ranges.
 
@@ -53,4 +55,7 @@ Reason: renaming orphans data already in keyboards' EEPROM, or breaks tool match
 - Recovery-mode testing: a `--recovery` run restarts the nRF52 twice, and each restart blinks the orange LED (2/s, "Bluetooth update") for up to 30 s. Tell the owner before running tests that light LEDs.
 - To build while another job uses `build/`, build a `git archive` copy in a sibling folder (the nRF5 SDK must sit at `../`), then delete it. Reason: two builds in one `build/` tree clobber each other.
 - **Keymaps in EEPROM hold internal 32-bit keycodes**, so never change what an existing value means: add new encodings in unused values or flag bits (K_NULL = 0x01, hold-tap `HT_MODS_FLAG` bit 23). Reason: saved keymaps would silently change behaviour.
-- Deferred and open items live in [docs/deferred.md](docs/deferred.md); update it when one is done or added.
+- **Checking the nRF52 without pairing:** restart it into recovery mode and back over VIA (`hybrid_update.py`'s `nrf_recovery`, then `UPD_RESTART`); the recovery flag proves the app reaches `main()` and gets SPI interrupts through the SoftDevice. It doesn't prove the BLE stack starts: that needs a pairing (slot 4 on the owner's Mac; pairing deletes that slot's bond). Reason: the bench Mac isn't paired with the keyboard, so an empty slot stays silent in scans.
+- **The `.hfb` never rewrites the nRF52 MBR** (`0x0-0xFFF`): any SoftDevice upgrade runs under PFU's MBR 2.2.2 and must keep the app at `0x26000`. S132 v7.2.0 under it was tested on 2026-11-16 (boot, recovery mode, LESC pairing, an SDK 15 bond reconnecting). Reason: PFU's bootloader copies only `0x1000-0x35FFF` and jumps to `0x26000`.
+- Deferred and open items live in [docs/deferred.md](docs/deferred.md) only; update it when one is done or added.
+- **Docs: one home per fact.** User guides link to the reference docs (`build.md` for the `.hfb` layout and CI, `hybrid-hardware.md` for pins, memory maps, power and SWD) instead of repeating them. Reason: the same facts sat in three or four files, and the docs ran to 19k words (cut to 11k, 2026-11-16).

@@ -51,6 +51,7 @@ void TIM2_IRQHandler(void) {
 static volatile uint32_t s_matrix_scan_count;
 static volatile uint32_t s_matrix_scan_us;
 static volatile uint32_t s_matrix_scan_max_us;
+static volatile uint16_t s_full_scan_peak_us; // own peak for key_depth.py; the console resets the other
 static volatile uint32_t s_matrix_period_us;
 static volatile uint32_t s_matrix_work_max_us;
 static volatile uint32_t s_matrix_queue_full;
@@ -134,6 +135,7 @@ void matrix_task(void *pvParameters) {
         uint32_t scan_us = (uint16_t)(TIM2->CNT - scan_start) / HHKB_SCAN_TIMER_TICKS_PER_US;
         s_matrix_scan_us = scan_us;
         if (scan_us > s_matrix_scan_max_us) s_matrix_scan_max_us = scan_us;
+        if (scan_us > s_full_scan_peak_us) s_full_scan_peak_us = (uint16_t)scan_us;
         s_matrix_scan_count++;
 #endif
 
@@ -191,5 +193,11 @@ void hhkb_get_scan_diagnostics(uint32_t *scan_us, uint32_t *scan_max_us, uint32_
 void hhkb_reset_scan_diagnostics_peaks(void) {
     s_matrix_scan_max_us = 0;
     s_matrix_work_max_us = 0;
+}
+
+uint16_t hhkb_take_full_scan_peak_us(void) {
+    uint16_t peak = s_full_scan_peak_us;
+    s_full_scan_peak_us = 0;
+    return peak;
 }
 #endif

@@ -18,7 +18,7 @@ Format breakdown (65,570 bytes total):
 
 Usage:
     python3 make_hfb.py input.bin output.hfb [--model AHHX01] [--version A4.50]
-    python3 make_hfb.py input.bin output.hfb --nrf-app nrf52832_xxaa.bin --softdevice s132_nrf52_6.0.0_softdevice.hex
+    python3 make_hfb.py input.bin output.hfb --nrf-app nrf52832_xxaa.bin --softdevice s132_nrf52_7.2.0_softdevice.hex
 """
 
 import sys
@@ -79,7 +79,7 @@ def make_hfb(bin_path: str, out_path: str, model: str = "AHHX01", version_str: s
 
 
 NRF_SECTION_BASE = 0x1000  # nRF52 address of the container's first nRF52 byte
-NRF_APP_BASE = 0x26000     # application start after PFU's S132 v6.0.0
+NRF_APP_BASE = 0x26000     # application start after the S132 SoftDevice (v6.0.0 and v7.2.0 alike)
 NRF_APP_MAX = 0x10000      # the stock section ends at nRF address 0x36000
 
 
@@ -115,7 +115,7 @@ def read_ihex(path: str, start: int, end: int) -> bytes:
 def make_hybrid_hfb(bin_path: str, nrf_app_path: str, softdevice_hex: str, out_path: str,
                     version_str: str = HYBRID_VERSION):
     """HHKB Hybrid container: STM32 Bank 2 image, then the nRF52 image from 0x1000 (Nordic's
-    S132 v6.0.0 SoftDevice + ECK's app at 0x26000), which PFU's nRF52 bootloader rewrites whole."""
+    S132 v7.2.0 SoftDevice + ECK's app at 0x26000), which PFU's nRF52 bootloader rewrites whole."""
     with open(bin_path, "rb") as f:
         data = f.read()
     with open(nrf_app_path, "rb") as f:
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     parser.add_argument("--model", default="AHHX01", help="Model code (default: AHHX01, e.g. AHHS01 for Classic Type-S)")
     parser.add_argument("--version", default=None, help="Firmware version (default: A4.50 for Classic, A8.50 for Type-S)")
     parser.add_argument("--nrf-app", default=None, help="HHKB Hybrid: nRF52 app .bin linked at 0x26000")
-    parser.add_argument("--softdevice", default=None, help="HHKB Hybrid: Nordic s132_nrf52_6.0.0_softdevice.hex")
+    parser.add_argument("--softdevice", default=None, help="HHKB Hybrid: Nordic s132_nrf52_7.2.0_softdevice.hex")
 
     args = parser.parse_args()
     if args.nrf_app or args.softdevice:

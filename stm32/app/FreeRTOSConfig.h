@@ -69,9 +69,7 @@ void TICKLESS_SLEEP_HOOK(unsigned long expected_ticks);
 extern uint32_t SystemCoreClock;
 #endif
 #define configCPU_CLOCK_HZ (SystemCoreClock) /* 32 MHz, or 16 MHz on a battery-powered board */
-#define vPortSVCHandler     SVC_Handler
-#define xPortPendSVHandler  PendSV_Handler
-#define xPortSysTickHandler SysTick_Handler
+/* The V11 ARM_CM0 port names its handlers SVC_Handler, PendSV_Handler and SysTick_Handler. */
 
 #define configIDLE_SHOULD_YIELD 1
 

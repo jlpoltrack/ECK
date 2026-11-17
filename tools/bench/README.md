@@ -35,5 +35,5 @@ Shared helpers: `tools/via_hid.py` (find the keyboard, VIA requests; also used b
 | `ram_diff.py` | Finds STM32 RAM that a USB request changes. |
 | `rtt_dump.py` | Dumps a SEGGER RTT buffer over SWD (nRF52 app built with `make NRF_LOG=1`). |
 
-SWD notes for this board (pads, the nRF52 vias, never letting pyOCD auto-unlock the nRF52) are in `docs/hybrid-port.md`.
+SWD notes for this board (pads, the nRF52 vias, never letting pyOCD auto-unlock the nRF52) are in `docs/hybrid-hardware.md` (section 6).
 

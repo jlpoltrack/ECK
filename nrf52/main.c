@@ -1,5 +1,5 @@
 /* ECK Bluetooth bridge for the HHKB Professional Hybrid's nRF52832.
- * Runs on PFU's S132 v6.0.0 at 0x26000. Receives HID reports from the STM32 over SPI
+ * Runs on Nordic's S132 v7.2.0, app at 0x26000. Receives HID reports from the STM32 over SPI
  * (common/ble_link.h) and sends them as a BLE HID keyboard. */
 #include <stdbool.h>
 #include <stdint.h>
@@ -17,7 +17,7 @@
 #include "ble_dis.h"
 #include "ble_hci.h"
 #include "ble_hids.h"
-#include "ble_lesc.h"
+#include "nrf_ble_lesc.h"
 #include "ble_srv_common.h"
 #include "fds.h"
 #include "nordic_common.h"
@@ -96,6 +96,11 @@ static bool m_clearing;             /* all bonds being deleted */
 static bool m_power_off;            /* STM32 asked for System OFF */
 static volatile bool m_off_check;
 static uint8_t m_off_waits;
+static bool m_disc_pending;         /* disconnecting once the all-released reports reach the host */
+static volatile bool m_disc_force;  /* the release wait timed out */
+static uint8_t m_inflight;          /* notifications sent but not yet acknowledged by the host */
+APP_TIMER_DEF(m_disc_timer);
+#define DISC_RELEASE_MS 300
 APP_TIMER_DEF(m_pair_timer);
 APP_TIMER_DEF(m_sec_timer);
 #define PAIR_WINDOW_MS 600000 /* stock: 10 min in pairing mode */
@@ -147,6 +152,7 @@ static void queue_drain(void) {
         pending_report_t *r = &m_queue[m_q_head];
         ret_code_t err = ble_hids_inp_rep_send(&m_hids, r->index, r->len, r->data, m_conn_handle);
         if (err == NRF_ERROR_RESOURCES) return; /* retried on BLE_GATTS_EVT_HVN_TX_COMPLETE */
+        if (err == NRF_SUCCESS) m_inflight++;
         if (err != NRF_SUCCESS && err != NRF_ERROR_INVALID_STATE && err != BLE_ERROR_GATTS_SYS_ATTR_MISSING &&
             err != NRF_ERROR_FORBIDDEN && err != BLE_ERROR_INVALID_CONN_HANDLE) {
             APP_ERROR_CHECK(err);
@@ -175,7 +181,7 @@ static uint8_t current_slot(void) {
  * e.g. bonds left by PFU's firmware, which are deleted at start-up. */
 static uint8_t peer_slot(pm_peer_id_t id) {
     uint32_t tag = 0;
-    uint16_t len = sizeof(tag);
+    uint32_t len = sizeof(tag);
     if (pm_peer_data_app_data_load(id, &tag, &len) != NRF_SUCCESS || (tag >> 8) != 0xD3C0U) return 0;
     return (uint8_t)tag;
 }
@@ -395,10 +401,42 @@ static void spis_evt(nrfx_spis_evt_t const *p_event, void *p_context) {
     }
 }
 
-static void disconnect(void) {
+static void disconnect_now(void) {
     if (m_conn_handle != BLE_CONN_HANDLE_INVALID) {
         (void)sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
     }
+}
+
+/* Disconnects once queued reports, if any, have reached the host (or the wait timed out). */
+static void disconnect_try(void) {
+    if (m_disc_pending && (m_disc_force || (m_q_count == 0 && m_inflight == 0))) {
+        m_disc_force = false;
+        disconnect_now();
+    }
+}
+
+/* Releases all keys on the host first: Windows keeps keys held at a disconnect (e.g. Ctrl from
+ * the Fn+Ctrl+slot chord) pressed, even after the keyboard reconnects. */
+static void disconnect(void) {
+    if (m_conn_handle == BLE_CONN_HANDLE_INVALID || m_disc_pending) return;
+    if (!m_secured) {
+        disconnect_now();
+        return;
+    }
+    static const uint8_t none[KB_REPORT_LEN] = {0};
+    m_q_count = 0; /* the host's final state is "nothing pressed" */
+    (void)queue_push(REPORT_KB, none, KB_REPORT_LEN);
+    (void)queue_push(REPORT_CONSUMER, none, CONSUMER_REPORT_LEN);
+    m_disc_pending = true;
+    m_disc_force = false;
+    APP_ERROR_CHECK(app_timer_start(m_disc_timer, APP_TIMER_TICKS(DISC_RELEASE_MS), NULL));
+    queue_drain();
+    disconnect_try();
+}
+
+static void disc_timeout(void *p_context) {
+    (void)p_context;
+    m_disc_force = true; /* handled in the main loop */
 }
 
 static void slot_delete(uint8_t slot) {
@@ -501,10 +539,11 @@ static bool frame_handle(const ble_link_frame_t *f) {
     switch (f->type) {
     case BLE_LINK_KEYBOARD:
         if (f->len != KB_REPORT_LEN) return true;
-        return !m_secured || queue_push(REPORT_KB, f->data, KB_REPORT_LEN); /* drop while not connected */
+        /* drop while not connected, or after the release reports of a disconnect */
+        return !m_secured || m_disc_pending || queue_push(REPORT_KB, f->data, KB_REPORT_LEN);
     case BLE_LINK_CONSUMER:
         if (f->len != CONSUMER_REPORT_LEN) return true;
-        return !m_secured || queue_push(REPORT_CONSUMER, f->data, CONSUMER_REPORT_LEN);
+        return !m_secured || m_disc_pending || queue_push(REPORT_CONSUMER, f->data, CONSUMER_REPORT_LEN);
     case BLE_LINK_BATTERY:
         if (f->len == 1) battery_update(f->data[0]);
         return true;
@@ -539,8 +578,8 @@ static bool frame_handle(const ble_link_frame_t *f) {
             APP_ERROR_CHECK(pm_peers_delete()); /* advertising restarts when this finishes */
         } else if (f->data[0] == BLE_LINK_CMD_POWER_OFF) {
             power_off_start();
-        } else if (f->data[0] == BLE_LINK_CMD_DISCONNECT && m_conn_handle != BLE_CONN_HANDLE_INVALID) {
-            (void)sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+        } else if (f->data[0] == BLE_LINK_CMD_DISCONNECT) {
+            disconnect();
         }
         return true;
     default:
@@ -603,6 +642,9 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context) {
         m_passkey_wait = false;
         m_host_leds = 0;
         m_q_count = 0;
+        m_inflight = 0;
+        m_disc_pending = false;
+        (void)app_timer_stop(m_disc_timer);
         (void)app_timer_stop(m_sec_timer);
         advertising_restart();
         break;
@@ -619,9 +661,13 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context) {
         APP_ERROR_CHECK(sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys));
         break;
     }
-    case BLE_GATTS_EVT_HVN_TX_COMPLETE:
+    case BLE_GATTS_EVT_HVN_TX_COMPLETE: {
+        uint8_t done = p_ble_evt->evt.gatts_evt.params.hvn_tx_complete.count;
+        m_inflight = done < m_inflight ? (uint8_t)(m_inflight - done) : 0;
         queue_drain();
+        disconnect_try();
         break;
+    }
     case BLE_GATTC_EVT_TIMEOUT:
         APP_ERROR_CHECK(sd_ble_gap_disconnect(p_ble_evt->evt.gattc_evt.conn_handle,
                                               BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION));
@@ -675,8 +721,7 @@ static void dis_init(void) {
     memset(&init, 0, sizeof(init));
     ble_srv_ascii_to_utf8(&init.manufact_name_str, MANUFACTURER_NAME);
     init.p_pnp_id = &pnp;
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&init.dis_attr_md.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&init.dis_attr_md.write_perm);
+    init.dis_char_rd_sec = SEC_JUST_WORKS;
     APP_ERROR_CHECK(ble_dis_init(&init));
 }
 
@@ -685,10 +730,9 @@ static void bas_init(void) {
     memset(&init, 0, sizeof(init));
     init.support_notification = true;
     init.initial_batt_level = 100;
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&init.battery_level_char_attr_md.cccd_write_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&init.battery_level_char_attr_md.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&init.battery_level_char_attr_md.write_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&init.battery_level_report_read_perm);
+    init.bl_rd_sec = SEC_JUST_WORKS;
+    init.bl_cccd_wr_sec = SEC_JUST_WORKS;
+    init.bl_report_rd_sec = SEC_JUST_WORKS;
     APP_ERROR_CHECK(ble_bas_init(&m_bas, &init));
 }
 
@@ -720,15 +764,15 @@ static void hids_init(void) {
     inputs[REPORT_CONSUMER].rep_ref.report_id = REPORT_ID_CONSUMER;
     for (int i = 0; i < 2; i++) {
         inputs[i].rep_ref.report_type = BLE_HIDS_REP_TYPE_INPUT;
-        BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&inputs[i].security_mode.cccd_write_perm);
-        BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&inputs[i].security_mode.read_perm);
-        BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&inputs[i].security_mode.write_perm);
+        inputs[i].sec.cccd_wr = SEC_JUST_WORKS;
+        inputs[i].sec.rd = SEC_JUST_WORKS;
+        inputs[i].sec.wr = SEC_JUST_WORKS;
     }
     outputs[0].max_len = OUTPUT_REPORT_LEN;
     outputs[0].rep_ref.report_id = REPORT_ID_KB;
     outputs[0].rep_ref.report_type = BLE_HIDS_REP_TYPE_OUTPUT;
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&outputs[0].security_mode.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&outputs[0].security_mode.write_perm);
+    outputs[0].sec.rd = SEC_JUST_WORKS;
+    outputs[0].sec.wr = SEC_JUST_WORKS;
 
     ble_hids_init_t init;
     memset(&init, 0, sizeof(init));
@@ -743,19 +787,16 @@ static void hids_init(void) {
     init.rep_map.p_data = (uint8_t *)report_map;
     init.hid_information.bcd_hid = 0x0111;
     init.hid_information.flags = HID_INFO_FLAG_REMOTE_WAKE_MSK | HID_INFO_FLAG_NORMALLY_CONNECTABLE_MSK;
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&init.rep_map.security_mode.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&init.rep_map.security_mode.write_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&init.hid_information.security_mode.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&init.hid_information.security_mode.write_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&init.security_mode_boot_kb_inp_rep.cccd_write_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&init.security_mode_boot_kb_inp_rep.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&init.security_mode_boot_kb_inp_rep.write_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&init.security_mode_boot_kb_outp_rep.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&init.security_mode_boot_kb_outp_rep.write_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&init.security_mode_protocol.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&init.security_mode_protocol.write_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_NO_ACCESS(&init.security_mode_ctrl_point.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_ENC_NO_MITM(&init.security_mode_ctrl_point.write_perm);
+    /* Encrypted access (SEC_JUST_WORKS: no MITM needed per attribute); unset fields are SEC_NO_ACCESS. */
+    init.rep_map.rd_sec = SEC_JUST_WORKS;
+    init.hid_information.rd_sec = SEC_JUST_WORKS;
+    init.boot_kb_inp_rep_sec.cccd_wr = SEC_JUST_WORKS;
+    init.boot_kb_inp_rep_sec.rd = SEC_JUST_WORKS;
+    init.boot_kb_outp_rep_sec.rd = SEC_JUST_WORKS;
+    init.boot_kb_outp_rep_sec.wr = SEC_JUST_WORKS;
+    init.protocol_mode_rd_sec = SEC_JUST_WORKS;
+    init.protocol_mode_wr_sec = SEC_JUST_WORKS;
+    init.ctrl_point_wr_sec = SEC_JUST_WORKS;
     APP_ERROR_CHECK(ble_hids_init(&m_hids, &init));
 }
 
@@ -817,8 +858,6 @@ static void peer_manager_init(void) {
     sec.kdist_peer.id = 1;
     APP_ERROR_CHECK(pm_sec_params_set(&sec));
     APP_ERROR_CHECK(pm_register(pm_evt_handler));
-    APP_ERROR_CHECK(ble_lesc_init());
-    APP_ERROR_CHECK(ble_lesc_ecc_keypair_generate_and_set());
 }
 
 /* Sampled before anything else starts, so a Bluetooth bug cannot block it. The pull-down holds the
@@ -851,6 +890,12 @@ static void recovery_main(void) {
     }
 }
 
+/* A host that disconnects during the DH computation is not an error worth a restart. */
+static void lesc_service(void) {
+    ret_code_t err = nrf_ble_lesc_request_handler();
+    if (err != BLE_ERROR_INVALID_CONN_HANDLE && err != NRF_ERROR_INVALID_STATE) APP_ERROR_CHECK(err);
+}
+
 int main(void) {
     APP_SCHED_INIT(APP_TIMER_SCHED_EVENT_DATA_SIZE, 20); /* SoftDevice events run in the main loop */
     APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
@@ -867,6 +912,7 @@ int main(void) {
     APP_ERROR_CHECK(app_timer_create(&m_pair_timer, APP_TIMER_MODE_SINGLE_SHOT, pair_timeout));
     APP_ERROR_CHECK(app_timer_create(&m_sec_timer, APP_TIMER_MODE_SINGLE_SHOT, security_timeout));
     APP_ERROR_CHECK(app_timer_create(&m_off_timer, APP_TIMER_MODE_REPEATED, off_timer_tick));
+    APP_ERROR_CHECK(app_timer_create(&m_disc_timer, APP_TIMER_MODE_SINGLE_SHOT, disc_timeout));
     bonded_slots_refresh(); /* the first status reply, prepared in link_init, reports the bonds */
     link_init();
     NRF_LOG_INFO("ECK BLE bridge started, link v%d", BLE_LINK_VERSION);
@@ -875,13 +921,14 @@ int main(void) {
 
     for (;;) {
         app_sched_execute();
-        APP_ERROR_CHECK(ble_lesc_service_request_handler()); /* DH key for LESC pairing */
+        lesc_service(); /* DH key for LESC pairing */
         link_process();
         nrf_update_poll(); /* one page erase (~85 ms) per pass while staging */
         if (m_off_check) {
             m_off_check = false;
             power_off_try();
         }
+        if (m_disc_force) disconnect_try();
         uint8_t upd = nrf_update_state();
         if (!NRF_LOG_PROCESS() && upd != BLE_LINK_UPD_ST_ERASING && upd != BLE_LINK_UPD_ST_VERIFYING) nrf_pwr_mgmt_run();
     }

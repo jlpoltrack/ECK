@@ -1,98 +1,47 @@
-**Documentation:** [Install](install.md) • [Backup & restore](backup-restore.md) • [Build](build.md) • [Config](config.md) • [Models](models.md) • [VIA](via.md) • [Debug](debug.md)
+[ECK docs](overview.md)
 
 # Install (Classic and Classic Type-S)
 
-This page covers the Classic and Classic Type-S, which build but are untested on hardware. For the Hybrid see [Hybrid updates](hybrid-update.md). The web flasher (`web/`, Chrome or Edge) offers the same first install for all three.
+For the Classic and Classic Type-S, which build but are untested on hardware. For the Hybrid see [Hybrid updates](hybrid-update.md). The [web flasher](https://jlpoltrack.github.io/ECK/) offers the same install.
 
 > [!WARNING]
-> You flash the keyboard and use DFU/SWD at your own risk. The author accepts no responsibility for keyboard damage, data loss, or consequences of selecting an incorrect firmware image, model, or recovery method.
+> You flash the keyboard at your own risk. The author accepts no responsibility for damage, data loss, or flashing the wrong image or model.
 
-> [!TIP]
-> A fresh install uses PFU's factory thresholds from the keyboard's own EEPROM, so no calibration is needed. Custom calibration (needed for your own actuation point or Rapid Trigger) is described in the [VIA guide](via.md#key-calibration-process).
+A fresh install uses PFU's factory thresholds from the keyboard's EEPROM, so no calibration is needed. Read [Backup & restore](backup-restore.md) first.
 
 ## Before flashing
 
-Build the matching firmware first. Classic uses an `AHHX01` container; Classic Type-S uses `AHHS01`. Keep a full backup before the first update.
+Build the image (`./build.sh classic` or `type_s`; [Build](build.md)). ECK goes in Flash Bank 2; PFU's updater stays in Bank 1 and installs it.
 
-ECK occupies Flash Bank 2 (`0x08010000–0x0801FFFF`). The original Bank 1 updater remains in place and provides the PFU update interface.
+- **Stock firmware:** PFU's updater is already reachable. Do **not** use SW6.
+- **ECK already installed:** ECK has its own USB identity, so return to Bank 1 first: with the keyboard unplugged, set SW6 ON, connect, then set SW6 OFF once Bank 1 runs. This erases the start of Bank 2 ([SW6 recovery](backup-restore.md#sw6-recovery)).
 
-ECK uses a different USB identity, so Keymap Tool cannot flash it directly. If ECK is already installed, first return to the stock Bank 1 updater.
+Make sure SW6 is OFF before flashing.
 
-With the keyboard powered off, set SW6 to ON, connect power, and return SW6 to OFF after Bank 1 starts. This recovery action erases the first 128-byte page of Bank 2. See [SW6 recovery](backup-restore.md#sw6-recovery) for the detailed description of this irreversible transition to Bank 1. Then flash the generated `.hfb` with the official updater and reconnect the keyboard after it completes.
+## Install with PFU's Keymap Tool
 
-If the keyboard is currently running the original PFU firmware, its PFU update interface is already available: do **not** use SW6.
+Open the `.hfb` in HHKB Keymap Tool and run the update. At the end it reports "An error occurred during writing to HHKB…". That is expected: ECK has started and reconnected under its own USB ID, which Keymap Tool doesn't know.
 
-> [!WARNING]
-> Make sure SW6 is OFF before flashing.
+## Install with `hhkb_flasher.py`
 
-## Install through the PFU updater
-
-Open the matching `.hfb` in HHKB Keymap Tool and complete the normal update.
-
-After a successful ECK update, Keymap Tool displays the following message:
-
-> An error occurred during writing to HHKB. Check the connection with HHKB and try again. You cannot write anything to HHKB while pressing a key.
-
-This is expected and does **not** mean that the update failed. At this point Bank 1 has written Bank 2 and transfers execution to ECK. ECK then reconnects with its own USB VID/PID, which the PFU Keymap Tool does not recognize, so the tool reports that its original PFU device disappeared.
-
-## Install with the ECK flasher
-
-You do not need the official Keymap Tool. `tools/hhkb_flasher.py` talks to the PFU Raw HID update interface (VID `0x04FE`, UsagePage `0xFF00`, Usage `0x01`) exposed by Bank 1 and provides a cross-platform alternative for Linux, macOS, and Windows. Stock firmware already exposes this interface; a running ECK image has a different USB identity, so it must first be returned to Bank 1 through SW6 as described above.
+A cross-platform alternative to Keymap Tool that talks to Bank 1's update interface:
 
 ```bash
-uv run --with hidapi python3 tools/hhkb_flasher.py --info
+uv run --with hidapi python3 tools/hhkb_flasher.py --info      # check the model it sees
 uv run --with hidapi python3 tools/hhkb_flasher.py build/<variant>/hhkb_ec_<variant>.hfb
 ```
 
-Confirm with `--info` that the PFU updater sees the expected keyboard model.
+Before sending, it checks both CRCs, that the model in the file matches the keyboard, and that the reset vector points into Bank 2. `--skip-crc` and `--skip-model-check` turn off the local checks (Bank 1 still validates the image); `--force` skips the reset-vector check for custom images.
 
-### Image Checks
+PFU's update protocol (verified on hardware; an SWD readback of Bank 2 matched the container byte for byte, 2026-11-11):
 
-The local flasher validates the container strictly before transmission by default:
-- **Two CRC-16 checksums:** validates both the outer container CRC-16/MCRF4XX (first 2 bytes) and the inner payload CRC-16 over the 64 KB binary.
-- **Keyboard model:** validates that the hardware model (e.g. `AHHX01` for Classic, `AHHS01` for Type-S) matches the model string in the container trailer.
-- **Reset vector address:** validates that the reset vector points into the Flash Bank 2 range (`0x08010000 <= (reset_vector & ~1) < 0x08020000`) with the Thumb bit set.
+- `0xE0` enter update mode; the device re-enumerates (~10 s).
+- `0xE1` start: container size (65,570) and outer CRC; Bank 1 erases Bank 2.
+- `0xE2` send: the container minus its first two bytes, 57 bytes per 64-byte report, header `AA AA E2 00 len seq_lo seq_hi`.
+- `0xE3` end: verify and reboot.
 
-Optional CLI flags:
-- `--skip-crc`: disables local CRC-16 validation.
-- `--skip-model-check`: disables local model compatibility checks.
-  > [!IMPORTANT]
-  > `--skip-crc` and `--skip-model-check` affect only those local checks in the Python tool; they do **not** bypass validation performed by the keyboard bootloader itself.
-- `--force`: independently disables reset-handler address validation for raw or custom test images.
-
-Bank 1 validates Bank 2 before transfer of control. Because exact internal PFU metadata rules are proprietary, direct Bank 2 writes that bypass Bank 1 (such as via DFU) require hardware verification.
-
-### Verified PFU HID Exchange
-
-The PFU firmware update sequence over USB Raw HID has been fully analyzed and verified on physical hardware:
-- **`0xE0` (Firmup Mode):** switches the controller into firmware update mode and waits for the new HID interface to re-enumerate (~10 seconds).
-- **`0xE1` (Firmup Start):** transmits total container size (65,570 bytes: `0x00010022` in little-endian) and outer CRC-16, triggering an erase of Bank 2.
-- **`0xE2` (Firmup Send):** transmits 65,568 container bytes (the entire container excluding the first two CRC bytes) in 57-byte payload chunks inside 64-byte HID reports with a 7-byte header `[0xAA, 0xAA, 0xE2, 0x00, len, seq_lo, seq_hi]`.
-- **`0xE3` (Firmup End):** finalizes transfer, requests verification, and triggers MCU reboot.
-
-> [!NOTE]
-> On 11 November 2026, the tool wrote the original Classic A4.29 container (`AHHX01`) to hardware. A SWD readback of Bank 2 matched the container payload byte-for-byte, confirming the exactness of the transfer protocol.
-
-### Image Layout and Versioning
-
-The `.hfb` container is exactly **65,570 bytes**:
-- `0x0000–0x0001`: outer CRC-16 (MCRF4XX) of the remaining container bytes.
-- `0x0002–0x0003`: inner CRC-16 (MCRF4XX) of the 64 KB payload.
-- `0x0004–0x10003`: 64 KB firmware payload (Flash Bank 2).
-- `0x10004–0x10011`: 14 bytes of 0xFF.
-- `0x10012–0x10017`: ASCII model identifier (`AHHX01` for Classic, `AHHS01` for Classic Type-S).
-- `0x10018–0x1001B`: 4-byte BCD firmware version. `make_hfb.py` emits **A4.50** for `AHHX01` and **A8.50** for `AHHS01`.
-- `0x1001C–0x10021`: 6 bytes of 0xFF.
-
-For manual packaging commands, see [Build](build.md#hfb-container-and-model-variants).
+Container layout: [Build](build.md#hfb-container).
 
 ## DFU and SWD
 
-ROM DFU and SWD are development and recovery paths. DFU can write a raw Bank 2 `.bin`, but it does not update PFU Bank 1 metadata. Use the PFU updater for normal installation. The five SWD pads beside connector CN3 are arranged in two rows:
-
-```text
-top:     GND | RST | VCC
-bottom:    CLK | DIO
-```
-
-Read [Backup & restore](backup-restore.md) before using either path.
+ST's ROM DFU loader and SWD are recovery and development paths ([Backup & restore](backup-restore.md)). DFU writes a raw Bank 2 `.bin` but doesn't update Bank 1's metadata, so Bank 1 may refuse the image; use PFU's updater for normal installs.

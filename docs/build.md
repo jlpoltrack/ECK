@@ -1,71 +1,58 @@
-**Documentation:** [Install](install.md) • [Backup & restore](backup-restore.md) • [Build](build.md) • [Config](config.md) • [Models](models.md) • [VIA](via.md) • [Debug](debug.md)
+[ECK docs](overview.md)
 
 # Build
 
-Run builds from the repository root. The first argument picks the keyboard; `-c` cleans first; `-d` adds bench options, comma-separated. Output goes to `build/<variant>/`: `hhkb_ec_<variant>.elf`, `.bin` (raw Bank 2 image) and `.hfb` (PFU update container).
+Run from the repository root. Output goes to `build/<variant>/`: `hhkb_ec_<variant>.elf`, `.bin` (raw Bank 2 image) and `.hfb` (PFU update container). Building does not flash.
 
 ```bash
-./build.sh hybrid    # HHKB Professional Hybrid: build/hybrid/hhkb_ec_hybrid.{bin,hfb}
-./build.sh classic   # HHKB Professional Classic: build/classic/hhkb_ec_classic.{bin,hfb}
-./build.sh type_s    # HHKB Classic Type-S: build/type_s/hhkb_ec_type_s.{bin,hfb}
+./build.sh hybrid    # build/hybrid/hhkb_ec_hybrid.{bin,hfb}
+./build.sh classic   # build/classic/hhkb_ec_classic.{bin,hfb}
+./build.sh type_s    # build/type_s/hhkb_ec_type_s.{bin,hfb}
 ```
 
-For the Hybrid, `build.sh` first builds the nRF52 app (`nrf52/`), and the `.hfb` packs it with Nordic's S132 v6.0.0 SoftDevice (`../nRF5_SDK_15.0.0`); without the SDK only the STM32 `.bin` is built. Classic and Type-S share one image; only their `.hfb` model and version differ. Building does not flash the keyboard. Each build also links its `compile_commands.json` at `build/compile_commands.json` for clangd and IDEs (the last variant built wins).
+- `-c` cleans first (including `nrf52/_build`).
+- `-d A,B` adds bench options: `HHKB_ADC_DIAGNOSTICS` (per-key readings over VIA for `tools/bench/key_depth.py`), `HHKB_SCAN_DIAGNOSTICS` (scan timing counters, shown by the Polling Rate Monitor), `HHKB_HYBRID_TEST_CMD` (bridge commands over SWD for `tools/bench/hybrid_cmd.py`).
+- The Hybrid build first builds the nRF52 app (`nrf52/`) and packs it with Nordic's S132 v7.2.0 SoftDevice from `../nRF5_SDK_17.1.1`; without the SDK only the `.bin` is built.
+- Classic and Type-S share one image; only the `.hfb` model ID and version differ.
+- Builds are warning-free with `-Wall -Wextra`.
+- `build/compile_commands.json` links to the last variant built, for clangd and IDEs.
+- `tools/build_hashes.sh <source> <out>` builds every variant with a fixed version string and prints the hashes, to show a refactor leaves the binaries unchanged.
 
-Bench options (`-d`), for development only:
+Everything else (Rapid Trigger, calibration, oversampling, scan rate, LEDs, hold-tap timing) is a runtime VIA setting.
 
-- `HHKB_ADC_DIAGNOSTICS`: per-key sensor readings over VIA for `tools/bench/key_depth.py`.
-- `HHKB_SCAN_DIAGNOSTICS`: scan timing counters, printed by the Polling Rate Monitor and readable over SWD.
-- `HHKB_HYBRID_TEST_CMD`: bridge commands over SWD for `tools/bench/hybrid_cmd.py` (Hybrid).
+## HFB container
 
-For example `./build.sh hybrid -d HHKB_ADC_DIAGNOSTICS,HHKB_SCAN_DIAGNOSTICS`. Settings that used to be build options are runtime VIA settings: Rapid Trigger, custom calibration (off: PFU's factory thresholds) and ×4 ADC oversampling. A keyboard with no saved settings starts with custom calibration and Rapid Trigger off.
+A Classic `.hfb` is 65,570 bytes (the Hybrid's adds the nRF52 image, [Hybrid hardware](hybrid-hardware.md#hfb-container)):
 
-The STM32 build uses `-Wall -Wextra` and builds without warnings; keep it that way.
+| Offset | Content |
+| --- | --- |
+| `0x00000` | Outer CRC-16/MCRF4XX of the rest of the file, little-endian |
+| `0x00002` | Inner CRC-16/MCRF4XX of the 64 KB payload |
+| `0x00004` | Bank 2 image (linked at `0x08010000`), padded with `0xFF` to 65,536 bytes |
+| `0x10004` | 14 × `0xFF`, model ID (6 ASCII), BCD version (4), 6 × `0xFF` |
 
-The generated HFB versions are A4.50 for Classic and A8.50 for Type-S. The container builder calculates both required CRC values and sets the matching PFU model identifier.
+Both CRCs: reflected polynomial `0x8408`, initial `0xFFFF`, no final XOR.
 
-## HFB container and model variants
+| | Classic | Classic Type-S | Hybrid |
+| --- | --- | --- | --- |
+| Model ID | `AHHX01` | `AHHS01` | `AHUX01` |
+| ECK version | A4.50 | A8.50 | A0.48 |
 
-An HHKB `.hfb` is exactly 65,570 bytes:
-
-```text
-+---------------------------------------------------------------+
-| Outer CRC-16/MCRF4XX, little-endian (2 bytes)                 |
-+---------------------------------------------------------------+
-| Inner CRC-16/MCRF4XX of the Bank 2 payload (2 bytes)          |
-+---------------------------------------------------------------+
-| Bank 2 firmware, padded with 0xFF (65,536 bytes)              |
-+---------------------------------------------------------------+
-| Trailer: 14 × 0xFF, model ID (6), BCD version (4), 6 × 0xFF   |
-+---------------------------------------------------------------+
-```
-
-Both CRCs use reflected polynomial `0x8408`, initial value `0xFFFF`, and no final XOR. The inner CRC is payload-specific; it is not a fixed model tag. The image is linked for Bank 2 at `0x08010000`.
-
-Classic and Classic Type-S use the same STM32L072RB, 4 × 15 matrix, 4051 multiplexers, and 64 KiB Bank 2 layout for this port. The firmware-facing differences are the PFU identifiers and version series:
-
-| Parameter               | Classic      | Classic Type-S |
-| ----------------------- | ------------ | -------------- |
-| Model ID                | `AHHX01`     | `AHHS01`       |
-| Version series          | `A4.xx`      | `A8.xx`        |
-| Current ECK HFB version | A4.50        | A8.50          |
-| Container size          | 65,570 bytes | 65,570 bytes   |
-
-`tools/make_hfb.py` builds both variants and calculates their CRCs automatically. For a manual invocation, use `--model AHHX01 --version A4.50` or `--model AHHS01 --version A8.50`.
+`tools/make_hfb.py` sets these and the CRCs; by hand: `--model AHHX01 --version A4.50`.
 
 ## Flash and RAM usage
 
-Bank 2 provides 65,536 bytes of Flash and the STM32L072 20,480 bytes of RAM. Current images (2026-11-16):
+Bank 2 holds 65,536 bytes; the STM32L072 has 20,480 bytes of RAM. At 2026-11-16:
 
-| Variant | Raw Bank 2 image | RAM at link time |
+| Variant | Bank 2 image | RAM at link time |
 | --- | --- | --- |
 | Hybrid | 43,132 bytes (65.8 %) | 17,312 bytes (84.5 %) |
 | Classic, Type-S | 34,556 bytes (52.7 %) | 16,288 bytes (79.5 %) |
 
-RAM counts the code run from RAM (the key scan), `.data`, `.bss` (statically allocated task stacks and queues, the keymap; FreeRTOS has no heap) and the 2 KB start-up stack; it is a build-time layout, not a measured worst-case stack depth. The 65,570-byte `.hfb` holds the padded Bank 2 payload and 34 bytes of container metadata (the Hybrid `.hfb` also carries the nRF52 app and SoftDevice).
+RAM is the static layout (RAM code, `.data`, `.bss` with all task stacks; FreeRTOS has no heap) plus the 2 KB start-up stack, not a measured stack depth.
 
-## GitHub Actions
+## CI and releases
 
-The [CI workflow](../.github/workflows/ci.yml) runs on every push and pull request: the host tests, then `./build.sh hybrid -c` (with the nRF5 SDK 15.0.0, fetched and SHA-256 checked, so the Hybrid `.hfb` is built too), `./build.sh classic -c`, `./build.sh type_s -c` and the Hybrid boot stub (`make -C stm32/boot`). Each run uploads the Hybrid `.bin`, `.hfb` and nRF52 app as a workflow artifact.
+[CI](../.github/workflows/ci.yml) runs on every push and pull request with the Arm GNU Toolchain 15.3.Rel2 (SHA-256 pinned, cached), the same compiler as bench builds: host tests, then clean builds of all three variants (fetching the nRF5 SDK, SHA-256 checked, so the Hybrid `.hfb` is built) and the boot stub (`make -C stm32/boot`). Each run uploads the Hybrid images as an artifact.
 
-A `v*` tag also publishes a GitHub release with the three `.hfb` files, `hybrid_boot.bin`, and `eck-web-flasher-<tag>.zip` (the web flasher in `web/` with those images bundled, via `tools/web_bundle.sh`). Load [via.json](../stm32/via/via.json) in the [VIA web app](https://www.usevia.app/) Design tab for the HHKB Settings menu.
+A `v*` tag also publishes a GitHub release with the three `.hfb` files, `hybrid_boot.bin` and `eck-web-flasher-<tag>.zip` (the web flasher with those images, built by `tools/web_bundle.sh`; serve it with e.g. `python3 -m http.server`). `.github/workflows/pages.yml` then publishes the web flasher with that release's images to <https://jlpoltrack.github.io/ECK/>; run it from the Actions tab to republish.

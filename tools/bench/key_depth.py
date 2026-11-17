@@ -9,7 +9,7 @@
   press [SEC]    press keys fully a few times: per key the rest and full-press ADC readings and the
                  readings at which the firmware registered each press
   cal            each key's rest level and range (calibration) and its reading now
-  scantime [SEC] longest scan with interrupts held off, per second
+  scantime [SEC] per second: longest scan half with interrupts off, and longest whole scan
 
 Depth is permille (1/1000) of the key's calibrated range: 0 at rest, 1000 bottomed out.
 Run: uv run --with hidapi python3 tools/bench/key_depth.py live
@@ -168,10 +168,12 @@ def main():
     elif cmd == "press":
         press(k, float(sys.argv[2]) if len(sys.argv) > 2 else 20)
     elif cmd == "scantime":
-        k.diag_block(4, 0)  # reset the maximum
+        missed0 = k.diag_block(4, 0)[2]  # also resets the maxima
         for _ in range(int(float(sys.argv[2]) if len(sys.argv) > 2 else 5)):
             time.sleep(1)
-            print(f"longest scan with interrupts off: {k.diag_block(4, 0)[0]} us", flush=True)
+            half, full, missed = k.diag_block(4, 0)[:3]
+            whole = f"{full} us, missed slots {(missed - missed0) & 0xFFFF}" if full else "n/a (needs HHKB_SCAN_DIAGNOSTICS)"
+            print(f"longest scan half with interrupts off: {half} us, longest whole scan: {whole}", flush=True)
     elif cmd == "cal":
         cal(k)
     else:

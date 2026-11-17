@@ -1,153 +1,67 @@
-**Documentation:** [Install](install.md) • [Backup & restore](backup-restore.md) • [Build](build.md) • [Config](config.md) • [Models](models.md) • [VIA](via.md) • [Debug](debug.md)
+[ECK docs](overview.md)
 
-# Backup & restore
+# Backup & restore (Classic)
 
-Back up Flash, EEPROM, and Option Bytes before any update. EEPROM includes board-specific factory thresholds and user settings; do not copy EEPROM from another keyboard.
+Back up Flash, EEPROM and option bytes before the first update. EEPROM holds board-specific factory thresholds: never copy it from another keyboard.
 
-This page describes the Classic (untested with ECK on hardware). On the Hybrid, `tools/hybrid_update.py backup DIR` (or the web flasher's Back up) saves the data EEPROM and Bank 2 over USB, `restore-eeprom` writes an EEPROM backup back, and the boot stub install saves the original Bank 1: see [Hybrid updates](hybrid-update.md).
+On the Hybrid, use `tools/hybrid_update.py backup` / `restore-eeprom` (or the web flasher) over USB instead; see [Hybrid updates](hybrid-update.md).
 
-## STM32 ROM DFU
+| Area | Address | Content |
+| --- | --- | --- |
+| Bank 1 | `0x08000000–0x0800FFFF` | PFU's updater |
+| Bank 2 | `0x08010000–0x0801FFFF` | Stock firmware or ECK |
+| EEPROM | `0x08080000–0x080817FF` | Factory data and ECK settings |
+| Option bytes | `0x1FF80000`, 32 bytes | Protection and boot settings |
 
-STM32 system-ROM DFU is independent of ECK, Bank 1, and the installed Bank 2 image. It works without a debugger.
+## Normal recovery
 
-1. Open the keyboard and remove the metal shield on the controller side.
-2. While connecting USB, short the **right-hand pads of R6 and R85**. This raises BOOT0 and starts the STM32 system bootloader. Determine “right-hand” from the photograph, not from an arbitrary board orientation; verify the resistor markings and pads before shorting.
-3. The source observation reports an orange LED. Confirm the mode over USB: STM32 DFU normally appears as `0483:df11`, then remove the short.
-
-![R6 and R85 pads for ROM DFU](https://i.imgur.com/oTwQLPg.jpeg)
-
-Check the device:
-
-```bash
-dfu-util -l
-```
-
-### Back up with DFU
-
-```bash
-dfu-util -a 0 -s 0x08000000:131072 -U hhkb-flash-full.bin
-dfu-util -a 2 -s 0x08080000:6144 -U hhkb-eeprom.bin
-dfu-util -a 1 -s 0x1FF80000:32 -U hhkb-option-bytes.bin
-```
-
-The full Flash dump includes Bank 1 and Bank 2. It does not include EEPROM or Option Bytes.
-
-### Restore with DFU
-
-DFU writes a raw `.bin`, not an `.hfb`. To restore only Bank 2 from a backup of the **same keyboard**:
-
-```bash
-dfu-util -a 0 -s 0x08010000 -D hhkb-bank2-stock-firmware_64k.bin
-```
-
-To restore a complete same-board backup, write Flash and EEPROM separately. Option Bytes should be restored only when necessary and only from that same backup.
-
-```bash
-dfu-util -a 0 -s 0x08000000 -D hhkb-full-flash_128k.bin
-dfu-util -a 2 -s 0x08080000 -D hhkb-eeprom_6k.bin
-# Only if needed, from the same board:
-dfu-util -a 1 -s 0x1FF80000 -D hhkb-option-bytes.bin
-```
-
-Writing an ECK Bank 2 image directly is possible:
-
-```bash
-dfu-util -a 0 -s 0x08010000 -D build/classic/hhkb_ec_classic.bin
-```
-
-ROM DFU does not guarantee that PFU Bank 1 metadata or EEPROM flags are updated. After reset, Bank 1 can reject the image. For normal installation use the PFU updater. A readback confirms Flash contents, not Bank 1 acceptance:
-
-```bash
-dfu-util -a 0 -s 0x08010000:65536 -U bank2-readback.bin
-cmp -n "$(wc -c < build/classic/hhkb_ec_classic.bin)" \
-  build/classic/hhkb_ec_classic.bin bank2-readback.bin
-```
-
-## Full SWD / J-Link backup
-
-The HHKB Classic SWD connection uses five pads beside connector CN3, arranged in two rows:
-
-```text
-GND  NRST  VCC
- SWCLK SWDIO
-```
-
-#### J-Link wiring for the five SWD pads beside CN3
-
-| Pad   | STM32L072 signal          | J-Link signal    |
-| ----- | ------------------------- | ---------------- |
-| GND   | Ground                    | GND              |
-| NRST  | NRST                      | RESET (optional) |
-| VCC   | 3.3 V / reference voltage | VTref            |
-| SWCLK | PA14                      | SWCLK            |
-| SWDIO | PA13                      | SWDIO            |
-
-> [!TIP]
-> The keyboard may be powered by USB. In that case connect its VCC to J-Link VTref only to sense the 3.3 V reference voltage. Alternatively supply 3.3 V from the programmer. Do not use both power sources at once.
-
-### Automatic full-backup script
-
-Create `backup_jlink.jlink`:
-
-```text
-r
-halt
-// 1. Full Flash dump: 128 KB = Bank 1 + Bank 2
-savebin hhkb_full_flash_128k.bin 0x08000000 0x00020000
-
-// 2. Original Bank 1: 64 KB
-savebin hhkb_bank1_bootloader_64k.bin 0x08000000 0x00010000
-
-// 3. Original Bank 2: 64 KB
-savebin hhkb_bank2_stock_firmware_64k.bin 0x08010000 0x00010000
-
-// 4. Internal EEPROM: 6 KB, Topre calibration, serial number, and flags
-savebin hhkb_eeprom_6k.bin 0x08080000 0x00001800
-
-// 5. STM32L072 Option Bytes: protection and boot parameters
-savebin hhkb_option_bytes.bin 0x1FF80000 0x00000020
-
-q
-```
-
-Run the backup:
-
-```bash
-JLinkExe -device STM32L072RB -if SWD -speed 4000 -autoconnect 1 -CommanderScript backup_jlink.jlink
-```
-
-### Restore through J-Link
-
-To restore Flash and EEPROM for the same keyboard, create `restore_jlink.jlink`:
-
-```text
-r
-halt
-loadbin hhkb_full_flash_128k.bin 0x08000000
-loadbin hhkb_eeprom_6k.bin 0x08080000
-r
-g
-q
-```
-
-This restores Flash and EEPROM from the full backup. It intentionally does not write Option Bytes; restore those only when necessary and only from a backup of the same board.
-
-## Bank layout
-
-| Area   | Address                 | Purpose                                                 |
-| ------ | ----------------------- | ------------------------------------------------------- |
-| Bank 1 | `0x08000000–0x0800FFFF` | Original PFU updater, B4.16 in the saved Classic backup |
-| Bank 2 | `0x08010000–0x0801FFFF` | Original A4.29 or ECK                                   |
-| EEPROM | `0x08080000–0x080817FF` | Factory data and ECK settings                           |
-
-## Restore
-
-For normal recovery, use SW6 to enter Bank 1 and install the matching official `.hfb` with the [HHKB download centre (Keymap Tool and firmware)](https://happyhackingkb.com/download/) or `hhkb_flasher.py`. The official tool does not recognize a running ECK USB device.
-
-DFU or SWD can restore a saved Bank 2 image. Restoring all Flash, EEPROM, or Option Bytes is an advanced operation: use backups from the same keyboard and keep the original files unchanged.
+Use SW6 to return to Bank 1 (below), then install a matching `.hfb` (ECK, or stock from the [HHKB download centre](https://happyhackingkb.com/download/)) with Keymap Tool or `hhkb_flasher.py`.
 
 ## SW6 recovery
 
-On the Classic (`HHKB_SW6_REBOOT_TO_BANK1` is 1 there and 0 on the Hybrid, `stm32/board/config.h`), starting ECK with SW6 ON invalidates Bank 2 and erases its first 128-byte vector page, then resets into Bank 1. The erased page contains the initial stack pointer and reset vector, so Bank 1 cannot transfer execution to Bank 2 again. Bank 2 will remain unbootable across power cycles until a complete compatible firmware image is written back to Bank 2 through the PFU updater, DFU, or SWD.
+On the Classic (`HHKB_SW6_REBOOT_TO_BANK1` in `stm32/board/config.h`; off on the Hybrid), starting ECK with SW6 ON erases Bank 2's first 128-byte page (its vector table) and resets into Bank 1. Bank 2 then stays unbootable until a full image is written through PFU's updater, DFU or SWD. Keep SW6 OFF in normal use.
 
-After this transition, Bank 1 can install the latest matching stock firmware from the [official HHKB download centre](https://happyhackingkb.com/download/) through Keymap Tool or `hhkb_flasher.py`. Select the correct Classic or Classic Type-S HFB. Keep SW6 OFF during normal use.
+## STM32 ROM DFU
+
+ST's DFU loader in system ROM works whatever Bank 1 and Bank 2 hold, and needs no debugger.
+
+1. Open the keyboard and remove the metal shield on the controller side.
+2. While connecting USB, short the **right-hand pads of R6 and R85** (as in the photo; check the markings first). This raises BOOT0.
+3. `dfu-util -l` should show `0483:df11`; then remove the short.
+
+![R6 and R85 pads for ROM DFU](https://i.imgur.com/oTwQLPg.jpeg)
+
+```bash
+# Backup
+dfu-util -a 0 -s 0x08000000:131072 -U hhkb-flash.bin       # both banks
+dfu-util -a 2 -s 0x08080000:6144 -U hhkb-eeprom.bin
+dfu-util -a 1 -s 0x1FF80000:32 -U hhkb-option-bytes.bin
+# Restore (same keyboard only)
+dfu-util -a 0 -s 0x08000000 -D hhkb-flash.bin
+dfu-util -a 2 -s 0x08080000 -D hhkb-eeprom.bin
+dfu-util -a 1 -s 0x1FF80000 -D hhkb-option-bytes.bin      # only if needed
+```
+
+DFU writes raw `.bin` files, not `.hfb`. Writing an ECK `.bin` to `0x08010000` works, but doesn't update Bank 1's metadata, so Bank 1 may refuse it; a readback proves the flash contents, not that Bank 1 will boot it.
+
+## SWD (J-Link)
+
+Five pads beside CN3:
+
+| Pad | Signal | J-Link |
+| --- | --- | --- |
+| top row: GND, NRST, VCC | ground, reset, 3.3 V | GND, RESET (optional), VTref |
+| bottom row: SWCLK, SWDIO | PA14, PA13 | SWCLK, SWDIO |
+
+Power the board from USB *or* the probe, not both. Backup script (`JLinkExe -device STM32L072RB -if SWD -speed 4000 -autoconnect 1 -CommanderScript backup.jlink`):
+
+```text
+r
+halt
+savebin hhkb_flash_128k.bin 0x08000000 0x00020000
+savebin hhkb_eeprom_6k.bin 0x08080000 0x00001800
+savebin hhkb_option_bytes.bin 0x1FF80000 0x00000020
+q
+```
+
+To restore Flash and EEPROM to the same keyboard, use `loadbin` with the same files and addresses, then `r`, `g`, `q`. Restore option bytes only if needed, and only from the same board.

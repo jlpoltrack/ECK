@@ -1,0 +1,44 @@
+name: Pages
+# Publishes web/ with the latest release's firmware to GitHub Pages: after a release, or by hand.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # workflow_run: only after a successful v* tag run (head_branch is the tag name)
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Bundle the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sudo apt-get install -y zsh
+          tag=$(gh release view --json tagName --jq .tagName)
+          gh release download "$tag" -D /tmp/release -p '*.hfb' -p hybrid_boot.bin
+          git fetch -q --depth=1 origin "refs/tags/$tag:refs/tags/$tag"
+          git show "$tag:stm32/via/via.json" > /tmp/release/via.json # the release's VIA definition
+          tools/web_bundle.sh "$tag" /tmp/release
+          cp LICENSE THIRD_PARTY_NOTICES.md web/
+          rm web/eck.test.mjs
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: web
+      - id: deploy
+        uses: actions/deploy-pages@v5

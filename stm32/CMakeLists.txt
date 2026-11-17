@@ -5,8 +5,9 @@ get_filename_component(STM32_ROOT "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
 get_filename_component(REPO_ROOT "${STM32_ROOT}/.." ABSOLUTE)
 set(VENDOR_DIR "${STM32_ROOT}/vendor")
 set(ST_DIR "${VENDOR_DIR}/st")
+# FreeRTOS Kernel V11.3.3 (44031977); its GCC/ARM_CM0 port is in board/freertos_port.
 set(FREERTOS_DIR "${VENDOR_DIR}/freertos")
-# TinyUSB 0.18.0 (86ad6e56c), only the files this build uses.
+# TinyUSB 0.21.0 (dae3f9a36), only the files this build uses.
 set(TINYUSB_DIR "${VENDOR_DIR}/tinyusb")
 # compile_commands.json for clangd and IDEs; build.sh links the latest one at build/.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -132,8 +133,8 @@ else()
 endif()
 
 # PFU's Hybrid .hfb is not redistributed; the Hybrid container is built from a local copy.
-# Nordic's S132 v6.0.0 SoftDevice, which the Hybrid .hfb carries (PFU's nRF52 bootloader rewrites it).
-set(HHKB_HYBRID_SOFTDEVICE "${REPO_ROOT}/../nRF5_SDK_15.0.0/components/softdevice/s132/hex/s132_nrf52_6.0.0_softdevice.hex" CACHE FILEPATH "Nordic S132 v6.0.0 SoftDevice .hex for the Hybrid .hfb")
+# Nordic's S132 v7.2.0 SoftDevice, which the Hybrid .hfb carries (PFU's nRF52 bootloader rewrites it).
+set(HHKB_HYBRID_SOFTDEVICE "${REPO_ROOT}/../nRF5_SDK_17.1.1/components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex" CACHE FILEPATH "Nordic S132 v7.2.0 SoftDevice .hex for the Hybrid .hfb")
 # The nRF52 Bluetooth app from nrf52/ (built with make). Required:
 # with PFU's nRF52 app both chips would drive the link as SPI master.
 set(HHKB_HYBRID_NRF_APP "${REPO_ROOT}/nrf52/_build/nrf52832_xxaa.bin" CACHE FILEPATH "nRF52 app placed in the Hybrid .hfb")
@@ -178,6 +179,7 @@ target_sources(${TARGET_NAME} PRIVATE
     "${FREERTOS_DIR}/queue.c"
     "${FREERTOS_DIR}/tasks.c"
     "${STM32_ROOT}/board/freertos_port/port.c"
+    "${STM32_ROOT}/board/freertos_port/portasm.c"
     # Board support and start-up (STM32L0 Low-Layer drivers are header-only here)
     "${STM32_ROOT}/board/platform.c"
     "${STM32_ROOT}/board/eeprom.c"
@@ -190,9 +192,9 @@ target_sources(${TARGET_NAME} PRIVATE
     "${TINYUSB_DIR}/src/tusb.c"
     "${TINYUSB_DIR}/src/common/tusb_fifo.c"
     "${TINYUSB_DIR}/src/device/usbd.c"
-    "${TINYUSB_DIR}/src/device/usbd_control.c"
     "${TINYUSB_DIR}/src/class/hid/hid_device.c"
     "${TINYUSB_DIR}/src/portable/st/stm32_fsdev/dcd_stm32_fsdev.c"
+    "${TINYUSB_DIR}/src/portable/st/stm32_fsdev/fsdev_common.c"
     # VIA protocol
     "${STM32_ROOT}/via/via.c"
     # HHKB modules: DIP switches, EC matrix, Hybrid link, indicators, VIA settings
