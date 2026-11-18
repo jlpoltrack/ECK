@@ -123,6 +123,9 @@ static void usb_device_task(void *param) {
         tud_task_ext(0, false);
         usb_keyboard_flush();
         via_flush_pending_report();
+#ifdef VIAL_ENABLE
+        via_mode_task();
+#endif
         hhkb_settings_task();
         via_eeprom_task();
         usb_diag_task();

@@ -2,7 +2,7 @@
 """One-command USB bench check of the Hybrid before a release (keyboard on USB, no keypresses).
 
 Backs up the keyboard, builds and flashes the firmware, then checks over USB:
-  - the reported version is in the flashed image; the USB serial is the chip ID and unchanged
+  - the reported version is in the flashed image; the USB serial is Vial's prefix and the chip ID, unchanged
   - the nRF52 reports no failed update and is not stuck in recovery mode
   - VIA keymap round trips (via_keymap_check.py) and EEPROM persistence (eeprom_save_test.py)
 Options:
@@ -218,9 +218,9 @@ def checks(a):
     image = open(hfb, "rb").read()
     report("version", "PASS" if ver and ver != "unknown" and ver.encode() in image else "FAIL",
            f"reports {ver!r}" + ("" if ver.encode() in image else ", not found in the image"))
-    chip_id = bool(re.fullmatch(r"[0-9A-F]{24}", serial))
-    report("USB serial", "PASS" if chip_id and (serial == serial0 or not re.fullmatch(r"[0-9A-F]{24}", serial0))
-           else "FAIL", f"{serial} (was {serial0})")
+    # Vial's serial prefix, then the chip ID; the ID must survive the flash (serial0 may predate Vial)
+    now, before = re.fullmatch(r"vial:f64c2b3c-([0-9A-F]{24})", serial), re.search(r"([0-9A-F]{24})$", serial0)
+    report("USB serial", "PASS" if now and (not before or now[1] == before[1]) else "FAIL", f"{serial} (was {serial0})")
     report("nRF52 status", "PASS" if not failed and not recovery else "FAIL", f"failed {failed}, recovery {recovery}")
 
     code, out = run(py("tools/bench/via_keymap_check.py"), 120)

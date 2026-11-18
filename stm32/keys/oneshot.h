@@ -48,6 +48,11 @@ TickType_t oneshot_check_timeouts(TickType_t now);
 // Returns true if there are active One-Shot keys pending release/timeout
 bool oneshot_has_active(void);
 
+#ifdef VIAL_ENABLE
+// After a key press is sent: release the one-shot mods that applied to it
+void oneshot_after_key_press(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

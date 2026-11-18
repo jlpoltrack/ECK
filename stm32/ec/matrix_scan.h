@@ -1,5 +1,6 @@
-#ifndef CLASSIC_MATRIX_H
-#define CLASSIC_MATRIX_H
+/* Matrix scan driver interface: each board implements it (boards/<board>/). */
+#ifndef MATRIX_SCAN_H
+#define MATRIX_SCAN_H
 
 #include "config.h"
 #include "ec_settings.h"
@@ -29,4 +30,4 @@ uint16_t hhkb_take_full_scan_peak_us(void); /* longest whole scan since the last
 }
 #endif
 
-#endif // CLASSIC_MATRIX_H
+#endif // MATRIX_SCAN_H

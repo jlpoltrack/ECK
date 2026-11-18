@@ -40,6 +40,13 @@ void usb_process_modifiers(uint8_t mod_mask, bool pressed);
  */
 void usb_process_key_with_modifiers(uint8_t mod_mask, uint8_t keycode, bool pressed);
 
+#ifdef VIAL_ENABLE
+/* Modifiers held by keys (not those added for one key); key overrides hide some from the host */
+uint8_t usb_get_real_mods(void);
+uint8_t usb_get_suppressed_mods(void);
+void usb_suppress_mods(uint8_t mod_mask);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

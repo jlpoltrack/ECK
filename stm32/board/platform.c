@@ -1,7 +1,10 @@
 #include "keyboard.h"
 #include "platform.h"
-#include "classic_matrix.h"
-#include "dip_switch.h"
+#include "matrix_scan.h"
+#include "board_init.h"
+#ifdef ECK_BOARD_R3S
+#include "rom_dfu.h"
+#endif
 #include "stm32l0xx.h"
 #include "tusb.h"
 #include <string.h>
@@ -11,25 +14,8 @@ void USB_IRQHandler(void) {
 }
 
 void platform_init(void) {
-    // 0. Hybrid: clear Bank 1 state. Classic/Type-S: SW6 ON erases Bank 2's vectors, resets into Bank 1
-    hhkb_early_dip_check();
-
-#ifndef HHKB_HYBRID // Hybrid boots on MSI 2.1 MHz: this blink would take ~3 s, on every reset
-    // Debug LED: initialize PA8 & PA9 outputs
-    RCC->IOPENR |= RCC_IOPENR_GPIOAEN;
-    GPIOA->MODER &= ~((3U << (8 * 2)) | (3U << (9 * 2)));
-    GPIOA->MODER |=  ((1U << (8 * 2)) | (1U << (9 * 2)));
-
-    // Flash both LEDs 3 times rapidly to show Bank 2 code execution started
-    for (int k = 0; k < 3; k++) {
-        GPIOA->BSRR = (1U << 8) | (1U << 9);
-        for (volatile uint32_t d = 0; d < 80000; d++) __NOP();
-        GPIOA->BRR = (1U << 8) | (1U << 9);
-        for (volatile uint32_t d = 0; d < 80000; d++) __NOP();
-    }
-    // Turn PA8 ON indicating platform init in progress
-    GPIOA->BSRR = (1U << 8);
-#endif
+    // 0. Board start-up: HHKB DIP switch check (and the Classic LED blink)
+    board_early_init();
 
     // Configure system clocks for STM32L072: HSI16 + PLL -> 32MHz SYSCLK, HSI48 for USB
     // Enable HSI16 and HSI48
@@ -101,6 +87,9 @@ __attribute__((section(".RamFunc"), noinline))
 void platform_bootloader_jump(void) {
 #ifdef HHKB_HYBRID
     if (board_bootloader_jump()) return;
+#endif
+#ifdef ECK_BOARD_R3S
+    (void)rom_dfu_enter(); /* ST's USB DFU loader; returns only on an unknown ROM */
 #endif
     __disable_irq();
     NVIC_SystemReset();

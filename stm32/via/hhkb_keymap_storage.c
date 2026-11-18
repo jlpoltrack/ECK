@@ -10,7 +10,7 @@
 #include <string.h>
 
 #ifndef SLOT_ADDRESS
-#define SLOT_ADDRESS 0x08080600UL
+#define SLOT_ADDRESS EEPROM_KEYMAP_SLOTS_ADDR
 #endif
 #define SLOT_MAGIC     0x334b4345UL // 'ECK3': keys as 16-bit VIA codes + macros
 #define SLOT_MAGIC_V2  0x324b4345UL // 'ECK2': 32-bit keys + 80 zero bytes + 224 B macros; read, then rewritten
@@ -26,12 +26,15 @@
 #define KEYMAP_WORDS  (NUM_SLOT_KEYS / 2U) // two 16-bit VIA codes per word
 #define MACRO_WORDS   ((DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE + 3U) / 4U)
 #define PAYLOAD_WORDS (KEYMAP_WORDS + MACRO_WORDS)
+#ifdef EEPROM_KEYMAP_LEGACY_FORMATS /* HHKB: slots may hold formats 1 and 2 */
 #define SLOT_WORDS    (4U + V2_PAYLOAD_WORDS) // slot stride, fixed since format 2 so slots never move
-
 _Static_assert(DYNAMIC_KEYMAP_MAX_LAYERS == 4 && NUM_KEYS == 60, "HHKB EEPROM layout requires 4 x 60 keys");
+#else
+#define SLOT_WORDS    (4U + PAYLOAD_WORDS)
+#endif
 _Static_assert(4U + PAYLOAD_WORDS <= SLOT_WORDS, "keymap + macros must fit a slot");
 _Static_assert(DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE >= 224U, "format-2 macros must fit on migration");
-_Static_assert(2 * SLOT_WORDS * 4 <= 0xa00, "keymap slots overlap factory sensor data");
+_Static_assert(2 * SLOT_WORDS * 4 <= EEPROM_KEYMAP_SLOTS_SIZE, "keymap slots must fit the board's EEPROM_KEYMAP_SLOTS_SIZE");
 
 static uint32_t snapshot[PAYLOAD_WORDS];
 static uint32_t generation, checksum;

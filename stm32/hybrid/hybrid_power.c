@@ -12,7 +12,7 @@
 #include "hybrid_ble.h"
 #include "hybrid_power_logic.h"
 #include "hybrid_sleep.h"
-#include "classic_matrix.h"
+#include "matrix_scan.h"
 #include "stm32l0xx.h"
 #include "task.h"
 

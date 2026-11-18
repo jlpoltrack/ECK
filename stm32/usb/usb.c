@@ -52,8 +52,28 @@ void usb_process_batched_key(uint16_t keycode, bool pressed) {
     }
 }
 
+#ifdef VIAL_ENABLE
+static uint8_t s_suppressed_mods; // held mods a key override hides from the host
+
+uint8_t usb_get_real_mods(void) { return s_real_mods; }
+uint8_t usb_get_suppressed_mods(void) { return s_suppressed_mods; }
+
+void usb_suppress_mods(uint8_t mod_mask) {
+    usb_flush_batched_keys();
+    s_suppressed_mods = mod_mask;
+    uint8_t combined = (uint8_t)((s_real_mods & ~s_suppressed_mods) | s_weak_mods);
+    if (current_report.Modifier != combined) {
+        current_report.Modifier = combined;
+        USB_HID_SendReport(&current_report);
+    }
+}
+#define REAL_MODS (s_real_mods & ~s_suppressed_mods)
+#else
+#define REAL_MODS s_real_mods
+#endif
+
 static bool sync_report_modifiers(void) {
-    uint8_t combined = s_real_mods | s_weak_mods;
+    uint8_t combined = (uint8_t)(REAL_MODS | s_weak_mods);
     if (current_report.Modifier != combined) {
         current_report.Modifier = combined;
         return true;

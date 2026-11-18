@@ -22,9 +22,9 @@ import sys
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from via_hid import open_keyboard, send  # noqa: E402
+from via_hid import PRODUCT, open_keyboard, send  # noqa: E402
 
-ROWS, COLS = 4, 15
+ROWS, COLS = (6, 16) if "R3S" in PRODUCT else (4, 15)  # ECK_PRODUCT=R3S: the Realforce R3S
 N = ROWS * COLS
 DIAG_ID = 31
 NAMES = {**{0x04 + i: chr(65 + i) for i in range(26)}, **{0x1E + i: str((i + 1) % 10) for i in range(10)},
@@ -140,13 +140,13 @@ def press(k, seconds):
             hi[i] = max(hi[i], raw[i])
             if i in down and i not in prev:
                 act[i].append(raw[i])
-            if i not in down:
-                rest[i].append(raw[i])
+            rest[i].append(raw[i])  # all samples: the median is the rest level for a briefly pressed key
         prev = down
-    for i in sorted((i for i in range(N) if act[i]), key=lambda i: names[i]):
-        r = sorted(rest[i])
-        print(f"{names[i]:>6}: rest {r[len(r) // 2]:4d}  full press {hi[i]:4d}  registered at {act[i]}")
-    print(f"pressed keys: {sum(1 for a in act if a)}")
+    rest = [sorted(r)[len(r) // 2] for r in rest]
+    moved = [i for i in range(N) if act[i] or (rest[i] and hi[i] - rest[i] > 500)]  # also unregistered presses
+    for i in sorted(moved, key=lambda i: names[i]):
+        print(f"{names[i]:>6}: rest {rest[i]:4d}  full press {hi[i]:4d}  registered at {act[i] or '-'}")
+    print(f"pressed keys: {sum(1 for i in moved if hi[i] - rest[i] > 500)}, registered: {sum(1 for a in act if a)}")
 
 
 def cal(k):

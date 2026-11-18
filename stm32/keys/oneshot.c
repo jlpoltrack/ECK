@@ -4,6 +4,9 @@
 #include "layers.h"
 #include "task.h"
 #include <string.h>
+#ifdef VIAL_ENABLE
+#include "vial.h"
+#endif
 
 #ifndef ONESHOT_TIMEOUT
 #define ONESHOT_TIMEOUT 1500
@@ -19,6 +22,9 @@
 #endif
 
 static OneShotState os_trackers[MAX_OS_TRACKERS];
+#ifdef VIAL_ENABLE
+static uint8_t s_release_after_key; // quick-release mods due once the current key is sent
+#endif
 extern void keyboard_send_modifiers(uint8_t mod_mask, bool pressed);
 
 void oneshot_init(void) {
@@ -70,13 +76,25 @@ void oneshot_on_key_press(uint32_t key) {
             os_trackers[i].key_pressed = true;
             if (os_trackers[i].pending_release) {
                 if (os_trackers[i].is_mod && ONESHOT_QUICK_RELEASE)
+#ifdef VIAL_ENABLE
+                    s_release_after_key |= (uint8_t)(1U << i); // the key must go out with the mod
+#else
                     deactivate_os(&os_trackers[i]);
+#endif
                 else
                     os_trackers[i].active = false;
             }
         }
     }
 }
+
+#ifdef VIAL_ENABLE
+void oneshot_after_key_press(void) {
+    for (int i = 0; i < MAX_OS_TRACKERS; i++)
+        if (s_release_after_key & (1U << i)) deactivate_os(&os_trackers[i]);
+    s_release_after_key = 0;
+}
+#endif
 
 void oneshot_on_key_release(void) {
     for (int i = 0; i < MAX_OS_TRACKERS; i++) {
@@ -101,7 +119,12 @@ TickType_t oneshot_check_timeouts(TickType_t now) {
         return portMAX_DELAY;
     }
     TickType_t min_remaining = portMAX_DELAY;
+#ifdef VIAL_ENABLE
+    if (!vial_data.osk_timeout) return portMAX_DELAY; // QMK setting 6; 0 is no timeout
+    const TickType_t timeout_ticks = pdMS_TO_TICKS(vial_data.osk_timeout);
+#else
     const TickType_t timeout_ticks = pdMS_TO_TICKS(ONESHOT_TIMEOUT);
+#endif
 
     for (int i = 0; i < MAX_OS_TRACKERS; i++) {
         if (os_trackers[i].active && os_trackers[i].pending_release) {

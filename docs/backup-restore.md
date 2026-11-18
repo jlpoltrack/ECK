@@ -19,7 +19,7 @@ Use SW6 to return to Bank 1 (below), then install a matching `.hfb` (ECK, or sto
 
 ## SW6 recovery
 
-On the Classic (`HHKB_SW6_REBOOT_TO_BANK1` in `stm32/board/config.h`; off on the Hybrid), starting ECK with SW6 ON erases Bank 2's first 128-byte page (its vector table) and resets into Bank 1. Bank 2 then stays unbootable until a full image is written through PFU's updater, DFU or SWD. Keep SW6 OFF in normal use.
+On the Classic (`HHKB_SW6_REBOOT_TO_BANK1` in `stm32/boards/hhkb/board_config.h`; off on the Hybrid), starting ECK with SW6 ON erases Bank 2's first 128-byte page (its vector table) and resets into Bank 1. Bank 2 then stays unbootable until a full image is written through PFU's updater, DFU or SWD. Keep SW6 OFF in normal use.
 
 ## STM32 ROM DFU
 

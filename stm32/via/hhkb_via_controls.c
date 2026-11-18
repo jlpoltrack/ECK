@@ -1,4 +1,4 @@
-#include "classic_matrix.h"
+#include "matrix_scan.h"
 #ifdef HHKB_ADC_DIAGNOSTICS
 #include "task_internal.h"
 #endif

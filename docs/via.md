@@ -2,13 +2,13 @@
 
 # VIA
 
-ECK speaks the [VIA](https://www.usevia.app/) protocol (v3: keymap, macros, custom menus). Vial is not supported. The **HHKB Settings** menu works only in the VIA web app.
+ECK speaks the [VIA](https://www.usevia.app/) protocol (v3: keymap, macros, custom menus) and [Vial](vial.md). The **HHKB Settings** menu works only in the VIA web app, and only in VIA mode: press **Fn + Ctrl + V** first, then connect ([why](vial.md#via-mode)).
 
 ## Load the definition
 
 1. Open the [VIA web app](https://www.usevia.app/), go to **Settings** and enable **Show Design tab**.
-2. In **Design**, choose **Load Draft Definition** and select `stm32/via/via.json` (the same file for all three keyboards).
-3. Connect the keyboard and open **HHKB Settings**.
+2. In **Design**, choose **Load Draft Definition** and select `stm32/via/via.json` (the same file for all three HHKBs; the Realforce R3S uses `stm32/boards/r3s/via.json`, generated from it by `tools/r3s/make_via_json.py`).
+3. Press Fn + Ctrl + V (VIA mode: two blinks), connect the keyboard and open **HHKB Settings** (on the R3S: **Settings**).
 
 If Layer 0 shows blank keys, click Layer 1 and back (a VIA rendering race).
 

@@ -8,7 +8,7 @@
 #include "hhkb_positions.h"
 
 #include <string.h>
-#include "classic_matrix.h" /* hhkb_get_debug_flag */
+#include "matrix_scan.h" /* hhkb_get_debug_flag */
 #include "usb_descriptors.h"
 
 #include "FreeRTOS.h"
@@ -78,7 +78,7 @@ static bool s_recovery;                /* PB6 held high: the nRF52 was restarted
 /* Host slot (1..4), whether Bluetooth wins over a connected USB host (bit 8) and the Bluetooth
  * scan rate + 1 (bits 16-18, 0 = default), kept in one EEPROM word past ECK's settings
  * (all zero in the stock Hybrid EEPROM). */
-#define SETTINGS_ADDR 0x080817F8UL
+#define SETTINGS_ADDR EEPROM_BLE_SETTINGS_ADDR
 #define SETTINGS_MAGIC 0xB7000000UL
 #define BLE_SCAN_RATE_DEFAULT 2U /* 250 Hz: faster than the 15-30 ms connection interval, saves power */
 static uint8_t s_slot = 1;

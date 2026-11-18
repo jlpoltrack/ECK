@@ -9,10 +9,10 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from via_hid import open_keyboard, via  # noqa: E402
+from via_hid import PRODUCT, open_keyboard, via  # noqa: E402
 
 RESET, GET_BUF, SET_BUF = 0x06, 0x12, 0x13
-LAYERS, KEYS = 4, 60
+LAYERS, KEYS = 4, (96 if "R3S" in PRODUCT else 60)  # matrix positions (rows x cols); ECK_PRODUCT=R3S
 SIZE = LAYERS * KEYS * 2
 
 

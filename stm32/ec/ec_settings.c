@@ -1,5 +1,5 @@
 #include "ec_settings.h"
-#include "classic_matrix.h"
+#include "matrix_scan.h"
 #include "settings_storage_guard.h"
 #include "usb_descriptors.h"
 #include "eeprom.h"
@@ -17,9 +17,45 @@
 #define CAL_MIN_SWING RT_MIN_RANGE
 #endif
 
-#define TOPRE_TYPICAL_TRAVEL_COUNTS 2370U
+#ifndef BOARD_TYPICAL_TRAVEL
+#define BOARD_TYPICAL_TRAVEL 2370U /* rest to full press without calibration (HHKB) */
+#endif
+#define TOPRE_TYPICAL_TRAVEL_COUNTS BOARD_TYPICAL_TRAVEL
+#ifndef BOARD_DEFAULT_SCAN_RATE
+#define BOARD_DEFAULT_SCAN_RATE 4 // 1000 Hz
+#endif
 #define CAL_BASELINE_SAMPLES 16U
 #define HHKB_SETTINGS_SAVE_DELAY_MS 500U
+
+/* Per-key bit masks. KEY_BIT and the two-word mask macros keep the HHKB's original code. */
+#define KEY_INDEX(col, row) ((col) * MATRIX_ROWS + (row))
+#define KEY_MASK_WORDS ((MATRIX_COLS * MATRIX_ROWS + 31) / 32)
+#if MATRIX_ROWS == 4
+#define KEY_BIT(col, row) (((col) << 2) | ((row) & 3))
+#else
+#define KEY_BIT(col, row) KEY_INDEX(col, row)
+#endif
+#if KEY_MASK_WORDS == 2
+#define MASK_TEST(m, k) (((k) < 32) ? ((m)[0] & (1U << (k))) != 0 : ((m)[1] & (1U << ((k) - 32))) != 0)
+#define MASK_SET(m, k) do { if ((k) < 32) (m)[0] |= (1U << (k)); else (m)[1] |= (1U << ((k) - 32)); } while (0)
+#define MASK_CLEAR(m, k) do { if ((k) < 32) (m)[0] &= ~(1U << (k)); else (m)[1] &= ~(1U << ((k) - 32)); } while (0)
+#define MASK_COUNT(m) (__builtin_popcount((m)[0]) + __builtin_popcount((m)[1]))
+#else
+#define MASK_TEST(m, k) (((m)[(k) / 32] & (1U << ((k) % 32))) != 0)
+#define MASK_SET(m, k) ((m)[(k) / 32] |= (1U << ((k) % 32)))
+#define MASK_CLEAR(m, k) ((m)[(k) / 32] &= ~(1U << ((k) % 32)))
+static int mask_count(const uint32_t *m) {
+    int n = 0;
+    for (unsigned i = 0; i < KEY_MASK_WORDS; i++) n += __builtin_popcount(m[i]);
+    return n;
+}
+#define MASK_COUNT(m) mask_count(m)
+#endif
+#define STR_(x) #x
+#define STR(x) STR_(x)
+#ifndef BOARD_DEFAULT_REST
+#define BOARD_DEFAULT_REST 800 /* rest level assumed without factory or custom calibration */
+#endif
 
 static uint16_t s_cal_baseline[MATRIX_COLS][MATRIX_ROWS];
 uint16_t s_cal_peak[MATRIX_COLS][MATRIX_ROWS];
@@ -30,8 +66,8 @@ static bool s_calibration_mode = false;
 static bool s_capture_baseline = false;
 static uint8_t s_cal_baseline_samples = 0;
 static uint16_t s_cal_baseline_accum[MATRIX_COLS][MATRIX_ROWS];
-static uint32_t s_calibrated_mask[2];
-static uint32_t s_cal_down_mask[2];
+static uint32_t s_calibrated_mask[KEY_MASK_WORDS];
+static uint32_t s_cal_down_mask[KEY_MASK_WORDS];
 static uint16_t s_cal_press_start_peak[MATRIX_COLS][MATRIX_ROWS];
 static uint16_t s_capture_base[MATRIX_COLS][MATRIX_ROWS];
 static uint16_t s_capture_peak[MATRIX_COLS][MATRIX_ROWS];
@@ -45,7 +81,7 @@ static rt_cfg_t s_rt_cfg = {
 };
 static uint16_t s_classic_release_pm = 100; // Default 10% travel hysteresis (0.4 mm)
 
-static uint8_t s_scan_rate = 4; // 1000 Hz
+static uint8_t s_scan_rate = BOARD_DEFAULT_SCAN_RATE;
 static bool s_oversampling_requested = false;
 static uint8_t s_tapping_term_10ms = 22; // 220 ms
 static uint8_t s_quick_tap_10ms = 15;    // 150 ms
@@ -73,15 +109,15 @@ static volatile uint16_t s_dbg_raw = 0;
 static volatile uint16_t s_dbg_norm = 0;
 static volatile bool s_dbg_down = false;
 static uint16_t s_last_reported_raw[MATRIX_COLS][MATRIX_ROWS];
-static uint32_t s_last_reported_down_mask[2] = {0, 0};
+static uint32_t s_last_reported_down_mask[KEY_MASK_WORDS];
 
 static inline bool is_reported_down(uint8_t col, uint8_t row) {
-    uint8_t idx = (col << 2) | (row & 3);
+    uint8_t idx = KEY_BIT(col, row);
     return (s_last_reported_down_mask[idx / 32] & (1U << (idx % 32))) != 0;
 }
 
 static inline void set_reported_down(uint8_t col, uint8_t row, bool down) {
-    uint8_t idx = (col << 2) | (row & 3);
+    uint8_t idx = KEY_BIT(col, row);
     if (down) {
         s_last_reported_down_mask[idx / 32] |= (1U << (idx % 32));
     } else {
@@ -101,17 +137,22 @@ static uint16_t compute_crc16(const uint8_t *data, size_t len) {
     return crc;
 }
 
-#define HHKB_FACTORY_BASELINE_ADDR 0x08081000UL
 static uint16_t get_factory_baseline(uint8_t col, uint8_t row) {
-    const uint16_t *base = (const uint16_t *)HHKB_FACTORY_BASELINE_ADDR;
+#ifndef EEPROM_FACTORY_BASELINE_ADDR /* no factory sensor data on this board */
+    (void)col;
+    (void)row;
+    return 0;
+#else
+    const uint16_t *base = (const uint16_t *)EEPROM_FACTORY_BASELINE_ADDR;
     uint8_t idx = (col << 3) | (row & 7);
     uint16_t val = base[idx];
     return (val >= 100 && val <= 2000) ? val : 0;
+#endif
 }
 
 static uint16_t get_default_baseline(uint8_t col, uint8_t row) {
     uint16_t f_base = get_factory_baseline(col, row);
-    return (f_base != 0) ? f_base : 800;
+    return (f_base != 0) ? f_base : BOARD_DEFAULT_REST;
 }
 
 static uint16_t get_default_peak(uint8_t col, uint8_t row) {
@@ -305,10 +346,15 @@ void hhkb_settings_task(void) {
 void hhkb_calibration_start(void) {
     memset(s_cal_baseline_accum, 0, sizeof(s_cal_baseline_accum));
     s_cal_baseline_samples = CAL_BASELINE_SAMPLES;
+#if KEY_MASK_WORDS == 2
     s_calibrated_mask[0] = 0;
     s_calibrated_mask[1] = 0;
     s_cal_down_mask[0] = 0;
     s_cal_down_mask[1] = 0;
+#else
+    memset(s_calibrated_mask, 0, sizeof(s_calibrated_mask));
+    memset(s_cal_down_mask, 0, sizeof(s_cal_down_mask));
+#endif
     s_capture_baseline = true;
     s_calibration_mode = true;
     if (hhkb_get_debug_flag(DEBUG_FLAG_CAL)) {
@@ -320,10 +366,8 @@ void hhkb_calibration_finish(void) {
     if (!s_calibration_mode) return;
     for (uint8_t c = 0; c < MATRIX_COLS; c++) {
         for (uint8_t r = 0; r < MATRIX_ROWS; r++) {
-            uint8_t k_idx = c * 4 + r;
-            bool was_actuated = (k_idx < 32)
-                ? (s_calibrated_mask[0] & (1U << k_idx)) != 0
-                : (s_calibrated_mask[1] & (1U << (k_idx - 32))) != 0;
+            uint8_t k_idx = KEY_INDEX(c, r);
+            bool was_actuated = MASK_TEST(s_calibrated_mask, k_idx);
             if (was_actuated) {
                 s_cal_baseline[c][r] = s_capture_base[c][r];
                 s_cal_peak[c][r] = s_capture_peak[c][r];
@@ -333,13 +377,25 @@ void hhkb_calibration_finish(void) {
         }
     }
     if (hhkb_get_debug_flag(DEBUG_FLAG_CAL)) {
-        uint8_t count = (uint8_t)(__builtin_popcount(s_calibrated_mask[0]) + __builtin_popcount(s_calibrated_mask[1]));
-        debug_console_printf("[CAL] Calibration complete and saved to EEPROM (%u/60 keys updated).\r\n", count);
+        uint8_t count = (uint8_t)MASK_COUNT(s_calibrated_mask);
+        debug_console_printf("[CAL] Calibration complete and saved to EEPROM (%u/" STR(NUM_KEYS) " keys updated).\r\n", count);
     }
     s_calibration_mode = false;
     s_custom_calibration = true;
     hhkb_settings_mark_dirty();
 }
+
+#ifdef BOARD_BOOT_REST
+/* Boards without factory rest levels: the scan driver reports each key's reading at start-up.
+ * A reading above BOARD_BOOT_REST_MAX (key held) keeps the default. Custom calibration wins. */
+void ec_boot_rest(uint8_t col, uint8_t row, uint16_t val) {
+    if (s_custom_calibration || s_calibration_mode || val < 100 || val > BOARD_BOOT_REST_MAX) return;
+    s_cal_baseline[col][row] = val;
+    s_cal_peak[col][row] = (uint16_t)(val + TOPRE_TYPICAL_TRAVEL_COUNTS <= 4095 ? val + TOPRE_TYPICAL_TRAVEL_COUNTS : 4000);
+    rt_key_set_range(&s_rt_keys[col][row], s_cal_baseline[col][row], s_cal_peak[col][row], s_rt_cfg.reset_pm);
+    rt_key_reset(&s_rt_keys[col][row]);
+}
+#endif
 
 bool hhkb_calibration_enabled(void) { return s_custom_calibration; }
 void hhkb_calibration_set_enabled(bool enabled) {
@@ -545,8 +601,8 @@ void hhkb_get_debug_travel_str(char *buf, size_t max_len) {
 
 void hhkb_get_cal_status_str(char *buf, size_t max_len) {
     if (s_calibration_mode) {
-        uint8_t count = (uint8_t)(__builtin_popcount(s_calibrated_mask[0]) + __builtin_popcount(s_calibrated_mask[1]));
-        fmt_snprintf(buf, max_len, "In progress: %u/60 keys", count);
+        uint8_t count = (uint8_t)MASK_COUNT(s_calibrated_mask);
+        fmt_snprintf(buf, max_len, "In progress: %u/" STR(NUM_KEYS) " keys", count);
     } else {
         uint8_t custom_count = 0;
         for (uint8_t c = 0; c < MATRIX_COLS; c++) {
@@ -556,7 +612,7 @@ void hhkb_get_cal_status_str(char *buf, size_t max_len) {
                 }
             }
         }
-        fmt_snprintf(buf, max_len, "Saved (%u/60 keys)", custom_count);
+        fmt_snprintf(buf, max_len, "Saved (%u/" STR(NUM_KEYS) " keys)", custom_count);
     }
 }
 
@@ -583,19 +639,17 @@ void hhkb_cal_record_peak(uint8_t col, uint8_t row, uint16_t val) {
 
     uint16_t press_thresh = s_capture_base[col][row] + CAL_MIN_SWING;
     uint16_t release_thresh = s_capture_base[col][row] + (CAL_MIN_SWING / 2);
-    uint8_t k_idx = col * 4 + row;
-    bool is_down = (k_idx < 32)
-        ? ((s_cal_down_mask[0] & (1U << k_idx)) != 0)
-        : ((s_cal_down_mask[1] & (1U << (k_idx - 32))) != 0);
+    uint8_t k_idx = KEY_INDEX(col, row);
+    bool is_down = MASK_TEST(s_cal_down_mask, k_idx);
 
     if (!is_down && val >= press_thresh) {
         // Transition: key pressed down
-        if (k_idx < 32) s_cal_down_mask[0] |= (1U << k_idx);
-        else s_cal_down_mask[1] |= (1U << (k_idx - 32));
+        MASK_SET(s_cal_down_mask, k_idx);
 
         s_cal_press_start_peak[col][row] = s_capture_peak[col][row];
 
         bool newly_calibrated = false;
+#if KEY_MASK_WORDS == 2 /* the HHKB's original form (its binaries stay unchanged) */
         if (k_idx < 32) {
             if (!(s_calibrated_mask[0] & (1U << k_idx))) {
                 s_calibrated_mask[0] |= (1U << k_idx);
@@ -607,23 +661,28 @@ void hhkb_cal_record_peak(uint8_t col, uint8_t row, uint16_t val) {
                 newly_calibrated = true;
             }
         }
+#else
+        if (!MASK_TEST(s_calibrated_mask, k_idx)) {
+            MASK_SET(s_calibrated_mask, k_idx);
+            newly_calibrated = true;
+        }
+#endif
         if (newly_calibrated && hhkb_get_debug_flag(DEBUG_FLAG_CAL)) {
-            uint8_t count = (uint8_t)(__builtin_popcount(s_calibrated_mask[0]) + __builtin_popcount(s_calibrated_mask[1]));
-            uint8_t pct = (uint8_t)((count * 100U) / 60U);
+            uint8_t count = (uint8_t)MASK_COUNT(s_calibrated_mask);
+            uint8_t pct = (uint8_t)((count * 100U) / NUM_KEYS);
             char bar[21];
-            uint8_t filled = (uint8_t)((count * 20U) / 60U);
+            uint8_t filled = (uint8_t)((count * 20U) / NUM_KEYS);
             for (uint8_t b = 0; b < 20; b++) bar[b] = (b < filled) ? '=' : ' ';
             bar[20] = '\0';
-            debug_console_printf("[CAL] [%s] %u%% (%u/60) | Key C%u R%u peak: %u\r\n",
+            debug_console_printf("[CAL] [%s] %u%% (%u/" STR(NUM_KEYS) ") | Key C%u R%u peak: %u\r\n",
                                  bar, pct, count, col, row, s_capture_peak[col][row]);
-            if (count >= 60) {
-                debug_console_printf("[CAL] >>> All 60 keys calibrated! Click 'Finish and save' in VIA. <<<\r\n");
+            if (count >= NUM_KEYS) {
+                debug_console_printf("[CAL] >>> All " STR(NUM_KEYS) " keys calibrated! Click 'Finish and save' in VIA. <<<\r\n");
             }
         }
     } else if (is_down && val < release_thresh) {
         // Transition: key released
-        if (k_idx < 32) s_cal_down_mask[0] &= ~(1U << k_idx);
-        else s_cal_down_mask[1] &= ~(1U << (k_idx - 32));
+        MASK_CLEAR(s_cal_down_mask, k_idx);
 
         uint16_t old_peak = s_cal_press_start_peak[col][row];
         uint16_t new_peak = s_capture_peak[col][row];

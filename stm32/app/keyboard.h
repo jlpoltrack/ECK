@@ -48,6 +48,17 @@ void keyboard_record_pressed_key(uint8_t row, uint8_t col, uint32_t key);
  */
 void bootloader_jump(void);
 
+#ifdef VIAL_ENABLE
+/* Row for keys the Vial features press themselves (never a matrix row) */
+#define KEYBOARD_VIRTUAL_ROW 0xFE
+void keyboard_handle_press(uint8_t row, uint8_t col);
+/* A key pressed by a feature, with a real press's steps; returns the key to release later */
+uint32_t keyboard_virtual_press(uint8_t slot, uint32_t key);
+void keyboard_virtual_release(uint8_t slot, uint32_t key);
+/* Just the key action (macro playback) */
+void keyboard_process_virtual(uint8_t slot, uint32_t key, bool pressed);
+#endif
+
 /* Power Saving (dip_switch.c): true blocks USB remote wakeup on a key press. */
 bool keyboard_power_saving_enabled(void);
 

@@ -4,6 +4,10 @@
 #include "layers.h"
 #include "task.h"
 #include <string.h>
+#ifdef VIAL_ENABLE
+#include "usb.h"
+#include "vial.h"
+#endif
 
 #ifndef TAPPING_TERM_DEFAULT
 #define TAPPING_TERM_DEFAULT 200
@@ -31,6 +35,20 @@ extern void keyboard_send_key(uint16_t keycode, bool pressed);
 extern void keyboard_send_modifiers(uint8_t mod_mask, bool pressed);
 extern void oneshot_send_lazy_mods(void);
 extern void oneshot_on_tap_key(void);
+
+#ifdef VIAL_ENABLE
+// A tap, shifted while Caps Word is on
+static void tap_key(uint8_t kc) {
+    uint8_t mods = vial_caps_word_mods(kc);
+    if (mods) {
+        usb_process_key_with_modifiers(mods, kc, true);
+        usb_process_key_with_modifiers(mods, kc, false);
+        return;
+    }
+    keyboard_send_key(kc, true);
+    keyboard_send_key(kc, false);
+}
+#endif
 
 void hold_tap_init(void) {
     memset(ht_trackers, 0, sizeof(ht_trackers));
@@ -62,6 +80,10 @@ static void activate_hold(HTTracker *tracker) {
 }
 
 void hold_tap_permissive_resolve(uint8_t except_row, uint8_t except_col) {
+#ifdef VIAL_ENABLE
+    for (int i = 0; i < MAX_HT_TRACKERS; i++)
+        if (ht_trackers[i].row != except_row || ht_trackers[i].col != except_col) ht_trackers[i].interrupted = true;
+#endif
     if (!hold_tap_config_value(1) || hold_tap_config_value(2)) return;
     for (int i = 0; i < MAX_HT_TRACKERS; i++) {
         if (ht_trackers[i].state == HT_STATE_PRESSED &&
@@ -155,8 +177,12 @@ bool hold_tap_process_event(uint8_t row, uint8_t col, uint32_t key, bool pressed
                         s_active_ht_count--;
                     }
                     oneshot_send_lazy_mods();
+#ifdef VIAL_ENABLE
+                    tap_key(kc);
+#else
                     keyboard_send_key(kc, true);
                     keyboard_send_key(kc, false);
+#endif
                     oneshot_on_tap_key();
 
                     // Record tap release for potential quick-tap repeat
@@ -171,6 +197,9 @@ bool hold_tap_process_event(uint8_t row, uint8_t col, uint32_t key, bool pressed
                     else
                         keyboard_send_modifiers(ht_mod_mask(ht_trackers[i].keycode), false);
                     s_last_release.valid = false;
+#ifdef VIAL_ENABLE
+                    if (!ht_trackers[i].interrupted && (vial_data.tapping & VIAL_TAPPING_RETRO)) tap_key(kc);
+#endif
                 }
                 ht_trackers[i].state = HT_STATE_IDLE;
                 break;

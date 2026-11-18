@@ -3,8 +3,13 @@
 #include "stm32l0xx.h"
 #include "events.h"
 #include "layers.h"
-#include "classic_matrix.h"
+#include "matrix_scan.h"
 #include "tusb.h"
+#include "board.h"
+#include "board_config.h"
+#ifdef BOARD_USB_RECOVERY_DFU
+#include "platform.h"
+#endif
 #ifdef HHKB_HYBRID
 #include "hybrid_ble.h"
 #include "hybrid_power.h"
@@ -12,8 +17,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* One owner for PA8 and PA9: off, heartbeat, Caps Lock, Fn, system 2, Bluetooth status. */
-#define LED_MASK ((1U << 8) | (1U << 9))
+/* One owner for the board LEDs (board.h): off, heartbeat, Caps Lock, Fn, system 2, Bluetooth status. */
 // VIA protocol 12 assigns custom keycodes from 0x7E00 in JSON order.
 enum {
     HHKB_SYSTEM_1 = 0x7E00,
@@ -21,6 +25,12 @@ enum {
 };
 
 static bool caps_lock;
+#ifdef BOARD_HOST_LEDS /* the board shows the host's Num, Caps and Scroll Lock */
+static uint8_t s_host_leds;
+#define HOST_LEDS(suspended) ((suspended) ? 0 : s_host_leds)
+#else
+#define HOST_LEDS(suspended) 0
+#endif
 
 static void update_system_layer(void) {
     uint16_t state = layers_get_state() & (uint16_t)~(1U << 2);
@@ -28,29 +38,54 @@ static void update_system_layer(void) {
     layers_set_state(state | 1U);
 }
 
-void indicators_init(void) {
-    GPIOA->BRR = LED_MASK;
-    GPIOA->OTYPER &= ~LED_MASK;                                  /* push-pull */
-    GPIOA->OSPEEDR = (GPIOA->OSPEEDR & ~(0xFU << 16)) | (0xAU << 16); /* high speed */
-    GPIOA->PUPDR &= ~(0xFU << 16);
-    GPIOA->MODER = (GPIOA->MODER & ~(0xFU << 16)) | (0x5U << 16);      /* output */
-#ifndef HHKB_HYBRID // Hybrid PA8 is its Bluetooth status LED
-    GPIOA->BSRR = 1U << 8; /* lit until the keyboard task runs: platform and LEDs are up */
-#endif
-}
+void indicators_init(void) { board_leds_init(); }
 
-void indicators_leds_off(void) { GPIOA->BRR = LED_MASK; }
+void indicators_leds_off(void) { board_leds_off(); }
 
 void keyboard_platform_init(void) { update_system_layer(); }
+
+#ifdef VIAL_ENABLE
+/* Notify blinks: alternating 150 ms on and off halves; start is set before the count. */
+#define BLINK_HALF pdMS_TO_TICKS(150)
+static volatile TickType_t s_blink_start;
+static volatile uint8_t s_blink_halves;
+
+void indicators_blink(uint8_t count) {
+    s_blink_start = xTaskGetTickCount();
+    s_blink_halves = (uint8_t)(2U * count);
+}
+
+/* True while blinking, with the LED state in *on. */
+static bool blink_state(TickType_t now, bool *on) {
+    uint8_t halves = s_blink_halves;
+    if (!halves) return false;
+    TickType_t half = (now - s_blink_start) / BLINK_HALF;
+    if (half >= halves) {
+        s_blink_halves = 0;
+        return false;
+    }
+    *on = (half & 1U) == 0;
+    return true;
+}
+
+static TickType_t blink_timeout(TickType_t now, TickType_t timeout) {
+    if (!s_blink_halves) return timeout;
+    TickType_t edge = BLINK_HALF - (now - s_blink_start) % BLINK_HALF;
+    return edge < timeout ? edge : timeout;
+}
+#else
+#define blink_timeout(now, timeout) (timeout)
+#endif
+
 #ifdef HHKB_HYBRID
 /* Next 125 ms LED phase (4 blinks/s while pairing) or the power module's next poll. */
 TickType_t keyboard_platform_timeout(void) {
     TickType_t now = xTaskGetTickCount(), phase = pdMS_TO_TICKS(125);
     TickType_t led = phase - now % phase, power = hybrid_power_timeout(now);
-    return power < led ? power : led;
+    return blink_timeout(now, power < led ? power : led);
 }
 #else
-TickType_t keyboard_platform_timeout(void) { return pdMS_TO_TICKS(250); }
+TickType_t keyboard_platform_timeout(void) { return blink_timeout(xTaskGetTickCount(), pdMS_TO_TICKS(250)); }
 #endif
 void keyboard_platform_tick(TickType_t now) {
 #ifdef HHKB_HYBRID
@@ -61,6 +96,9 @@ void keyboard_platform_tick(TickType_t now) {
     bool mounted = tud_mounted();
 #endif
     bool suspended = tud_suspended();
+#ifdef BOARD_USB_RECOVERY_DFU /* boards without a recovery switch: no USB host in 15 s, ST's DFU loader */
+    if (!mounted && now >= pdMS_TO_TICKS(15000)) platform_bootloader_jump();
+#endif
     bool lit[2];
     for (uint8_t i = 0; i < 2; i++) {
         bool on = false;
@@ -87,7 +125,11 @@ void keyboard_platform_tick(TickType_t now) {
 #ifdef HHKB_HYBRID
     hybrid_power_leds(&lit[0], &lit[1]); /* PA8 blue, PA9 orange */
 #endif
-    GPIOA->BSRR = (lit[0] ? 1U << 8 : 1U << 24) | (lit[1] ? 1U << 9 : 1U << 25);
+#ifdef VIAL_ENABLE
+    bool blink;
+    if (blink_state(now, &blink)) lit[BOARD_NOTIFY_LED] = blink;
+#endif
+    board_leds_write(lit[0], lit[1], HOST_LEDS(suspended));
 }
 
 bool indicators_process_key(uint32_t key, bool pressed) {
@@ -99,4 +141,9 @@ bool indicators_process_key(uint32_t key, bool pressed) {
     return true;
 }
 
-void indicators_hid_leds(uint8_t state) { caps_lock = (state & 0x02) != 0; }
+void indicators_hid_leds(uint8_t state) {
+    caps_lock = (state & 0x02) != 0;
+#ifdef BOARD_HOST_LEDS
+    s_host_leds = state;
+#endif
+}

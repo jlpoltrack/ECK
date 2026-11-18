@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Build one HHKB variant into build/<variant>/. Usage: ./build.sh hybrid|classic|type_s [-c] [-d EXTRA_DEFS]
+# Build one HHKB variant into build/<variant>/. Usage: ./build.sh hybrid|classic|type_s|r3s [-c] [-d EXTRA_DEFS]
 # -c cleans first; -d adds bench options, comma-separated (docs/build.md).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-usage() { echo "Usage: $0 hybrid|classic|type_s [-c] [-d DEF1,DEF2,...]" >&2; exit 2; }
+usage() { echo "Usage: $0 hybrid|classic|type_s|r3s [-c] [-d DEF1,DEF2,...]" >&2; exit 2; }
 [[ $# -ge 1 ]] || usage
 VARIANT="$1"; shift
-case "$VARIANT" in hybrid|classic|type_s) ;; *) usage ;; esac
+case "$VARIANT" in hybrid|classic|type_s|r3s) ;; *) usage ;; esac
 BUILD_DIR="$ROOT/build/$VARIANT"
 EXTRA=""
 CLEAN=false
@@ -34,4 +34,4 @@ cmake -G "Unix Makefiles" -S "$ROOT/stm32" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Mi
     "-DHHKB_VARIANT=$VARIANT" "-DHHKB_EXTRA_DEFINES=$EXTRA"
 cmake --build "$BUILD_DIR" -j"$JOBS"
 ln -sfn "$VARIANT/compile_commands.json" "$ROOT/build/compile_commands.json" # for clangd and IDEs
-ls -l "$BUILD_DIR"/hhkb_ec_"$VARIANT".{bin,hfb} 2>/dev/null || true
+ls -l "$BUILD_DIR"/hhkb_ec_"$VARIANT".{bin,hfb,rfb} 2>/dev/null || true

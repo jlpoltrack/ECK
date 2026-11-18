@@ -85,6 +85,21 @@ uint16_t layers_get_state(void) {
     return layer_state;
 }
 
+#ifdef VIAL_ENABLE
+static uint16_t s_locked; // Layer Lock: these layers ignore layers_off
+
+void layers_lock_toggle(uint8_t layer_idx) {
+    if (layer_idx == 0) return;
+    s_locked ^= (uint16_t)(1U << layer_idx);
+    if (!(s_locked & (1U << layer_idx))) layers_off(layer_idx);
+}
+#define LAYER_LOCKED(i) (s_locked & (1U << (i)))
+#define DROP_STALE_LOCKS() (s_locked &= layer_state)
+#else
+#define LAYER_LOCKED(i) 0
+#define DROP_STALE_LOCKS() ((void)0)
+#endif
+
 /**
  * @brief Set the full layer bitmask state and recalculate the active layer index.
  * @param state New 16-bit layer bitmask.
@@ -93,6 +108,7 @@ void layers_set_state(uint16_t state) {
     state &= valid_layers();
     layer_state = state ? state : 1;
     layer = compute_active_layer(layer_state);
+    DROP_STALE_LOCKS();
 }
 
 /**
@@ -110,8 +126,9 @@ void layers_on(uint8_t layer_idx) {
  * @brief Disable a specific layer in the active layer bitmask (base layer 0 fallback guaranteed).
  * @param layer_idx Layer index; one the keymap does not have is ignored.
  */
+
 void layers_off(uint8_t layer_idx) {
-    if (layer_idx < layers_get_count()) {
+    if (layer_idx < layers_get_count() && !LAYER_LOCKED(layer_idx)) {
         layer_state &= ~(1U << layer_idx);
         if (layer_state == 0) {
             layer_state = 1; // Default base layer always remains active
@@ -131,6 +148,7 @@ void layers_toggle(uint8_t layer_idx) {
             layer_state = 1;
         }
         layer = compute_active_layer(layer_state);
+        DROP_STALE_LOCKS();
     }
 }
 

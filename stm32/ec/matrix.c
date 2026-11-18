@@ -1,5 +1,5 @@
 #include "matrix.h"
-#include "classic_matrix.h"
+#include "matrix_scan.h"
 #include "queue.h"
 #ifdef HHKB_HYBRID
 #include "hybrid_sleep.h"
@@ -143,6 +143,9 @@ void matrix_task(void *pvParameters) {
         for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
             matrix_row_t state = s_matrix_state[row];
             if (state == published_state[row]) continue;
+#ifdef BOARD_SCAN_ONLY /* bring-up build: scan and report readings over VIA, but send no keys */
+            continue;
+#endif
             matrix_event_t event = {
                 .row = MATRIX_EVENT_ROW_SNAPSHOT | (first_event ? MATRIX_EVENT_SCAN_START : 0) | row,
                 .col = (uint8_t)state,

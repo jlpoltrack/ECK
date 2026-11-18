@@ -28,6 +28,8 @@ void indicators_hid_leds(uint8_t leds);
 void indicators_init(void);
 /* Both LEDs off now: USB suspend, resume and mount (the next tick relights them). */
 void indicators_leds_off(void);
+/* Blink the board's notify LED (BOARD_NOTIFY_LED) count times over its usual state. */
+void indicators_blink(uint8_t count);
 void hybrid_ble_early_init(void);
 bool hybrid_ble_process_key(uint32_t key, bool pressed);
 bool hybrid_ble_matrix_change(uint8_t row, uint8_t col, bool pressed);

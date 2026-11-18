@@ -38,12 +38,14 @@ A day of 2 h typing, 6 h idle and 16 h asleep comes to roughly 2-3 months on two
 
 | Path | Contents |
 | --- | --- |
-| `stm32/app/` | Startup, keyboard task, board events, FreeRTOS config |
+| `stm32/app/` | Startup, keyboard task, FreeRTOS config |
 | `stm32/keys/` | Layers, hold-tap, one-shot, macros |
-| `stm32/via/` | VIA protocol, HHKB Settings menu, keymap/macro storage, `via.json` |
+| `stm32/via/` | VIA and Vial protocols, HHKB Settings menu, keymap/macro storage, `via.json` |
 | `stm32/usb/` | USB HID (TinyUSB glue, descriptors) |
-| `stm32/board/` | Board config, clocks, DIP switches, LEDs, linker script, FreeRTOS port |
-| `stm32/ec/` | Key matrix scanning, calibration, Rapid Trigger |
+| `stm32/board/` | Shared firmware config, clocks, LEDs, EEPROM writer, linker script, FreeRTOS port |
+| `stm32/boards/hhkb/` | HHKB board: matrix, layout and EEPROM map (`board_config.h`), default keymap, matrix scan, DIP switches, board events |
+| `stm32/boards/r3s/` | Realforce R3S board (bring-up): matrix, layout, EEPROM map, scan, indicators |
+| `stm32/ec/` | Scan timing, calibration, Rapid Trigger |
 | `stm32/hybrid/` | Hybrid power, sleep, Bluetooth chords, SPI link to the nRF52 |
 | `stm32/boot/` | Hybrid Bank 1 boot stub |
 | `stm32/vendor/` | FreeRTOS 11.3.3, TinyUSB 0.21.0 subset, ST CMSIS and LL headers |

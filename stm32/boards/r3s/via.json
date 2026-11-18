@@ -1,0 +1,1252 @@
+{
+  "name": "Realforce R3S (ECK)",
+  "vendorId": "0xCAFE",
+  "productId": "0x4011",
+  "customKeycodes": [
+    {
+      "name": "System 1",
+      "title": "Select System 1",
+      "shortName": "Sys 1"
+    },
+    {
+      "name": "System 2",
+      "title": "Select System 2",
+      "shortName": "Sys 2"
+    }
+  ],
+  "matrix": {
+    "rows": 6,
+    "cols": 16
+  },
+  "menus": [
+    {
+      "label": "Settings",
+      "content": [
+        {
+          "label": "Scan Rate",
+          "content": [
+            {
+              "label": "USB scan rate",
+              "type": "dropdown",
+              "options": [
+                [
+                  "50 Hz",
+                  0
+                ],
+                [
+                  "125 Hz",
+                  1
+                ],
+                [
+                  "250 Hz",
+                  2
+                ],
+                [
+                  "500 Hz",
+                  3
+                ]
+              ],
+              "content": [
+                "id_hhkb_scan_rate",
+                0,
+                13
+              ]
+            },
+            {
+              "label": "ADC oversampling (4x)",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_adc_oversampling",
+                0,
+                18
+              ]
+            },
+            {
+              "label": "Tapping term (10 ms units)",
+              "type": "range",
+              "options": [
+                5,
+                50
+              ],
+              "content": [
+                "id_hhkb_tapping_term",
+                0,
+                14
+              ]
+            },
+            {
+              "label": "Permissive hold",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_permissive_hold",
+                0,
+                15
+              ]
+            },
+            {
+              "label": "Tap preferred",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_tap_preferred",
+                0,
+                16
+              ]
+            },
+            {
+              "label": "Quick tap (10 ms units; 0 disables)",
+              "type": "range",
+              "options": [
+                0,
+                50
+              ],
+              "content": [
+                "id_hhkb_quick_tap",
+                0,
+                17
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Calibration",
+          "content": [
+            {
+              "label": "1. Prepare",
+              "type": "label",
+              "content": [
+                "Enable custom calibration and release all keys."
+              ]
+            },
+            {
+              "label": "2. Measure",
+              "type": "label",
+              "content": [
+                "Press Start, then fully press the keys you want to calibrate."
+              ]
+            },
+            {
+              "label": "3. Save",
+              "type": "label",
+              "content": [
+                "Press Finish. Disable custom calibration to use defaults."
+              ]
+            },
+            {
+              "label": "Use custom calibration",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_calibration",
+                0,
+                2
+              ]
+            },
+            {
+              "label": "Calibration status",
+              "type": "label",
+              "content": [
+                "id_hhkb_cal_status",
+                0,
+                26
+              ]
+            },
+            {
+              "label": "Live updates",
+              "type": "label",
+              "content": [
+                "Status does not update live. Click Refresh status or view HID Console."
+              ]
+            },
+            {
+              "label": "Start calibration",
+              "type": "button",
+              "options": [
+                1
+              ],
+              "content": [
+                "id_hhkb_cal_start",
+                0,
+                7
+              ]
+            },
+            {
+              "label": "Refresh status",
+              "type": "button",
+              "options": [
+                1
+              ],
+              "content": [
+                "id_hhkb_cal_refresh",
+                0,
+                27
+              ]
+            },
+            {
+              "label": "Finish and save",
+              "type": "button",
+              "options": [
+                1
+              ],
+              "content": [
+                "id_hhkb_cal_finish",
+                0,
+                8
+              ]
+            },
+            {
+              "label": "Actuation point",
+              "type": "dropdown",
+              "options": [
+                [
+                  "0.1 mm",
+                  1
+                ],
+                [
+                  "0.2 mm",
+                  2
+                ],
+                [
+                  "0.3 mm",
+                  3
+                ],
+                [
+                  "0.4 mm",
+                  4
+                ],
+                [
+                  "0.5 mm",
+                  5
+                ],
+                [
+                  "0.6 mm",
+                  6
+                ],
+                [
+                  "0.7 mm",
+                  7
+                ],
+                [
+                  "0.8 mm",
+                  8
+                ],
+                [
+                  "0.9 mm",
+                  9
+                ],
+                [
+                  "1.0 mm",
+                  10
+                ],
+                [
+                  "1.1 mm",
+                  11
+                ],
+                [
+                  "1.2 mm",
+                  12
+                ],
+                [
+                  "1.3 mm",
+                  13
+                ],
+                [
+                  "1.4 mm",
+                  14
+                ],
+                [
+                  "1.5 mm",
+                  15
+                ],
+                [
+                  "1.6 mm",
+                  16
+                ],
+                [
+                  "1.7 mm",
+                  17
+                ],
+                [
+                  "1.8 mm",
+                  18
+                ],
+                [
+                  "1.9 mm",
+                  19
+                ],
+                [
+                  "2.0 mm",
+                  20
+                ],
+                [
+                  "2.1 mm",
+                  21
+                ],
+                [
+                  "2.2 mm",
+                  22
+                ],
+                [
+                  "2.3 mm",
+                  23
+                ],
+                [
+                  "2.4 mm",
+                  24
+                ],
+                [
+                  "2.5 mm",
+                  25
+                ],
+                [
+                  "2.6 mm",
+                  26
+                ],
+                [
+                  "2.7 mm",
+                  27
+                ],
+                [
+                  "2.8 mm",
+                  28
+                ],
+                [
+                  "2.9 mm",
+                  29
+                ],
+                [
+                  "3.0 mm",
+                  30
+                ],
+                [
+                  "3.1 mm",
+                  31
+                ],
+                [
+                  "3.2 mm",
+                  32
+                ],
+                [
+                  "3.3 mm",
+                  33
+                ],
+                [
+                  "3.4 mm",
+                  34
+                ],
+                [
+                  "3.5 mm",
+                  35
+                ],
+                [
+                  "3.6 mm",
+                  36
+                ],
+                [
+                  "3.7 mm",
+                  37
+                ],
+                [
+                  "3.8 mm",
+                  38
+                ],
+                [
+                  "3.9 mm",
+                  39
+                ],
+                [
+                  "4.0 mm",
+                  40
+                ]
+              ],
+              "content": [
+                "id_hhkb_actuation",
+                0,
+                1
+              ]
+            },
+            {
+              "label": "Hysteresis",
+              "type": "label",
+              "content": [
+                "Classic mode: release travel below the actuation point."
+              ]
+            },
+            {
+              "label": "With Rapid Trigger",
+              "type": "label",
+              "content": [
+                "Use RT release sensitivity instead of hysteresis."
+              ]
+            },
+            {
+              "label": "Release hysteresis",
+              "type": "dropdown",
+              "options": [
+                [
+                  "0.1 mm",
+                  1
+                ],
+                [
+                  "0.2 mm",
+                  2
+                ],
+                [
+                  "0.3 mm",
+                  3
+                ],
+                [
+                  "0.4 mm",
+                  4
+                ],
+                [
+                  "0.5 mm",
+                  5
+                ],
+                [
+                  "0.6 mm",
+                  6
+                ],
+                [
+                  "0.7 mm",
+                  7
+                ],
+                [
+                  "0.8 mm",
+                  8
+                ],
+                [
+                  "0.9 mm",
+                  9
+                ],
+                [
+                  "1.0 mm",
+                  10
+                ],
+                [
+                  "1.1 mm",
+                  11
+                ],
+                [
+                  "1.2 mm",
+                  12
+                ],
+                [
+                  "1.3 mm",
+                  13
+                ],
+                [
+                  "1.4 mm",
+                  14
+                ],
+                [
+                  "1.5 mm",
+                  15
+                ],
+                [
+                  "1.6 mm",
+                  16
+                ],
+                [
+                  "1.7 mm",
+                  17
+                ],
+                [
+                  "1.8 mm",
+                  18
+                ],
+                [
+                  "1.9 mm",
+                  19
+                ],
+                [
+                  "2.0 mm",
+                  20
+                ],
+                [
+                  "2.1 mm",
+                  21
+                ],
+                [
+                  "2.2 mm",
+                  22
+                ],
+                [
+                  "2.3 mm",
+                  23
+                ],
+                [
+                  "2.4 mm",
+                  24
+                ],
+                [
+                  "2.5 mm",
+                  25
+                ],
+                [
+                  "2.6 mm",
+                  26
+                ],
+                [
+                  "2.7 mm",
+                  27
+                ],
+                [
+                  "2.8 mm",
+                  28
+                ],
+                [
+                  "2.9 mm",
+                  29
+                ],
+                [
+                  "3.0 mm",
+                  30
+                ],
+                [
+                  "3.1 mm",
+                  31
+                ],
+                [
+                  "3.2 mm",
+                  32
+                ],
+                [
+                  "3.3 mm",
+                  33
+                ],
+                [
+                  "3.4 mm",
+                  34
+                ],
+                [
+                  "3.5 mm",
+                  35
+                ],
+                [
+                  "3.6 mm",
+                  36
+                ],
+                [
+                  "3.7 mm",
+                  37
+                ],
+                [
+                  "3.8 mm",
+                  38
+                ],
+                [
+                  "3.9 mm",
+                  39
+                ],
+                [
+                  "4.0 mm",
+                  40
+                ]
+              ],
+              "content": [
+                "id_hhkb_classic_hysteresis",
+                0,
+                5
+              ]
+            },
+            {
+              "label": "Settings EEPROM",
+              "type": "label",
+              "content": [
+                "id_hhkb_settings_status",
+                0,
+                12
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Rapid Trigger",
+          "content": [
+            {
+              "label": "Rapid Trigger",
+              "type": "label",
+              "content": [
+                "After the actuation point, release and re-press follow key movement without returning to the top."
+              ]
+            },
+            {
+              "label": "Rapid Trigger",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_rapid_trigger",
+                0,
+                3
+              ]
+            },
+            {
+              "label": "Press sensitivity",
+              "type": "label",
+              "content": [
+                "Downward travel required to re-press after release."
+              ],
+              "showIf": "{id_hhkb_rapid_trigger} == 1"
+            },
+            {
+              "label": "RT press sensitivity",
+              "type": "dropdown",
+              "options": [
+                [
+                  "0.1 mm",
+                  1
+                ],
+                [
+                  "0.2 mm",
+                  2
+                ],
+                [
+                  "0.3 mm",
+                  3
+                ],
+                [
+                  "0.4 mm",
+                  4
+                ],
+                [
+                  "0.5 mm",
+                  5
+                ],
+                [
+                  "0.6 mm",
+                  6
+                ],
+                [
+                  "0.7 mm",
+                  7
+                ],
+                [
+                  "0.8 mm",
+                  8
+                ],
+                [
+                  "0.9 mm",
+                  9
+                ],
+                [
+                  "1.0 mm",
+                  10
+                ],
+                [
+                  "1.1 mm",
+                  11
+                ],
+                [
+                  "1.2 mm",
+                  12
+                ],
+                [
+                  "1.3 mm",
+                  13
+                ],
+                [
+                  "1.4 mm",
+                  14
+                ],
+                [
+                  "1.5 mm",
+                  15
+                ],
+                [
+                  "1.6 mm",
+                  16
+                ],
+                [
+                  "1.7 mm",
+                  17
+                ],
+                [
+                  "1.8 mm",
+                  18
+                ],
+                [
+                  "1.9 mm",
+                  19
+                ],
+                [
+                  "2.0 mm",
+                  20
+                ],
+                [
+                  "2.1 mm",
+                  21
+                ],
+                [
+                  "2.2 mm",
+                  22
+                ],
+                [
+                  "2.3 mm",
+                  23
+                ],
+                [
+                  "2.4 mm",
+                  24
+                ],
+                [
+                  "2.5 mm",
+                  25
+                ],
+                [
+                  "2.6 mm",
+                  26
+                ],
+                [
+                  "2.7 mm",
+                  27
+                ],
+                [
+                  "2.8 mm",
+                  28
+                ],
+                [
+                  "2.9 mm",
+                  29
+                ],
+                [
+                  "3.0 mm",
+                  30
+                ],
+                [
+                  "3.1 mm",
+                  31
+                ],
+                [
+                  "3.2 mm",
+                  32
+                ],
+                [
+                  "3.3 mm",
+                  33
+                ],
+                [
+                  "3.4 mm",
+                  34
+                ],
+                [
+                  "3.5 mm",
+                  35
+                ],
+                [
+                  "3.6 mm",
+                  36
+                ],
+                [
+                  "3.7 mm",
+                  37
+                ],
+                [
+                  "3.8 mm",
+                  38
+                ],
+                [
+                  "3.9 mm",
+                  39
+                ],
+                [
+                  "4.0 mm",
+                  40
+                ]
+              ],
+              "content": [
+                "id_hhkb_press",
+                0,
+                4
+              ],
+              "showIf": "{id_hhkb_rapid_trigger} == 1"
+            },
+            {
+              "label": "Release sensitivity",
+              "type": "label",
+              "content": [
+                "Upward travel from the deepest point required to release."
+              ],
+              "showIf": "{id_hhkb_rapid_trigger} == 1"
+            },
+            {
+              "label": "RT release sensitivity",
+              "type": "dropdown",
+              "options": [
+                [
+                  "0.1 mm",
+                  1
+                ],
+                [
+                  "0.2 mm",
+                  2
+                ],
+                [
+                  "0.3 mm",
+                  3
+                ],
+                [
+                  "0.4 mm",
+                  4
+                ],
+                [
+                  "0.5 mm",
+                  5
+                ],
+                [
+                  "0.6 mm",
+                  6
+                ],
+                [
+                  "0.7 mm",
+                  7
+                ],
+                [
+                  "0.8 mm",
+                  8
+                ],
+                [
+                  "0.9 mm",
+                  9
+                ],
+                [
+                  "1.0 mm",
+                  10
+                ],
+                [
+                  "1.1 mm",
+                  11
+                ],
+                [
+                  "1.2 mm",
+                  12
+                ],
+                [
+                  "1.3 mm",
+                  13
+                ],
+                [
+                  "1.4 mm",
+                  14
+                ],
+                [
+                  "1.5 mm",
+                  15
+                ],
+                [
+                  "1.6 mm",
+                  16
+                ],
+                [
+                  "1.7 mm",
+                  17
+                ],
+                [
+                  "1.8 mm",
+                  18
+                ],
+                [
+                  "1.9 mm",
+                  19
+                ],
+                [
+                  "2.0 mm",
+                  20
+                ],
+                [
+                  "2.1 mm",
+                  21
+                ],
+                [
+                  "2.2 mm",
+                  22
+                ],
+                [
+                  "2.3 mm",
+                  23
+                ],
+                [
+                  "2.4 mm",
+                  24
+                ],
+                [
+                  "2.5 mm",
+                  25
+                ],
+                [
+                  "2.6 mm",
+                  26
+                ],
+                [
+                  "2.7 mm",
+                  27
+                ],
+                [
+                  "2.8 mm",
+                  28
+                ],
+                [
+                  "2.9 mm",
+                  29
+                ],
+                [
+                  "3.0 mm",
+                  30
+                ],
+                [
+                  "3.1 mm",
+                  31
+                ],
+                [
+                  "3.2 mm",
+                  32
+                ],
+                [
+                  "3.3 mm",
+                  33
+                ],
+                [
+                  "3.4 mm",
+                  34
+                ],
+                [
+                  "3.5 mm",
+                  35
+                ],
+                [
+                  "3.6 mm",
+                  36
+                ],
+                [
+                  "3.7 mm",
+                  37
+                ],
+                [
+                  "3.8 mm",
+                  38
+                ],
+                [
+                  "3.9 mm",
+                  39
+                ],
+                [
+                  "4.0 mm",
+                  40
+                ]
+              ],
+              "content": [
+                "id_hhkb_rt_release",
+                0,
+                11
+              ],
+              "showIf": "{id_hhkb_rapid_trigger} == 1"
+            },
+            {
+              "label": "Top dead zone",
+              "type": "label",
+              "content": [
+                "Returning here releases the key and disarms Rapid Trigger."
+              ],
+              "showIf": "{id_hhkb_rapid_trigger} == 1"
+            },
+            {
+              "label": "Top dead zone",
+              "type": "dropdown",
+              "options": [
+                [
+                  "0.0 mm",
+                  0
+                ],
+                [
+                  "0.1 mm",
+                  1
+                ],
+                [
+                  "0.2 mm",
+                  2
+                ],
+                [
+                  "0.3 mm",
+                  3
+                ],
+                [
+                  "0.4 mm",
+                  4
+                ],
+                [
+                  "0.5 mm",
+                  5
+                ],
+                [
+                  "0.6 mm",
+                  6
+                ]
+              ],
+              "content": [
+                "id_hhkb_reset",
+                0,
+                6
+              ],
+              "showIf": "{id_hhkb_rapid_trigger} == 1"
+            }
+          ]
+        },
+        {
+          "label": "LED",
+          "content": [
+            {
+              "label": "Simple Mode LED",
+              "type": "dropdown",
+              "options": [
+                [
+                  "Off",
+                  0
+                ],
+                [
+                  "Debug heartbeat",
+                  1
+                ],
+                [
+                  "Caps Lock",
+                  2
+                ],
+                [
+                  "Fn layer",
+                  3
+                ],
+                [
+                  "System 2",
+                  4
+                ]
+              ],
+              "content": [
+                "id_hhkb_led_1",
+                0,
+                10
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Debug",
+          "content": [
+            {
+              "label": "Firmware Version",
+              "type": "label",
+              "content": [
+                "id_hhkb_fw_version",
+                0,
+                28
+              ]
+            },
+            {
+              "label": "EC Matrix Stream",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_debug_enable",
+                0,
+                19
+              ]
+            },
+            {
+              "label": "VIA Telemetry Diag",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_debug_via",
+                0,
+                23
+              ]
+            },
+            {
+              "label": "Polling Rate Monitor",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_debug_rate",
+                0,
+                24
+              ]
+            },
+            {
+              "label": "Calibration Monitor",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_debug_cal",
+                0,
+                25
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "layouts": {
+    "keymap": [
+      [
+        "0,4\nEsc",
+        "0,7\nF1",
+        "0,5\nF2",
+        "0,3\nF3",
+        "0,0\nF4",
+        {
+          "x": 0.5
+        },
+        "0,1\nF5",
+        "0,2\nF6",
+        "0,12\nF7",
+        "0,14\nF8",
+        {
+          "x": 0.5
+        },
+        "0,15\nF9",
+        "0,13\nF10",
+        "0,11\nF11",
+        "1,8\nF12",
+        {
+          "x": 0.25
+        },
+        "0,8\nPrtSc",
+        "0,9\nScrLk",
+        "0,10\nPause"
+      ],
+      [
+        {
+          "y": 0.5
+        },
+        "1,4\n~\n`",
+        "1,6\n!\n1",
+        "1,7\n@\n2",
+        "1,5\n#\n3",
+        "1,3\n$\n4",
+        "1,0\n%\n5",
+        "1,1\n^\n6",
+        "1,2\n&\n7",
+        "1,12\n*\n8",
+        "1,14\n(\n9",
+        "1,15\n)\n0",
+        "1,13\n_\n-",
+        "1,11\n+\n=",
+        {
+          "w": 2
+        },
+        "2,8\nBackspace",
+        {
+          "x": 0.25
+        },
+        "2,9\nInsert",
+        "1,9\nHome",
+        "1,10\nPgUp"
+      ],
+      [
+        {
+          "w": 1.5
+        },
+        "2,4\nTab",
+        "2,6\nQ",
+        "2,7\nW",
+        "2,5\nE",
+        "2,3\nR",
+        "2,0\nT",
+        "2,1\nY",
+        "2,2\nU",
+        "2,12\nI",
+        "2,14\nO",
+        "2,15\nP",
+        "2,13\n{\n[",
+        "2,11\n}\n]",
+        {
+          "w": 1.5
+        },
+        "3,8\n|\n\\",
+        {
+          "x": 0.25
+        },
+        "3,9\nDelete",
+        "3,10\nEnd",
+        "2,10\nPgDn"
+      ],
+      [
+        {
+          "w": 1.75
+        },
+        "3,4\nCaps Lock",
+        "3,6\nA",
+        "3,7\nS",
+        "3,5\nD",
+        "3,3\nF",
+        "3,0\nG",
+        "3,1\nH",
+        "3,2\nJ",
+        "3,12\nK",
+        "3,14\nL",
+        "3,15\n:\n;",
+        "3,13\n\"\n'",
+        {
+          "w": 2.25
+        },
+        "4,8\nEnter"
+      ],
+      [
+        {
+          "w": 2.25
+        },
+        "4,4\nShift",
+        "4,6\nZ",
+        "4,7\nX",
+        "4,5\nC",
+        "4,3\nV",
+        "4,0\nB",
+        "4,1\nN",
+        "4,2\nM",
+        "4,12\n<\n,",
+        "4,14\n>\n.",
+        "4,15\n?\n/",
+        {
+          "w": 2.75
+        },
+        "4,11\nShift",
+        {
+          "x": 1.25
+        },
+        "4,10\n↑"
+      ],
+      [
+        {
+          "w": 1.25
+        },
+        "5,4\nCtrl",
+        {
+          "w": 1.25
+        },
+        "5,6\nWin",
+        {
+          "w": 1.25
+        },
+        "5,7\nAlt",
+        {
+          "w": 6.25
+        },
+        "5,0",
+        {
+          "w": 1.25
+        },
+        "5,14\nAlt",
+        {
+          "w": 1.25
+        },
+        "5,15\nMenu",
+        {
+          "w": 1.25
+        },
+        "5,13\nFn",
+        {
+          "w": 1.25
+        },
+        "5,11\nCtrl",
+        {
+          "x": 0.25
+        },
+        "5,10\n←",
+        "5,9\n↓",
+        "4,9\n→"
+      ]
+    ]
+  }
+}

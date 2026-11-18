@@ -8,14 +8,17 @@ Run from the repository root. Output goes to `build/<variant>/`: `hhkb_ec_<varia
 ./build.sh hybrid    # build/hybrid/hhkb_ec_hybrid.{bin,hfb}
 ./build.sh classic   # build/classic/hhkb_ec_classic.{bin,hfb}
 ./build.sh type_s    # build/type_s/hhkb_ec_type_s.{bin,hfb}
+./build.sh r3s       # build/r3s/hhkb_ec_r3s.{bin,rfb} (Realforce R3S bring-up; flash with tools/r3s/r3s_backup.py flash)
 ```
 
 - `-c` cleans first (including `nrf52/_build`).
+- Vial is on by default; `cmake -DECK_VIAL=OFF` builds VIA-only ([Vial](vial.md)).
 - `-d A,B` adds bench options: `HHKB_ADC_DIAGNOSTICS` (per-key readings over VIA for `tools/bench/key_depth.py`), `HHKB_SCAN_DIAGNOSTICS` (scan timing counters, shown by the Polling Rate Monitor), `HHKB_HYBRID_TEST_CMD` (bridge commands over SWD for `tools/bench/hybrid_cmd.py`).
 - The Hybrid build first builds the nRF52 app (`nrf52/`) and packs it with Nordic's S132 v7.2.0 SoftDevice from `../nRF5_SDK_17.1.1`; without the SDK only the `.bin` is built.
 - Classic and Type-S share one image; only the `.hfb` model ID and version differ.
 - Builds are warning-free with `-Wall -Wextra`.
 - `build/compile_commands.json` links to the last variant built, for clangd and IDEs.
+- Board-specific code lives in `stm32/boards/<board>/`: `board_config.h` (name, matrix, layout, EEPROM map), `default_keymap.h`, the matrix scan driver and board-only modules. `CMakeLists.txt` picks the board (`r3s` for the Realforce R3S, `hhkb` otherwise); shared code reaches board hardware through `board.h`, `board_init.h` and `ec/matrix_scan.h`; shared settings are in `stm32/board/config.h`.
 - `tools/build_hashes.sh <source> <out>` builds every variant with a fixed version string and prints the hashes, to show a refactor leaves the binaries unchanged.
 
 Everything else (Rapid Trigger, calibration, oversampling, scan rate, LEDs, hold-tap timing) is a runtime VIA setting.
@@ -42,12 +45,13 @@ Both CRCs: reflected polynomial `0x8408`, initial `0xFFFF`, no final XOR.
 
 ## Flash and RAM usage
 
-Bank 2 holds 65,536 bytes; the STM32L072 has 20,480 bytes of RAM. At 2026-11-17 (v0.4.4):
+Bank 2 holds 65,536 bytes; the STM32L072 has 20,480 bytes of RAM. At 2026-11-18 (with Vial, which adds ~6.3 KB and 1,544 bytes to each: [Vial](vial.md#size)):
 
 | Variant | Bank 2 image | RAM at link time |
 | --- | --- | --- |
-| Hybrid | 43,368 bytes (66.2 %) | 15,296 bytes (74.7 %) |
-| Classic, Type-S | 34,840 bytes (53.2 %) | 14,296 bytes (69.8 %) |
+| Hybrid | 49,720 bytes (75.9 %) | 16,848 bytes (82.3 %) |
+| Classic, Type-S | 41,192 bytes (62.9 %) | 15,856 bytes (77.4 %) |
+| Realforce R3S | 41,644 bytes (63.5 %) | 18,560 bytes (90.6 %) |
 
 RAM is the static layout (RAM code, `.data`, `.bss` with all task stacks; FreeRTOS has no heap) plus the 2 KB reserved for the interrupt stack. That stack grows down from the top of RAM into everything unused (5 KB+ more); task stacks are fixed arrays in `.bss`, sized from `tools/stack_depth.py` worst cases.
 

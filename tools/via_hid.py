@@ -1,6 +1,10 @@
-"""Find an HHKB running ECK by its VIA raw HID interface and exchange 32-byte VIA reports (hidapi)."""
+"""Find an HHKB running ECK by its VIA raw HID interface and exchange 32-byte VIA reports (hidapi).
+ECK_PRODUCT (default "HHKB") picks another ECK keyboard by its product string, e.g. ECK_PRODUCT=R3S."""
+import os
 import sys
 import time
+
+PRODUCT = os.environ.get("ECK_PRODUCT", "HHKB")
 
 
 def open_keyboard(required=True, wait=0.0):
@@ -12,14 +16,14 @@ def open_keyboard(required=True, wait=0.0):
     deadline = time.monotonic() + wait
     while True:
         devs = [d for d in hid.enumerate() if d["usage_page"] == 0xFF60 and d["usage"] == 0x61
-                and "HHKB" in (d["product_string"] or "")]
+                and PRODUCT in (d["product_string"] or "")]
         if devs:
             h = hid.device()
             h.open_path(devs[0]["path"])
             return h
         if time.monotonic() >= deadline:
             if required:
-                sys.exit("no HHKB running ECK found on USB")
+                sys.exit(f"no {PRODUCT} running ECK found on USB")
             return None
         time.sleep(0.5)
 

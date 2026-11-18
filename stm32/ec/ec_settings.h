@@ -16,7 +16,7 @@ extern "C" {
 #define USER_EEPROM_C_MAGIC        0x484B4343UL // "HKCC"
 #define USER_EEPROM_PREV_MAGIC     0x484B4342UL // "HKCB"
 #define USER_EEPROM_OLD_MAGIC      0x484B4341UL // "HKCA"
-#define USER_EEPROM_ADDR           0x08081500UL
+#define USER_EEPROM_ADDR           EEPROM_SETTINGS_ADDR
 #define USER_EEPROM_VERSION        2 // 2: led_modes byte replaces actuation_pct
 
 typedef struct __attribute__((aligned(4))) {
@@ -24,8 +24,8 @@ typedef struct __attribute__((aligned(4))) {
     uint8_t  version;
     uint8_t  led_modes;                          // v2: LED 0 (PA8) low nibble, LED 1 (PA9) high nibble
     uint16_t crc16;
-    uint16_t baseline[MATRIX_COLS][MATRIX_ROWS]; // 120 bytes
-    uint16_t peak[MATRIX_COLS][MATRIX_ROWS];     // 120 bytes
+    uint16_t baseline[MATRIX_COLS][MATRIX_ROWS]; // HHKB: 120 bytes
+    uint16_t peak[MATRIX_COLS][MATRIX_ROWS];     // HHKB: 120 bytes
     rt_cfg_t rt;                                 // 10 bytes
     uint8_t  scan_rate;                          // 0..4
     uint8_t  tapping_term_10ms;                  // 5..50
@@ -33,7 +33,7 @@ typedef struct __attribute__((aligned(4))) {
     uint8_t  flags;                              // bit 0: permissive_hold, bit 1: tap_pref, bit 2: oversampling, bit 3: custom_cal, bit 4: debug, bit 5: system, bit 6..7: v1 led0
     uint16_t classic_release_pm;                 // 25..1000
 } hhkb_eeprom_cal_t;
-_Static_assert(sizeof(hhkb_eeprom_cal_t) == 264, "HHKB settings must stay within 264 bytes EEPROM record");
+_Static_assert(sizeof(hhkb_eeprom_cal_t) == EEPROM_SETTINGS_SIZE, "settings record size is fixed per board (EEPROM map)");
 
 // Calibration & Settings API
 void hhkb_settings_init(void);
@@ -106,6 +106,9 @@ void hhkb_cal_accumulate_baseline(uint8_t col, uint8_t row, uint16_t val);
 void hhkb_cal_record_peak(uint8_t col, uint8_t row, uint16_t val);
 bool hhkb_cal_is_capturing_baseline(void);
 void hhkb_cal_decrement_samples(void);
+#ifdef BOARD_BOOT_REST
+void ec_boot_rest(uint8_t col, uint8_t row, uint16_t val);
+#endif
 
 #ifdef __cplusplus
 }

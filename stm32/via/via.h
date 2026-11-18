@@ -32,6 +32,11 @@ uint32_t from_via_keycode(uint16_t via_key);
 void via_init(void);
 /* Handle one 32-byte VIA request; response gets the 32-byte answer. */
 void via_process_packet(uint8_t const *request, uint8_t *response);
+#ifdef VIAL_ENABLE
+// Board chord: switch between Vial (protocol 9) and VIA mode (12, usevia.app's menus)
+void via_mode_toggle(void);
+void via_mode_task(void); // USB task: the reconnect after a switch
+#endif
 /* USB task: save a changed keymap/macros after a short delay, a word per call. */
 void via_eeprom_task(void);
 void via_eeprom_save(void);

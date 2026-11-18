@@ -33,6 +33,11 @@ void layers_off(uint8_t layer_idx);
 // Toggle a layer in the bitmask
 void layers_toggle(uint8_t layer_idx);
 
+#ifdef VIAL_ENABLE
+// Layer Lock: keep a layer on after its momentary key is released (again to unlock)
+void layers_lock_toggle(uint8_t layer_idx);
+#endif
+
 // Get the total number of defined layers
 uint8_t layers_get_count(void);
 

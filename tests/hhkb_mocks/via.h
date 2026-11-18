@@ -7,6 +7,8 @@
 #define DYNAMIC_KEYMAP_MAX_LAYERS 4
 #define NUM_KEYS 60
 #define DYNAMIC_KEYMAP_MACRO_BUFFER_SIZE 512
+#define EEPROM_KEYMAP_SLOTS_SIZE 0xa00U /* boards/hhkb/board_config.h */
+#define EEPROM_KEYMAP_LEGACY_FORMATS 1
 
 typedef struct {
     uint32_t keymap[DYNAMIC_KEYMAP_MAX_LAYERS][NUM_KEYS];
@@ -22,5 +24,6 @@ uint32_t from_via_keycode(uint16_t via_key);
 void via_keymap_load(void);
 void via_keymap_save(void);
 void via_keymap_poll(void);
+void via_mode_toggle(void);
 
 #endif

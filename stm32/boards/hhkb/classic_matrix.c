@@ -1,4 +1,4 @@
-#include "classic_matrix.h"
+#include "matrix_scan.h"
 #include "ec_settings.h"
 #include "rapid_trigger.h"
 #include "stm32l0xx.h"
@@ -24,8 +24,8 @@ static volatile uint16_t s_masked_max_us; /* longest scan half with interrupts h
  * are off, and the key has a valid one. */
 #define HHKB_FACTORY_HYSTERESIS 50
 static uint16_t get_factory_threshold(uint8_t col, uint8_t row) {
-    const uint16_t *press = (const uint16_t *)0x08081100;
-    const int16_t *offset = (const int16_t *)0x08081200;
+    const uint16_t *press = (const uint16_t *)EEPROM_FACTORY_PRESS_ADDR;
+    const int16_t *offset = (const int16_t *)EEPROM_FACTORY_OFFSET_ADDR;
     uint8_t idx = (col << 3) | (row & 7);
     int32_t threshold = (int32_t)press[idx] + (int32_t)offset[idx];
     return (threshold > HHKB_FACTORY_HYSTERESIS && threshold <= 4095) ? (uint16_t)threshold : 0;

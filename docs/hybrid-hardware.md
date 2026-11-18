@@ -48,7 +48,7 @@ The STM32 side matches the HHKB Classic: stock pin setup is identical, except th
 | LSI (37 kHz typ., 26-56 kHz) | LPTIM1 /16 keeps FreeRTOS time across STOP; rate measured against SysTick at start-up | `hybrid/hybrid_sleep.c` |
 | LSE | **None**: PC14 (OSC32_IN) is the sensor supply output | code |
 | TIM2 | 4 ticks/µs, scan pacing and settle delays; stops in STOP | `ec/matrix.c` |
-| ADC clock | PCLK/2 at 32 MHz, PCLK/1 at 16 MHz (16 MHz either way) | `ec/classic_matrix.c` |
+| ADC clock | PCLK/2 at 32 MHz, PCLK/1 at 16 MHz (16 MHz either way) | `boards/hhkb/classic_matrix.c` |
 
 The clock is chosen at boot from PC13; a USB power change while ON resets the STM32.
 
@@ -72,7 +72,7 @@ Data EEPROM. `0x08080000-0x080805FF` and `0x08081000-0x080813FF` are PFU's (keep
 | `0x08080370` | CRC-16/MCRF4XX of Bank 2 (low half-word); 0 keeps Bank 1 in its updater/loader | `boot/boot.c`, `hybrid/hybrid.h` |
 | `0x08080600-0x08080FFF` | Keymap slots: two 1,280-byte copies (16-byte header, 240 keys as 16-bit VIA codes, 512 B macros, 272 B unused), tag `ECK3` | `via/hhkb_keymap_storage.c` |
 | `0x08081000` | Factory rest levels per key (256 B) | `ec/ec_settings.c` |
-| `0x08081100`, `0x08081200` | Factory press thresholds and offsets per key (index `8*col+row`) | `ec/classic_matrix.c` |
+| `0x08081100`, `0x08081200` | Factory press thresholds and offsets per key (index `8*col+row`) | `boards/hhkb/classic_matrix.c` |
 | `0x08081350` | Set by stock E0, cleared by PFU's Bank 1; meaning unknown | stock code |
 | `0x08081400-0x080814FF` | Free (stock keymap save 0) | |
 | `0x08081500` | ECK settings record (264 B: calibration, scan rate, LED modes) | `ec/ec_settings.c` |
@@ -88,7 +88,7 @@ As ECK configures them; "stock" items come from PFU's firmware.
 | Pin | Function | Dir / level | Source |
 | --- | --- | --- | --- |
 | PA1 | Op-amp output, ADC_IN1 | Analog | `classic_matrix.c` |
-| PA3-PA7 | DIP SW1-SW5 | Input, pull-up, low = ON; analog after start-up on batteries | `board/dip_switch.c`, `hybrid_power.c` |
+| PA3-PA7 | DIP SW1-SW5 | Input, pull-up, low = ON; analog after start-up on batteries | `boards/hhkb/dip_switch.c`, `hybrid_power.c` |
 | PA8 | Blue LED | Output, high = on | `hybrid_power.c` |
 | PA9 | Orange LED | Output, high = on; wins over blue | `hybrid_power.c` |
 | PA10 | Stock input, purpose unknown | Unused | stock code |

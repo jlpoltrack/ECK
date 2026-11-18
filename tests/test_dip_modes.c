@@ -8,6 +8,10 @@ static uint8_t dips;
 uint16_t layers_get_state(void) { return state; }
 int16_t keyboard_get_flat_key_index(uint8_t row, uint8_t col) { return (int16_t)(row * 15 + col); }
 uint8_t dip_switch_read(void) { return dips; }
+#ifdef VIAL_ENABLE
+static int via_toggles;
+void via_mode_toggle(void) { via_toggles++; }
+#endif
 #include "dip_modes.c"
 
 #define FN (1U | (1U << 1))
@@ -95,5 +99,16 @@ int main(void) {
     assert(hhkb_fn_held() && key(POS_M, true) && key(POS_M, false) && s_mode == MODE_MAC);
     key(POS_CTRL, false);
     key(POS_LGUI, false);
+#ifdef VIAL_ENABLE
+    // Fn+Ctrl+V toggles VIA mode and is swallowed; V alone or with Fn only passes through.
+    boot(0);
+    assert(!key(POS_V, true) && !key(POS_V, false) && via_toggles == 0);
+    key(POS_FN, true);
+    assert(!key(POS_V, true) && !key(POS_V, false) && via_toggles == 0);
+    key(POS_CTRL, true);
+    assert(key(POS_V, true) && key(POS_V, false) && via_toggles == 1);
+    key(POS_CTRL, false);
+    key(POS_FN, false);
+#endif
     return 0;
 }

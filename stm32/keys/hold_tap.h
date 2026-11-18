@@ -19,6 +19,9 @@ typedef struct {
     uint8_t row;
     uint8_t col;
     HTState state;
+#ifdef VIAL_ENABLE
+    bool interrupted; // another key went down while held (retro tapping)
+#endif
 } HTTracker;
 
 typedef struct {

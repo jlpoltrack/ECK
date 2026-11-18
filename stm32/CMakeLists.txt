@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-# HHKB EC firmware for the STM32L072. Build: ./build.sh hybrid|classic|type_s (or cmake -DHHKB_VARIANT=...)
+# ECK firmware for the STM32L072. Build: ./build.sh hybrid|classic|type_s|r3s (or cmake -DHHKB_VARIANT=...)
 
 get_filename_component(STM32_ROOT "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
 get_filename_component(REPO_ROOT "${STM32_ROOT}/.." ABSOLUTE)
@@ -13,13 +13,41 @@ set(TINYUSB_DIR "${VENDOR_DIR}/tinyusb")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Variant preset (build.sh passes it) and optional bench options, comma-separated.
-set(HHKB_VARIANT "hybrid" CACHE STRING "Keyboard: hybrid, classic or type_s")
-set_property(CACHE HHKB_VARIANT PROPERTY STRINGS hybrid classic type_s)
+set(HHKB_VARIANT "hybrid" CACHE STRING "Keyboard: hybrid, classic, type_s or r3s")
+set_property(CACHE HHKB_VARIANT PROPERTY STRINGS hybrid classic type_s r3s)
 set(HHKB_EXTRA_DEFINES "" CACHE STRING "Bench options, e.g. HHKB_ADC_DIAGNOSTICS,HHKB_SCAN_DIAGNOSTICS")
-if(NOT HHKB_VARIANT MATCHES "^(hybrid|classic|type_s)$")
-    message(FATAL_ERROR "HHKB_VARIANT must be hybrid, classic or type_s (got '${HHKB_VARIANT}')")
+if(NOT HHKB_VARIANT MATCHES "^(hybrid|classic|type_s|r3s)$")
+    message(FATAL_ERROR "HHKB_VARIANT must be hybrid, classic, type_s or r3s (got '${HHKB_VARIANT}')")
+endif()
+# Board: matrix, layout, EEPROM map and board-only modules (stm32/boards/<board>/).
+# The HHKB's sources keep their order in the list below: it fixes the link order (and so its binaries).
+if(HHKB_VARIANT STREQUAL "r3s")
+    set(ECK_BOARD "r3s")
+else()
+    set(ECK_BOARD "hhkb")
+endif()
+set(BOARD_DIR "${STM32_ROOT}/boards/${ECK_BOARD}")
+if(ECK_BOARD STREQUAL "hhkb")
+    set(BOARD_SOURCES_DIP "${BOARD_DIR}/dip_modes.c" "${BOARD_DIR}/dip_switch.c")
+    set(BOARD_SOURCES_SCAN "${BOARD_DIR}/classic_matrix.c")
+    set(BOARD_SOURCES_HYBRID
+        "${STM32_ROOT}/hybrid/hybrid.c"
+        "${STM32_ROOT}/hybrid/hybrid_ble.c"
+        "${STM32_ROOT}/hybrid/hybrid_chords.c"
+        "${STM32_ROOT}/hybrid/hybrid_power.c"
+        "${STM32_ROOT}/hybrid/hybrid_power_logic.c"
+        "${STM32_ROOT}/hybrid/hybrid_sleep.c")
+else()
+    add_compile_definitions(ECK_BOARD_R3S)
+    set(BOARD_SOURCES_DIP "")
+    set(BOARD_SOURCES_SCAN "${BOARD_DIR}/r3s_matrix.c" "${BOARD_DIR}/r3s_leds.c")
+    set(BOARD_SOURCES_HYBRID "")
 endif()
 string(REPLACE "," ";" _EXTRA_LIST "${HHKB_EXTRA_DEFINES}")
+option(ECK_VIAL "Build with Vial (defines VIAL_ENABLE)" ON)
+if(ECK_VIAL AND NOT "VIAL_ENABLE" IN_LIST _EXTRA_LIST)
+    list(APPEND _EXTRA_LIST VIAL_ENABLE)
+endif()
 foreach(DEF ${_EXTRA_LIST})
     string(STRIP "${DEF}" STRIPPED_DEF)
     if(NOT STRIPPED_DEF STREQUAL "")
@@ -146,6 +174,7 @@ add_executable(${TARGET_NAME})
 set_target_properties(${TARGET_NAME} PROPERTIES SUFFIX ".elf")
 
 target_include_directories(${TARGET_NAME} PRIVATE
+    "${BOARD_DIR}"
     "${STM32_ROOT}/board"
     "${STM32_ROOT}/usb"
     "${ST_DIR}/cmsis_core/Include"
@@ -166,7 +195,7 @@ target_sources(${TARGET_NAME} PRIVATE
     # Core orchestration, key features, drivers
     "${STM32_ROOT}/app/main.c"
     "${STM32_ROOT}/app/keyboard.c"
-    "${STM32_ROOT}/app/events.c"
+    "${BOARD_DIR}/events.c"
     "${STM32_ROOT}/app/memory.c"
     "${STM32_ROOT}/app/fmt.c"
     "${STM32_ROOT}/keys/layers.c"
@@ -198,22 +227,36 @@ target_sources(${TARGET_NAME} PRIVATE
     # VIA protocol
     "${STM32_ROOT}/via/via.c"
     # HHKB modules: DIP switches, EC matrix, Hybrid link, indicators, VIA settings
-    "${STM32_ROOT}/board/dip_modes.c"
-    "${STM32_ROOT}/board/dip_switch.c"
-    "${STM32_ROOT}/ec/classic_matrix.c"
+    ${BOARD_SOURCES_DIP}
+    ${BOARD_SOURCES_SCAN}
     "${STM32_ROOT}/ec/ec_settings.c"
     "${STM32_ROOT}/ec/matrix.c"
     "${STM32_ROOT}/ec/rapid_trigger.c"
-    "${STM32_ROOT}/hybrid/hybrid.c"
-    "${STM32_ROOT}/hybrid/hybrid_ble.c"
-    "${STM32_ROOT}/hybrid/hybrid_chords.c"
-    "${STM32_ROOT}/hybrid/hybrid_power.c"
-    "${STM32_ROOT}/hybrid/hybrid_power_logic.c"
-    "${STM32_ROOT}/hybrid/hybrid_sleep.c"
+    ${BOARD_SOURCES_HYBRID}
     "${STM32_ROOT}/board/indicators_system.c"
     "${STM32_ROOT}/via/hhkb_keymap_storage.c"
     "${STM32_ROOT}/via/hhkb_via_controls.c"
 )
+
+# Vial (ECK_VIAL, on by default): definition built from the board's VIA definition
+if(ECK_BOARD STREQUAL "r3s")
+    set(VIA_JSON "${BOARD_DIR}/via.json")
+else()
+    set(VIA_JSON "${STM32_ROOT}/via/via.json")
+endif()
+if("VIAL_ENABLE" IN_LIST _EXTRA_LIST)
+    add_custom_command(
+        OUTPUT ${CMAKE_BINARY_DIR}/vial_definition.h
+        COMMAND python3 ${REPO_ROOT}/tools/vial_def.py ${VIA_JSON} ${CMAKE_BINARY_DIR}/vial_definition.h
+        DEPENDS ${VIA_JSON} ${REPO_ROOT}/tools/vial_def.py
+    )
+    target_sources(${TARGET_NAME} PRIVATE
+        "${STM32_ROOT}/via/vial.c"
+        "${STM32_ROOT}/keys/vial_features.c"
+        ${CMAKE_BINARY_DIR}/vial_definition.h
+    )
+    target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_BINARY_DIR})
+endif()
 
 target_link_libraries(${TARGET_NAME} PRIVATE
     -mcpu=cortex-m0plus
@@ -245,6 +288,13 @@ if(HHKB_HYBRID)
             COMMENT "Generating binary and HHKB Hybrid .hfb for ${TARGET_NAME}"
         )
     endif()
+elseif(ECK_BOARD STREQUAL "r3s")
+    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+        COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${TARGET_NAME}> ${CMAKE_BINARY_DIR}/${TARGET_NAME}.bin
+        COMMAND python3 ${REPO_ROOT}/tools/make_hfb.py --rfb ${CMAKE_BINARY_DIR}/${TARGET_NAME}.bin ${CMAKE_BINARY_DIR}/${TARGET_NAME}.rfb
+        COMMAND ${CMAKE_SIZE} $<TARGET_FILE:${TARGET_NAME}>
+        COMMENT "Generating binary and Realforce R3S .rfb for ${TARGET_NAME}"
+    )
 else()
     if(HHKB_VARIANT STREQUAL "type_s")
         set(HFB_MODEL_ARG "--model" "AHHS01" "--version" "A8.50")

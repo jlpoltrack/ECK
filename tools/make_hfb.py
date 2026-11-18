@@ -66,6 +66,23 @@ def wrap_binary_to_hfb(raw_bin: bytes, model: str = "AHHX01", version_bytes: byt
     return compute_crc16_mcrf4xx(body).to_bytes(2, "little") + body
 
 
+RFB_SIZE = 65568
+R3S_MODEL = "R3SD####"  # Topre's R3S US TKL container ID (R3SD_verA011.rfb)
+R3S_VERSION = "A0.11"
+
+
+def wrap_binary_to_rfb(raw_bin: bytes, model: str = R3S_MODEL, version_bytes: bytes = parse_version_bytes(R3S_VERSION)) -> bytes:
+    """Topre Realforce container: as the Classic .hfb, but a 28-byte trailer (12 x 0xFF, 8-byte
+    model ID, 4-byte version, 4 x 0xFF)."""
+    if len(raw_bin) > BANK2_SIZE:
+        raise ValueError(f"Firmware binary size ({len(raw_bin)} bytes) exceeds 64KB bank limit!")
+    padded = raw_bin + b"\xff" * (BANK2_SIZE - len(raw_bin))
+    inner_tag = compute_crc16_mcrf4xx(padded).to_bytes(2, "little")
+    model_bytes = model.encode("ascii")[:8].ljust(8, b"#")
+    body = inner_tag + padded + b"\xff" * 12 + model_bytes + version_bytes + b"\xff" * 4
+    return compute_crc16_mcrf4xx(body).to_bytes(2, "little") + body
+
+
 def make_hfb(bin_path: str, out_path: str, model: str = "AHHX01", version_str: str = None):
     with open(bin_path, "rb") as f:
         data = f.read()
@@ -147,6 +164,7 @@ if __name__ == "__main__":
     parser.add_argument("--version", default=None, help="Firmware version (default: A4.50 for Classic, A8.50 for Type-S)")
     parser.add_argument("--nrf-app", default=None, help="HHKB Hybrid: nRF52 app .bin linked at 0x26000")
     parser.add_argument("--softdevice", default=None, help="HHKB Hybrid: Nordic s132_nrf52_7.2.0_softdevice.hex")
+    parser.add_argument("--rfb", action="store_true", help="Topre Realforce R3S .rfb container instead")
 
     args = parser.parse_args()
     if args.nrf_app or args.softdevice:
@@ -155,4 +173,10 @@ if __name__ == "__main__":
         make_hybrid_hfb(args.input, args.nrf_app, args.softdevice, args.output, args.version or HYBRID_VERSION)
         sys.exit(0)
 
+    if args.rfb:
+        data = wrap_binary_to_rfb(open(args.input, "rb").read(), version_bytes=parse_version_bytes(args.version or R3S_VERSION))
+        assert len(data) == RFB_SIZE
+        open(args.output, "wb").write(data)
+        print(f"Generated {args.output}: {len(data)} bytes ({R3S_MODEL}, inner CRC {data[2:4].hex()})")
+        sys.exit(0)
     make_hfb(args.input, args.output, model=args.model, version_str=args.version)

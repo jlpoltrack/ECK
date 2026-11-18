@@ -18,7 +18,11 @@
 // Task stack sizes in words (4 bytes). Static worst cases (tools/stack_depth.py, 2026-11-17) plus
 // ~90 B for saved context: matrix ~650 B, keyboard ~780 B (battery wake scan with debug output)
 #define TASK_STACK_MATRIX 192
+#ifdef VIAL_ENABLE
+#define TASK_STACK_KEYBOARD 512 // feature presses nest up to 3 deep: ~1.3 KB worst case (docs/vial.md)
+#else
 #define TASK_STACK_KEYBOARD 256
+#endif
 #define TASK_STACK_DEF 384
 
 #define TASK_PARAMS_DEF NULL

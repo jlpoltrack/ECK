@@ -7,7 +7,8 @@ Open firmware for the HHKB Professional Hybrid, Classic and Classic Type-S. It r
 
 ## Features
 
-- [VIA](via.md): keymap, macros and the **HHKB Settings** menu (scan rate, calibration, Rapid Trigger, LEDs, debug). Vial is not supported.
+- [Vial](vial.md): keymap, macros, tap dance, combos, key overrides and QMK settings, no definition file needed.
+- [VIA](via.md): keymap, macros and the **HHKB Settings** menu (scan rate, calibration, Rapid Trigger, LEDs, debug), in VIA mode (Fn + Ctrl + V).
 - Scan rate 50–1000 Hz (stock: about 50 Hz); the Hybrid has separate USB and Bluetooth rates (defaults 1000 and 250 Hz). Optional ×4 ADC oversampling at 50–500 Hz on USB.
 - PFU's factory thresholds by default, or per-key calibration with adjustable actuation point and hysteresis.
 - Rapid Trigger (off by default) with separate press and release sensitivity.

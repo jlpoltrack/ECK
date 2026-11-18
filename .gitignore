@@ -11,9 +11,12 @@ __pycache__/
 /docs/dev/
 # Stock PFU firmware (not redistributable) and per-keyboard memory backups.
 /HHKB*_FW_*.hfb
+# Stock Topre Realforce firmware (not redistributable).
+/R*_ver*.rfb
 /backups/
 *.sr
 *.npz
 /.vscode/
 /web/firmware/
 /.claude/worktrees/
+/tools/r3s/_build/

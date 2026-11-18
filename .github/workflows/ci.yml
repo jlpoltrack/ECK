@@ -57,6 +57,9 @@ jobs:
         run: ./build.sh classic -c
       - name: Classic Type-S
         run: ./build.sh type_s -c
+      # Bring-up only: built to keep it compiling, not released.
+      - name: Realforce R3S
+        run: ./build.sh r3s -c && test -f build/r3s/hhkb_ec_r3s.rfb
       - name: Hybrid boot stub
         run: make -C stm32/boot
       # A v* tag publishes a release: the three .hfb files, the boot stub, and the web flasher with them bundled.

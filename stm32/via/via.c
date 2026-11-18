@@ -7,6 +7,19 @@
 
 #include "usb.h"
 #include <string.h>
+#ifdef VIAL_ENABLE
+#include "vial.h"
+#include "events.h"
+#include "tusb.h"
+
+// Vial keycodes ECK keeps as-is internally: tap dance, Grave Escape, combo/override toggles,
+// Caps Word, repeat keys, Layer Lock
+static bool is_vial_keycode(uint32_t k) {
+    return (k >= K_TD(0) && k < K_TD(VIAL_TAP_DANCE_ENTRIES)) || k == K_GRAVE_ESC ||
+           (k >= K_COMBO_ON && k <= K_COMBO_TOGGLE) || (k >= K_KO_TOGGLE && k <= K_KO_OFF) ||
+           k == K_CAPS_WORD || (k >= K_REPEAT && k <= K_LAYER_LOCK);
+}
+#endif
 
 via_storage_t via_storage __attribute__((aligned(4)));
 
@@ -136,10 +149,19 @@ uint16_t to_via_keycode(uint32_t key) {
     if ((key & 0xFF000000) == KIND_MK) {
         return (uint16_t)((mask_to_via((key >> 8) & 0xFF) << 8) | (key & 0xFF));
     }
+#ifdef VIAL_ENABLE
+    if ((key & 0xFF000000) == KIND_OS) // OSM 0x52A0 + 5-bit mods, OSL 0x5280 + layer
+        return (key & 0x10000) ? (uint16_t)(0x52A0 | (mask_to_via((key >> 8) & 0xFF) & 0x1F))
+                               : (uint16_t)(0x5280 | (key & 0x1F));
+#endif
     if (key >= L_0 && key <= L_15)
         return 0x5220 | (key - L_0);
     if (key >= 0x7E00 && key <= 0x7F3F) // QK_KB / QK_USER: HHKB custom keycodes
         return (uint16_t)key;
+#ifdef VIAL_ENABLE
+    if (is_vial_keycode(key))
+        return (uint16_t)key;
+#endif
     return (key <= 0xFF) ? (uint16_t)key : 0x0000;
 }
 
@@ -151,6 +173,10 @@ uint32_t from_via_keycode(uint16_t via_key) {
         return K_TRNS;
     if (via_key >= 0x7E00 && via_key <= 0x7F3F)
         return via_key;
+#ifdef VIAL_ENABLE
+    if (is_vial_keycode(via_key))
+        return via_key;
+#endif
     if (via_key == 0x7C00 || via_key == 0x5C00)
         return K_BOOTLOADER;
     if (via_key == K_LYRUP || via_key == K_LYRDWN)
@@ -177,6 +203,13 @@ uint32_t from_via_keycode(uint16_t via_key) {
         return MT(from_via_mods((via_key >> 8) & 0x1F), (via_key & 0xFF));
     if (via_key >= 0x4000 && via_key <= 0x4FFF)
         return HT((via_key >> 8) & 0x0F, (via_key & 0xFF));
+
+#ifdef VIAL_ENABLE
+    if (via_key >= 0x5280 && via_key <= 0x529F)
+        return OS_LAYER(via_key & 0x0F);
+    if (via_key >= 0x52A0 && via_key <= 0x52BF)
+        return OS_MOD(from_via_mods(via_key & 0x1F));
+#endif
 
     // Layer Toggle
     if (via_key >= 0x5260 && via_key <= 0x527F) {
@@ -217,6 +250,9 @@ void via_eeprom_save(void) {
 
 void via_eeprom_task(void) {
     via_keymap_poll();
+#ifdef VIAL_ENABLE
+    vial_storage_poll();
+#endif
     if (s_eeprom_dirty) {
         TickType_t now = xTaskGetTickCount();
         if ((now - s_eeprom_dirty_time) >= pdMS_TO_TICKS(VIA_EEPROM_SAVE_DELAY_MS)) {
@@ -230,7 +266,32 @@ void via_init(void) {
     s_eeprom_dirty = false;
     via_storage_init_default();
     via_keymap_load();
+#ifdef VIAL_ENABLE
+    vial_init();
+#endif
 }
+
+#ifdef VIAL_ENABLE
+static volatile bool s_via_mode; // until restart: report VIA protocol 12 instead of Vial's 9
+static volatile bool s_via_reconnect;
+
+/* The apps read the protocol only when they connect: reconnect USB, and blink to confirm. */
+void via_mode_toggle(void) {
+    s_via_mode = !s_via_mode;
+    s_via_reconnect = true;
+    indicators_blink(2);
+}
+
+/* USB task: drop off the bus for 100 ms so the host re-enumerates and the app reconnects. */
+void via_mode_task(void) {
+    if (!s_via_reconnect) return;
+    s_via_reconnect = false;
+    if (!tud_mounted()) return;
+    tud_disconnect();
+    vTaskDelay(pdMS_TO_TICKS(100));
+    tud_connect();
+}
+#endif
 
 void via_process_packet(uint8_t const *request, uint8_t *response) {
     // Fill response with request values as a default/fallback
@@ -239,9 +300,15 @@ void via_process_packet(uint8_t const *request, uint8_t *response) {
     uint8_t command_id = request[0];
     switch (command_id) {
     case VIA_GET_PROTOCOL_VERSION: {
+#ifdef VIAL_ENABLE
+        // The Vial app accepts only protocol 9; VIA mode reports 12 for usevia.app's menus
+        response[1] = 0x00;
+        response[2] = s_via_mode ? 0x0C : 0x09;
+#else
         // VIA v3 (Protocol 12) for usevia.app Custom UI menus
         response[1] = 0x00;
         response[2] = 0x0C;
+#endif
         break;
     }
 
@@ -264,6 +331,21 @@ void via_process_packet(uint8_t const *request, uint8_t *response) {
             break;
         }
         case VIA_SUB_SWITCH_MATRIX_STATE: {
+#ifdef VIAL_ENABLE
+            // VIA protocol 9 (Vial): all rows from byte 2, no row offset
+            if (!s_via_mode) {
+                memset(&response[2], 0, 30);
+                for (uint8_t r = 0, idx = 2; r < NUM_ROWS; r++) {
+                    uint16_t value = 0;
+                    for (uint8_t c = 0; c < NUM_COLS; c++)
+                        if (matrix_is_pressed(r, c)) value |= (uint16_t)(1U << c);
+                    response[idx++] = (uint8_t)(value >> 8);
+                    response[idx++] = (uint8_t)value;
+                }
+                _Static_assert(NUM_COLS <= 16 && 2 + 2 * NUM_ROWS <= 32, "matrix must fit one protocol-9 reply");
+                break;
+            }
+#endif
             uint8_t row_offset = request[2];
             response[2] = row_offset;
             uint8_t col_bytes = (NUM_COLS + 7) / 8;
@@ -451,6 +533,12 @@ void via_process_packet(uint8_t const *request, uint8_t *response) {
         break;
     }
 
+#ifdef VIAL_ENABLE
+    case 0xFE:
+        vial_process(response);
+        break;
+#endif
+
     default:
         response[0] = 0xFF; // Unhandled command
         break;
@@ -597,6 +685,32 @@ TickType_t via_macro_check_timeouts(TickType_t now) {
                 } else {
                     send_event(kc, false);
                 }
+#ifdef VIAL_ENABLE
+            } else if (action >= 5 && action <= 7) { // Vial: tap / down / up of a 16-bit keycode
+                if (s_macro_offset + 1 >= end) {
+                    s_macro_offset = end;
+                    break;
+                }
+                uint16_t kc = (uint16_t)(dynamic_macro_buffer[s_macro_offset] | (dynamic_macro_buffer[s_macro_offset + 1] << 8));
+                s_macro_offset += 2;
+                if (!(kc & 0xFF) || !(kc >> 8)) {
+                    s_macro_offset = end;
+                    break;
+                }
+                if (kc > 0xFF00)
+                    kc = (uint16_t)((kc & 0xFF) << 8);
+                uint32_t key = from_via_keycode(kc);
+                if (key == K_GRAVE_ESC)
+                    key = vial_grave_escape();
+                if (key == K_NULL) {
+                    // unknown to ECK: skip it
+                } else if (action == 5 && (key <= HID_KEY_EXSEL || (key >= 0xE0 && key <= 0xE7))) {
+                    queue_tap_key((uint16_t)key); // a real HID usage
+                } else {
+                    if (action != 7) keyboard_process_virtual(VIAL_SLOT_MACRO, key, true);
+                    if (action != 6) keyboard_process_virtual(VIAL_SLOT_MACRO, key, false);
+                }
+#endif
             } else if (action == 4) { // SS_DELAY_CODE
                 if (s_macro_offset + 1 >= end) {
                     s_macro_offset = end;

@@ -5,7 +5,7 @@
 #include "via.h"
 #include "fmt.h"
 #include "ec_settings.h"
-#include "classic_matrix.h"
+#include "matrix_scan.h"
 #include "stm32l0xx.h"
 #include <stdarg.h>
 #include <string.h>
@@ -188,17 +188,28 @@ char const *string_desc_arr[] = {
 
 /* Serial number: the 96-bit unique ID as hex. Constant across updates, so hosts keep the
  * device's permissions (Chrome) and driver binding (Windows); VIA reports the version. */
+#ifdef VIAL_ENABLE
+#define SERIAL_PREFIX "vial:f64c2b3c-" // the Vial app finds keyboards by this
+#else
+#define SERIAL_PREFIX ""
+#endif
 static const char *serial_string(void) {
-    static char s[25];
+    static char s[sizeof(SERIAL_PREFIX) + 24] = SERIAL_PREFIX;
+    char *id = s + sizeof(SERIAL_PREFIX) - 1;
     static const uint32_t offs[3] = {0x14, 0x04, 0x00};
     for (int w = 0; w < 3; w++) {
         uint32_t v = *(const volatile uint32_t *)(UID_BASE + offs[w]);
-        for (int i = 0; i < 8; i++) s[w * 8 + i] = "0123456789ABCDEF"[(v >> (28 - 4 * i)) & 0xF];
+        for (int i = 0; i < 8; i++) id[w * 8 + i] = "0123456789ABCDEF"[(v >> (28 - 4 * i)) & 0xF];
     }
     return s;
 }
 
-uint16_t _desc_str[32];
+#ifdef VIAL_ENABLE
+#define DESC_STR_MAX 39 // Vial's serial prefix + the 24-digit chip ID
+#else
+#define DESC_STR_MAX 31
+#endif
+uint16_t _desc_str[DESC_STR_MAX + 1];
 
 // Device descriptor callback
 uint8_t const *tud_descriptor_device_cb(void) {
@@ -376,8 +387,8 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
 
         const char *str = index == 3 ? serial_string() : string_desc_arr[index];
         uint8_t chr_count = strlen(str);
-        if (chr_count > 31)
-            chr_count = 31;
+        if (chr_count > DESC_STR_MAX)
+            chr_count = DESC_STR_MAX;
         for (uint8_t i = 0; i < chr_count; i++) {
             _desc_str[1 + i] = str[i];
         }

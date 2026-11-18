@@ -14,6 +14,7 @@ enum {
     POS_F = 33,
     POS_Z = 43,
     POS_X = 44,
+    POS_V = 46,
     POS_M = 49,
     POS_FN = 54,
     POS_LALT = 55,

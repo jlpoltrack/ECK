@@ -25,6 +25,9 @@
 #include "usb.h"
 
 #include "via.h"
+#ifdef VIAL_ENABLE
+#include "vial.h"
+#endif
 
 /**
  * @brief Enter bootloader mode for firmware update via platform abstraction.
@@ -132,6 +135,13 @@ static void process_matrix_action(uint8_t row, uint8_t col, uint32_t key, bool p
         return;
     }
 
+#ifdef VIAL_ENABLE
+    // 1b. Vial: tap dance, repeat keys, Caps Word, Layer Lock, key overrides
+    if (vial_features_process(row, col, key, pressed)) {
+        return;
+    }
+#endif
+
     // 2. Layer Momentary Activation (unified L_0..L_15 and MO(layer))
     if ((key >= L_0 && key <= L_15) || ((key & 0xFF000000) == KIND_MO)) {
         uint8_t lyr = (key >= L_0 && key <= L_15) ? (uint8_t)(key - L_0) : (uint8_t)(key & 0xFF);
@@ -190,6 +200,75 @@ static void process_matrix_action(uint8_t row, uint8_t col, uint32_t key, bool p
     keyboard_send_key((uint16_t)key, pressed);
 }
 
+static void handle_press(uint8_t row, uint8_t col, bool batched) {
+    // Permissive Hold: resolve other pending HT keys immediately
+    hold_tap_permissive_resolve(row, col);
+
+    // Resolve key from active layer stack
+    uint32_t key = layers_lookup_key(row, col);
+#ifdef VIAL_ENABLE
+    key = vial_features_on_press(row, col, key);
+#endif
+    keyboard_record_pressed_key(row, col, key);
+
+    // Notify One-Shot subsystem of key press
+    oneshot_on_key_press(key);
+
+    // Process action
+    process_matrix_action(row, col, key, true, batched);
+#ifdef VIAL_ENABLE
+    oneshot_after_key_press();
+#endif
+}
+
+static void handle_release(uint8_t row, uint8_t col, bool batched) {
+    uint32_t key = pop_pressed_key(row, col);
+
+    // Process action release
+    process_matrix_action(row, col, key, false, batched);
+
+    // Notify One-Shot subsystem of key release
+    oneshot_on_key_release();
+}
+
+#ifdef VIAL_ENABLE
+void keyboard_handle_press(uint8_t row, uint8_t col) {
+    handle_press(row, col, false);
+}
+
+/* Entries can name each other (a tap dance outputting a key that outputs it again): presses
+ * nested deeper than this are dropped, so no setting can overflow the stack. */
+#define VIRTUAL_DEPTH_MAX 3
+static uint8_t s_virtual_depth;
+
+uint32_t keyboard_virtual_press(uint8_t slot, uint32_t key) {
+    if (s_virtual_depth >= VIRTUAL_DEPTH_MAX) return 0;
+    s_virtual_depth++;
+    hold_tap_permissive_resolve(KEYBOARD_VIRTUAL_ROW, slot);
+    key = vial_features_on_press(KEYBOARD_VIRTUAL_ROW, slot, key);
+    oneshot_on_key_press(key);
+    process_matrix_action(KEYBOARD_VIRTUAL_ROW, slot, key, true, false);
+    oneshot_after_key_press();
+    s_virtual_depth--;
+    return key ? key : K_NULL; // nonzero, so the caller still releases it
+}
+
+void keyboard_virtual_release(uint8_t slot, uint32_t key) {
+    if (s_virtual_depth >= VIRTUAL_DEPTH_MAX) return;
+    s_virtual_depth++;
+    process_matrix_action(KEYBOARD_VIRTUAL_ROW, slot, key, false, false);
+    oneshot_on_key_release();
+    s_virtual_depth--;
+}
+
+void keyboard_process_virtual(uint8_t slot, uint32_t key, bool pressed) {
+    if (s_virtual_depth >= VIRTUAL_DEPTH_MAX) return;
+    s_virtual_depth++;
+    process_matrix_action(KEYBOARD_VIRTUAL_ROW, slot, key, pressed, false);
+    s_virtual_depth--;
+}
+#endif
+
 static BaseType_t receive_matrix_event(matrix_event_t *event, TickType_t wait) {
     static uint16_t rows[NUM_ROWS];
     static uint16_t pending;
@@ -230,6 +309,11 @@ void keyboard_check(void) {
     // 1. Process active timeouts and determine earliest wakeup deadline
     TickType_t next_deadline = portMAX_DELAY;
     TickType_t r;
+#ifdef VIAL_ENABLE
+    // First: what it presses (a flushed mod-tap, a macro) is then seen by the checks below
+    if (vial_features_has_active() && (r = vial_features_check_timeouts(now)) < next_deadline)
+        next_deadline = r;
+#endif
     if (hold_tap_has_active() && (r = hold_tap_check_timeouts(now)) < next_deadline)
         next_deadline = r;
     if (oneshot_has_active() && (r = oneshot_check_timeouts(now)) < next_deadline)
@@ -259,26 +343,15 @@ void keyboard_check(void) {
             }
 
             if (pressed) {
-                // Permissive Hold: resolve other pending HT keys immediately
-                hold_tap_permissive_resolve(row, col);
-
-                // Resolve key from active layer stack
-                uint32_t key = layers_lookup_key(row, col);
-                keyboard_record_pressed_key(row, col, key);
-
-                // Notify One-Shot subsystem of key press
-                oneshot_on_key_press(key);
-
-                // Process action
-                process_matrix_action(row, col, key, true, batched);
+#ifdef VIAL_ENABLE
+                if (vial_combo_on_press(row, col, xTaskGetTickCount())) continue;
+#endif
+                handle_press(row, col, batched);
             } else {
-                uint32_t key = pop_pressed_key(row, col);
-
-                // Process action release
-                process_matrix_action(row, col, key, false, batched);
-
-                // Notify One-Shot subsystem of key release
-                oneshot_on_key_release();
+#ifdef VIAL_ENABLE
+                if (vial_combo_on_release(row, col)) continue;
+#endif
+                handle_release(row, col, batched);
             }
         } while (pdTRUE == receive_matrix_event(&matrix_event, 0));
         usb_flush_batched_keys();
