@@ -1,9 +1,9 @@
 # ECK overview
 
-Open firmware for the HHKB Professional Hybrid, Classic and Classic Type-S. It runs on the keyboard's own STM32L072 (and the Hybrid's nRF52832 Bluetooth module) and installs over USB: no soldering or disassembly. Tested on the Hybrid Type-S (PD-KB800BS); the Classics build but are untested ([models](models.md)).
+Open firmware for the HHKB Professional Hybrid, Classic and Classic Type-S, and the Topre Realforce R3S TKL. It runs on the keyboard's own STM32L072 (and the Hybrid's nRF52832 Bluetooth module) and installs over USB: no soldering or disassembly. Tested on the Hybrid Type-S (PD-KB800BS); the Classics build but are untested; the R3S is in bring-up and not yet released ([models](models.md)).
 
 **Users:** [Hybrid updates](hybrid-update.md) • [Classic install](install.md) • [VIA](via.md) • [Configuration](config.md) • [Backup & restore](backup-restore.md) • [Debug](debug.md)
-**Developers:** [Build](build.md) • [Hybrid port](hybrid-port.md) • [Hybrid hardware](hybrid-hardware.md) • [Hybrid stock behaviour](hybrid-stock-behaviour.md) • [Deferred](deferred.md)
+**Developers:** [Build](build.md) • [Hybrid port](hybrid-port.md) • [Hybrid hardware](hybrid-hardware.md) • [Hybrid stock behaviour](hybrid-stock-behaviour.md) • [R3S hardware](r3s-hardware.md) • [Deferred](deferred.md)
 
 ## Features
 
@@ -22,10 +22,12 @@ The 32 MHz clock and all scan rates are normal MCU operating modes, not overcloc
 
 ## Hybrid use
 
-ECK follows PFU's manual for the switch, battery and LED:
+ECK follows PFU's manual for the switch, battery and LED (except where noted in [Hybrid port](hybrid-port.md)):
+
+![LED patterns](led-patterns.svg)
 
 - **Power switch:** hold 1 s to turn on (blue), 2 s to turn off (orange). A light press blinks blue once per Bluetooth slot number (1-4), or lights 1 s on USB. Plugging in USB also turns it on; inserting batteries does not.
-- **Bluetooth:** Fn + Ctrl + 1-4 selects a host slot, Fn + Ctrl + 0 USB. To pair: Fn + Q, then Fn + Ctrl + 1-4. Fn + Q, then Fn + Ctrl + Delete + 1-4 (or Fn + Z + Delete for all) deletes pairings and turns the keyboard off. Details: [Hybrid port](hybrid-port.md#bluetooth).
+- **Bluetooth:** Fn + Ctrl + 1-4 selects a host slot, Fn + Ctrl + 0 USB. To pair: Fn + Ctrl + Q, then Fn + Ctrl + 1-4. Fn + Ctrl + Q, then Fn + Ctrl + Delete + 1-4 (or Fn + Ctrl + Delete + Z for all; Delete before the last key) deletes pairings; orange blinks 3 times and the keyboard stays on. Details: [Hybrid port](hybrid-port.md#bluetooth).
 - **Batteries:** orange blinks once every ~30 s when low, twice every ~15 s when they need replacing (on batteries, in Bluetooth use). Empty batteries: orange, then off. Hosts see 100, 15, 5 or 0 % (the board has level detectors, not a gauge).
 - **Auto power-off** (batteries, SW6 OFF): 60 min without a key (the manual says 30), 10 min in pairing mode, or 1 min without reaching the paired host. This is a deep sleep: any key wakes it (that key is not typed). Only a 2 s switch hold turns it fully off.
 - **Battery life:** idle but connected 1.50 mA (stock 5.1 mA); deep sleep 0.33 mA, off 0.20 mA. A day of 2 h typing, 6 h idle and 16 h asleep is roughly 2-3 months on two AA cells (estimate). Details: [Hybrid hardware](hybrid-hardware.md#5-power).

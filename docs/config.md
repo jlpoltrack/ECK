@@ -8,6 +8,8 @@ Settings are changed at runtime in [VIA](via.md); build options are only for ben
 
 Read once at power-on, so change them with the keyboard unplugged (and, on the Hybrid, switched off).
 
+![DIP switches](dip-switches.svg)
+
 Stock SW6 is power saving on every model (OFF: a key press doesn't wake the computer). The Classic gives that up for [SW6 recovery](backup-restore.md#sw6-recovery), its only recovery without opening the case (it has no power switch), and always lets a key press wake the computer. The Hybrid keeps stock SW6 and recovers with its power switch instead.
 
 | Switch | OFF | ON |
@@ -27,10 +29,14 @@ Stock SW6 is power saving on every model (OFF: a key press doesn't wake the comp
 
 - **HHK mode:** Fn + right ◇ sends Stop.
 - **Mac mode:** SW3 has no effect: the top-right key sends Backspace and Fn + Delete sends forward Delete, as on Apple keyboards.
-- **Without the switches:** Fn + Ctrl + M selects Mac mode; Fn + Ctrl + W selects Win mode (or HHK when SW1/SW2 select HHK). The change lasts until power-off and isn't sent to the host. The chord goes by key position (the Fn key, or the left ◇ with SW4; left Ctrl; W; M), whatever the keymap holds there.
-- **VIA mode:** Fn + Ctrl + V switches between Vial and VIA mode (for VIA's HHKB Settings menu) until the keyboard restarts; two blinks of the blue LED (LED 0) confirm it. [Vial](vial.md#via-mode).
+- **Without the switches:** Fn + Ctrl + W switches between Mac mode (two blinks of LED 0, blue on the Hybrid) and Win mode (one blink; HHK when SW1/SW2 select HHK). The change lasts until power-off and isn't sent to the host. The chord goes by key position (the Fn key, or the left ◇ with SW4; left Ctrl; W), whatever the keymap holds there.
+- **VIA mode:** Fn + Ctrl + V switches between Vial and VIA mode (for VIA's HHKB Settings menu) until the keyboard restarts; LED 0 (blue on the Hybrid) blinks twice into VIA mode and once back to Vial. [Vial](vial.md#via-mode).
 
 The rest of the Fn layer (Caps Lock, volume, keypad, Power) is the same in every mode; Fn + Tab is Caps Lock.
+
+![Default layers and chords](layers.svg)
+
+(The pictures, and the LED patterns in [Overview](overview.md), are drawn by `tools/gen_layer_svg.py` from `stm32/boards/hhkb/default_keymap.h`, with the chords and DIP switches written into the script; rerun it after changing any of them.)
 
 The switches change only keys that still hold their default keycodes (the top-right key, F, and the four bottom-row modifiers), so VIA remaps are kept. With SW4 on, the left ◇ selects the Fn layer of the active system (layer 1 for System 1, layer 3 for System 2). With SW4 and SW5 both on, the left ◇ is Fn and the left Alt sends ◇.
 

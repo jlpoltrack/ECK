@@ -13,7 +13,9 @@ void hybrid_power_tick(TickType_t now);
 TickType_t hybrid_power_timeout(TickType_t now);
 /* Apply power indications to the LED states the LED modes chose; orange (PA9) wins over blue. */
 void hybrid_power_leds(bool *blue, bool *orange);
-/* Enter the OFF state as after a 2 s switch hold (used after deleting pairings, manual p.14-15). */
-void hybrid_power_request_off(void);
+/* Orange: 3 blinks to confirm forgotten pairings (PFU's firmware turns off instead). */
+void hybrid_power_confirm_forget(void);
+/* Blue: N blinks for Bluetooth slot N, or 1 s on USB (power switch light press, slot chords). */
+void hybrid_power_show_slot(void);
 
 #endif

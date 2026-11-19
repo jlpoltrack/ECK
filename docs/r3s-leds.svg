@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="696" font-family="Helvetica, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="28" font-size="17" font-weight="bold" fill="#222" text-anchor="start">R3S Indicator LEDs</text>
+<text x="20" y="50" font-size="12" fill="#444" text-anchor="start">Each RGB LED lights a colour when its select line AND that colour line are high (both active high).</text>
+<text x="20" y="66" font-size="12" fill="#444" text-anchor="start">Drawn from the firmware's pin use; the driver transistors between the chip and the LEDs aren't known.</text>
+<rect x="20" y="100" width="120" height="288" rx="6" fill="#eef1f5" stroke="#8a94a3"/>
+<text x="80.0" y="122" font-size="13" font-weight="bold" fill="#222" text-anchor="middle">STM32L072</text>
+<text x="132" y="150" font-size="12" font-weight="bold" fill="#222" text-anchor="end">PB6</text>
+<line x1="140" y1="146" x2="550" y2="146" stroke="#555" stroke-width="2"/>
+<text x="560" y="150" font-size="12" font-weight="bold" fill="#222" text-anchor="start">Num Lock</text>
+<text x="150" y="140" font-size="10" fill="#888" text-anchor="start">select</text>
+<text x="132" y="214" font-size="12" font-weight="bold" fill="#222" text-anchor="end">PB5</text>
+<line x1="140" y1="210" x2="550" y2="210" stroke="#555" stroke-width="2"/>
+<text x="560" y="214" font-size="12" font-weight="bold" fill="#222" text-anchor="start">Caps Lock</text>
+<text x="150" y="204" font-size="10" fill="#888" text-anchor="start">select</text>
+<text x="132" y="278" font-size="12" font-weight="bold" fill="#222" text-anchor="end">PB4</text>
+<line x1="140" y1="274" x2="550" y2="274" stroke="#555" stroke-width="2"/>
+<text x="560" y="278" font-size="12" font-weight="bold" fill="#222" text-anchor="start">Scroll Lock</text>
+<text x="150" y="268" font-size="10" fill="#888" text-anchor="start">select</text>
+<text x="132" y="342" font-size="12" font-weight="bold" fill="#222" text-anchor="end">PB3</text>
+<line x1="140" y1="338" x2="550" y2="338" stroke="#555" stroke-width="2"/>
+<text x="560" y="342" font-size="12" font-weight="bold" fill="#222" text-anchor="start">Simple Mode</text>
+<text x="150" y="332" font-size="10" fill="#888" text-anchor="start">select</text>
+<text x="42" y="378" font-size="11" font-weight="bold" fill="#d93a3a" text-anchor="middle">PB9</text>
+<line x1="42" y1="388" x2="42" y2="412" stroke="#d93a3a" stroke-width="2"/>
+<line x1="42" y1="412" x2="330" y2="412" stroke="#d93a3a" stroke-width="2"/>
+<line x1="330" y1="412" x2="330" y2="124" stroke="#d93a3a" stroke-width="2"/>
+<text x="330" y="118" font-size="11" font-weight="bold" fill="#d93a3a" text-anchor="middle">red</text>
+<polyline points="272,146 272,168 286,168" fill="none" stroke="#555" stroke-width="2"/>
+<circle cx="272" cy="146" r="3" fill="#555"/>
+<polygon points="286,160 286,176 300,168" fill="#d93a3a" opacity="0.85"/>
+<line x1="300" y1="160" x2="300" y2="176" stroke="#d93a3a" stroke-width="2"/>
+<line x1="300" y1="168" x2="330" y2="168" stroke="#d93a3a" stroke-width="2"/>
+<circle cx="330" cy="168" r="3" fill="#d93a3a"/>
+<polyline points="272,210 272,232 286,232" fill="none" stroke="#555" stroke-width="2"/>
+<circle cx="272" cy="210" r="3" fill="#555"/>
+<polygon points="286,224 286,240 300,232" fill="#d93a3a" opacity="0.85"/>
+<line x1="300" y1="224" x2="300" y2="240" stroke="#d93a3a" stroke-width="2"/>
+<line x1="300" y1="232" x2="330" y2="232" stroke="#d93a3a" stroke-width="2"/>
+<circle cx="330" cy="232" r="3" fill="#d93a3a"/>
+<polyline points="272,274 272,296 286,296" fill="none" stroke="#555" stroke-width="2"/>
+<circle cx="272" cy="274" r="3" fill="#555"/>
+<polygon points="286,288 286,304 300,296" fill="#d93a3a" opacity="0.85"/>
+<line x1="300" y1="288" x2="300" y2="304" stroke="#d93a3a" stroke-width="2"/>
+<line x1="300" y1="296" x2="330" y2="296" stroke="#d93a3a" stroke-width="2"/>
+<circle cx="330" cy="296" r="3" fill="#d93a3a"/>
+<polyline points="272,338 272,360 286,360" fill="none" stroke="#555" stroke-width="2"/>
+<circle cx="272" cy="338" r="3" fill="#555"/>
+<polygon points="286,352 286,368 300,360" fill="#d93a3a" opacity="0.85"/>
+<line x1="300" y1="352" x2="300" y2="368" stroke="#d93a3a" stroke-width="2"/>
+<line x1="300" y1="360" x2="330" y2="360" stroke="#d93a3a" stroke-width="2"/>
+<circle cx="330" cy="360" r="3" fill="#d93a3a"/>
+<text x="80" y="378" font-size="11" font-weight="bold" fill="#2f9e44" text-anchor="middle">PB8</text>
+<line x1="80" y1="388" x2="80" y2="422" stroke="#2f9e44" stroke-width="2"/>
+<line x1="80" y1="422" x2="420" y2="422" stroke="#2f9e44" stroke-width="2"/>
+<line x1="420" y1="422" x2="420" y2="124" stroke="#2f9e44" stroke-width="2"/>
+<text x="420" y="118" font-size="11" font-weight="bold" fill="#2f9e44" text-anchor="middle">green</text>
+<polyline points="362,146 362,168 376,168" fill="none" stroke="#555" stroke-width="2"/>
+<circle cx="362" cy="146" r="3" fill="#555"/>
+<polygon points="376,160 376,176 390,168" fill="#2f9e44" opacity="0.85"/>
+<line x1="390" y1="160" x2="390" y2="176" stroke="#2f9e44" stroke-width="2"/>
+<line x1="390" y1="168" x2="420" y2="168" stroke="#2f9e44" stroke-width="2"/>
+<circle cx="420" cy="168" r="3" fill="#2f9e44"/>
+<polyline points="362,210 362,232 376,232" fill="none" stroke="#555" stroke-width="2"/>
+<circle cx="362" cy="210" r="3" fill="#555"/>
+<polygon points="376,224 376,240 390,232" fill="#2f9e44" opacity="0.85"/>
+<line x1="390" y1="224" x2="390" y2="240" stroke="#2f9e44" stroke-width="2"/>
+<line x1="390" y1="232" x2="420" y2="232" stroke="#2f9e44" stroke-width="2"/>
+<circle cx="420" cy="232" r="3" fill="#2f9e44"/>
+<polyline points="362,274 362,296 376,296" fill="none" stroke="#555" stroke-width="2"/>
+<circle cx="362" cy="274" r="3" fill="#555"/>
+<polygon points="376,288 376,304 390,296" fill="#2f9e44" opacity="0.85"/>
+<line x1="390" y1="288" x2="390" y2="304" stroke="#2f9e44" stroke-width="2"/>
+<line x1="390" y1="296" x2="420" y2="296" stroke="#2f9e44" stroke-width="2"/>
+<circle cx="420" cy="296" r="3" fill="#2f9e44"/>
+<polyline points="362,338 362,360 376,360" fill="none" stroke="#555" stroke-width="2"/>
+<circle cx="362" cy="338" r="3" fill="#555"/>
+<polygon points="376,352 376,368 390,360" fill="#2f9e44" opacity="0.85"/>
+<line x1="390" y1="352" x2="390" y2="368" stroke="#2f9e44" stroke-width="2"/>
+<line x1="390" y1="360" x2="420" y2="360" stroke="#2f9e44" stroke-width="2"/>
+<circle cx="420" cy="360" r="3" fill="#2f9e44"/>
+<text x="118" y="378" font-size="11" font-weight="bold" fill="#2f6fd6" text-anchor="middle">PB7</text>
+<line x1="118" y1="388" x2="118" y2="432" stroke="#2f6fd6" stroke-width="2"/>
+<line x1="118" y1="432" x2="510" y2="432" stroke="#2f6fd6" stroke-width="2"/>
+<line x1="510" y1="432" x2="510" y2="124" stroke="#2f6fd6" stroke-width="2"/>
+<text x="510" y="118" font-size="11" font-weight="bold" fill="#2f6fd6" text-anchor="middle">blue</text>
+<polyline points="452,146 452,168 466,168" fill="none" stroke="#555" stroke-width="2"/>
+<circle cx="452" cy="146" r="3" fill="#555"/>
+<polygon points="466,160 466,176 480,168" fill="#2f6fd6" opacity="0.85"/>
+<line x1="480" y1="160" x2="480" y2="176" stroke="#2f6fd6" stroke-width="2"/>
+<line x1="480" y1="168" x2="510" y2="168" stroke="#2f6fd6" stroke-width="2"/>
+<circle cx="510" cy="168" r="3" fill="#2f6fd6"/>
+<polyline points="452,210 452,232 466,232" fill="none" stroke="#555" stroke-width="2"/>
+<circle cx="452" cy="210" r="3" fill="#555"/>
+<polygon points="466,224 466,240 480,232" fill="#2f6fd6" opacity="0.85"/>
+<line x1="480" y1="224" x2="480" y2="240" stroke="#2f6fd6" stroke-width="2"/>
+<line x1="480" y1="232" x2="510" y2="232" stroke="#2f6fd6" stroke-width="2"/>
+<circle cx="510" cy="232" r="3" fill="#2f6fd6"/>
+<polyline points="452,274 452,296 466,296" fill="none" stroke="#555" stroke-width="2"/>
+<circle cx="452" cy="274" r="3" fill="#555"/>
+<polygon points="466,288 466,304 480,296" fill="#2f6fd6" opacity="0.85"/>
+<line x1="480" y1="288" x2="480" y2="304" stroke="#2f6fd6" stroke-width="2"/>
+<line x1="480" y1="296" x2="510" y2="296" stroke="#2f6fd6" stroke-width="2"/>
+<circle cx="510" cy="296" r="3" fill="#2f6fd6"/>
+<polyline points="452,338 452,360 466,360" fill="none" stroke="#555" stroke-width="2"/>
+<circle cx="452" cy="338" r="3" fill="#555"/>
+<polygon points="466,352 466,368 480,360" fill="#2f6fd6" opacity="0.85"/>
+<line x1="480" y1="352" x2="480" y2="368" stroke="#2f6fd6" stroke-width="2"/>
+<line x1="480" y1="360" x2="510" y2="360" stroke="#2f6fd6" stroke-width="2"/>
+<circle cx="510" cy="360" r="3" fill="#2f6fd6"/>
+<text x="20" y="462" font-size="14" font-weight="bold" fill="#222" text-anchor="start">Multiplexing (ECK): one LED at a time, so each has its own colour</text>
+<text x="20" y="482" font-size="12" fill="#444" text-anchor="start">TIM21 runs at 1 kHz. Each 1 ms slot lights the next LED (Num, Caps, Scroll, Simple Mode) in its colour;</text>
+<text x="20" y="498" font-size="12" fill="#444" text-anchor="start">a compare ends it early for brightness (20 %: lit 0.8 ms of every 4 ms). Example: Caps red, Simple Mode blue.</text>
+<text x="120" y="535" font-size="12" fill="#222" text-anchor="end">Num Lock</text>
+<rect x="130" y="529" width="544" height="4" rx="2" fill="#dde1e6"/>
+<text x="120" y="561" font-size="12" fill="#222" text-anchor="end">Caps Lock</text>
+<rect x="130" y="555" width="544" height="4" rx="2" fill="#dde1e6"/>
+<rect x="164.0" y="549" width="27.2" height="16" rx="2" fill="#d93a3a"/>
+<rect x="300.0" y="549" width="27.2" height="16" rx="2" fill="#d93a3a"/>
+<rect x="436.0" y="549" width="27.2" height="16" rx="2" fill="#d93a3a"/>
+<rect x="572.0" y="549" width="27.2" height="16" rx="2" fill="#d93a3a"/>
+<text x="120" y="587" font-size="12" fill="#222" text-anchor="end">Scroll Lock</text>
+<rect x="130" y="581" width="544" height="4" rx="2" fill="#dde1e6"/>
+<text x="120" y="613" font-size="12" fill="#222" text-anchor="end">Simple Mode</text>
+<rect x="130" y="607" width="544" height="4" rx="2" fill="#dde1e6"/>
+<rect x="232.0" y="601" width="27.2" height="16" rx="2" fill="#2f6fd6"/>
+<rect x="368.0" y="601" width="27.2" height="16" rx="2" fill="#2f6fd6"/>
+<rect x="504.0" y="601" width="27.2" height="16" rx="2" fill="#2f6fd6"/>
+<rect x="640.0" y="601" width="27.2" height="16" rx="2" fill="#2f6fd6"/>
+<text x="130" y="638" font-size="10" fill="#888" text-anchor="middle">0 ms</text>
+<text x="266" y="638" font-size="10" fill="#888" text-anchor="middle">4 ms</text>
+<text x="402" y="638" font-size="10" fill="#888" text-anchor="middle">8 ms</text>
+<text x="538" y="638" font-size="10" fill="#888" text-anchor="middle">12 ms</text>
+<text x="674" y="638" font-size="10" fill="#888" text-anchor="middle">16 ms</text>
+<text x="20" y="662" font-size="12" fill="#444" text-anchor="start">Confirmation blinks (VIA mode) light Simple Mode alone in blue. Before a firmware update the chip stops</text>
+<text x="20" y="678" font-size="12" fill="#444" text-anchor="start">multiplexing and leaves Simple Mode lit magenta (red + blue) while ST's loader runs.</text>
+</svg>

@@ -39,6 +39,8 @@
 #define BOARD_DEFAULT_SCAN_RATE 3 /* 500 Hz: a full scan takes ~1.6 ms (2026-11-17) */
 #define BOARD_HOST_LEDS 1         /* Num, Caps and Scroll Lock indicators */
 #define BOARD_NOTIFY_LED 1        /* the Simple Mode LED (LED 1): confirmation blinks */
+#define BOARD_NOTIFY_SOLO 1       /* ...alone and in their own colour (board_leds_notify) */
+#define ROM_DFU_KEEP_IOP (1U << 1) /* GPIOB (IOPRSTR/IOPENR bit 1): the update LED stays lit */
 #define BOARD_USB_RECOVERY_DFU 1  /* no USB host 15 s after start: ST's DFU loader (the R3S has no recovery switch) */
 
 /* --- EEPROM map (data EEPROM 0x08080000-0x080817FF) ---

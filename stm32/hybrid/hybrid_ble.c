@@ -509,7 +509,7 @@ static uint64_t s_chord_keys; /* chord keys (by position) whose release is swall
 static bool s_delete_held, s_delete_swallowed;
 static bool s_pair_standby;
 static TickType_t s_standby_at;
-static TickType_t s_flash_at = 0; /* LED: 1 s on after start-up, a slot or USB switch, or cancel */
+static TickType_t s_flash_at = 0; /* LED: 1 s on after start-up or a pairing cancel */
 static uint8_t s_passkey[6];
 static uint8_t s_passkey_len;
 
@@ -579,7 +579,7 @@ static bool chord(int pos) {
                          (s_flags & BLE_LINK_ST_PAIRING) != 0, &slot)) {
     case CHORD_DELETE:
         command(BLE_LINK_CMD_DELETE_SLOT, &slot, 1);
-        hybrid_power_request_off(); /* manual p.15: orange while deleting, then OFF */
+        hybrid_power_confirm_forget();
         s_pair_standby = false;
         break;
     case CHORD_PAIR:
@@ -591,13 +591,14 @@ static bool chord(int pos) {
     case CHORD_SELECT:
         s_slot = slot;
         s_prefer_ble = true;
-        flash_led();
+        if (s_queue) xQueueSend(s_queue, &(link_msg_t){.type = BLE_LINK_NOP}, 0); /* tell the nRF52 now */
+        hybrid_power_show_slot();
         s_pair_standby = false;
         break;
     case CHORD_USB:
         s_prefer_ble = false;
         s_pair_standby = false;
-        flash_led();
+        hybrid_power_show_slot();
         break;
     case CHORD_STANDBY:
         s_pair_standby = true;
@@ -611,7 +612,7 @@ static bool chord(int pos) {
     case CHORD_CLEAR_ALL:
         s_pair_standby = false;
         command(BLE_LINK_CMD_CLEAR_BONDS, NULL, 0);
-        hybrid_power_request_off();
+        hybrid_power_confirm_forget();
         break;
     default:
         return false;
@@ -627,7 +628,7 @@ bool hybrid_ble_process_key(uint32_t key, bool pressed) {
     return true;
 }
 
-/* Fn chords by position, never reaching the host. The Delete key also counts for the delete
+/* Fn+Ctrl chords by position, never reaching the host. The Delete key also counts for the delete
  * chords; in pairing standby it never reaches the host either. */
 bool hybrid_ble_matrix_change(uint8_t row, uint8_t col, bool pressed) {
     int16_t pos = keyboard_get_flat_key_index(row, col);
@@ -650,7 +651,7 @@ bool hybrid_ble_matrix_change(uint8_t row, uint8_t col, bool pressed) {
     return true;
 }
 
-/* 1 s on after start-up or a switch, 4 blinks/s while pairing or waiting for a passkey,
+/* 1 s on after start-up or a pairing cancel, 4 blinks/s while pairing or waiting for a passkey,
  * 2 blinks/s in pairing standby; otherwise off (no light while reconnecting or connected). */
 bool hybrid_ble_status_led(TickType_t now) {
     if ((TickType_t)(now - s_flash_at) < pdMS_TO_TICKS(FLASH_MS)) return true;

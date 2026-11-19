@@ -29,6 +29,10 @@ static inline bool rom_dfu_known(void) {
     return true;
 }
 
+#ifndef ROM_DFU_KEEP_IOP
+#define ROM_DFU_KEEP_IOP 0U /* GPIO ports (IOPRSTR/IOPENR bits) left as they are, e.g. for an LED */
+#endif
+
 /* Put the core back near reset state: MSI clock, peripherals reset, no IRQs. */
 static inline void rom_dfu_reset_state(void) {
     __disable_irq();
@@ -48,11 +52,11 @@ static inline void rom_dfu_reset_state(void) {
     RCC->APB2RSTR = 0;
     RCC->AHBRSTR = 0xFFFFFFFFUL;
     RCC->AHBRSTR = 0;
-    RCC->IOPRSTR = 0xFFFFFFFFUL;
+    RCC->IOPRSTR = ~ROM_DFU_KEEP_IOP;
     RCC->IOPRSTR = 0;
     RCC->APB1ENR = 0;
     RCC->APB2ENR = 0;
-    RCC->IOPENR = 0;
+    RCC->IOPENR = ROM_DFU_KEEP_IOP;
     EXTI->IMR = 0;
     EXTI->EMR = 0;
     EXTI->PR = 0xFFFFFFFFUL;

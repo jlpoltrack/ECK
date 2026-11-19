@@ -8,6 +8,8 @@ static uint8_t dips;
 uint16_t layers_get_state(void) { return state; }
 int16_t keyboard_get_flat_key_index(uint8_t row, uint8_t col) { return (int16_t)(row * 15 + col); }
 uint8_t dip_switch_read(void) { return dips; }
+static int last_blinks;
+void indicators_blink(uint8_t count) { last_blinks = count; }
 #ifdef VIAL_ENABLE
 static int via_toggles;
 void via_mode_toggle(void) { via_toggles++; }
@@ -64,28 +66,31 @@ int main(void) {
     boot(SW(4) | SW(5));
     assert(map(POS_LGUI, K_LGUI) == MO(1) && map(POS_LALT, K_LALT) == K_LGUI);
 
-    // Fn+Ctrl+W/M switch modes by key position and are swallowed; Ctrl or Fn alone pass through.
-    // The layer state no longer matters: a keymap without MO(1) on Fn still works.
+    // Fn+Ctrl+W toggles Mac and Win/HHK by key position, blinks 2 (Mac) or 1, and is swallowed;
+    // Ctrl or Fn alone pass through. The layer state doesn't matter: a keymap without MO(1) on Fn works.
     boot(0);
     assert(!key(POS_CTRL, true));
-    assert(!key(POS_M, true) && !key(POS_M, false));
+    assert(!key(POS_W, true) && !key(POS_W, false));
     assert(!key(POS_FN, true));
     assert(hhkb_fn_held() && hhkb_ctrl_held());
-    assert(key(POS_M, true));
-    assert(!key(POS_FN, false)); // Fn released before M: the release is still swallowed
-    assert(key(POS_M, false));
-    assert(s_mode == MODE_MAC && map(POS_DEL, K_BSPC) == K_BSPC);
+    assert(key(POS_W, true));
+    assert(!key(POS_FN, false)); // Fn released before W: the release is still swallowed
+    assert(key(POS_W, false));
+    assert(s_mode == MODE_MAC && last_blinks == 2 && map(POS_DEL, K_BSPC) == K_BSPC);
     key(POS_FN, true);
     assert(key(POS_W, true) && key(POS_W, false));
-    assert(s_mode == MODE_HHK); // DIPs select HHK, so Fn+Ctrl+W returns to HHK
+    assert(s_mode == MODE_HHK && last_blinks == 1); // DIPs select HHK, so the toggle returns to HHK
+    assert(!key(POS_M, true) && !key(POS_M, false)); // Fn+Ctrl+M is no longer a chord
     assert(!key(POS_CTRL, false) && !hhkb_ctrl_held());
     assert(!key(POS_W, true) && !key(POS_W, false));
     key(POS_FN, false);
-    boot(SW(2)); // Mac DIPs: Fn+Ctrl+W selects Win
+    boot(SW(2)); // Mac DIPs: the toggle goes to Win, then back to Mac
     key(POS_FN, true);
     key(POS_CTRL, true);
     assert(key(POS_W, true) && key(POS_W, false));
-    assert(s_mode == MODE_WIN);
+    assert(s_mode == MODE_WIN && last_blinks == 1);
+    assert(key(POS_W, true) && key(POS_W, false));
+    assert(s_mode == MODE_MAC && last_blinks == 2);
     key(POS_CTRL, false);
     key(POS_FN, false);
     // SW4: the left ◇ is Fn for the chords too; without SW4 it is not.
@@ -96,7 +101,7 @@ int main(void) {
     boot(SW(4));
     key(POS_LGUI, true);
     key(POS_CTRL, true);
-    assert(hhkb_fn_held() && key(POS_M, true) && key(POS_M, false) && s_mode == MODE_MAC);
+    assert(hhkb_fn_held() && key(POS_W, true) && key(POS_W, false) && s_mode == MODE_MAC);
     key(POS_CTRL, false);
     key(POS_LGUI, false);
 #ifdef VIAL_ENABLE

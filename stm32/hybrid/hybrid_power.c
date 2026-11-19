@@ -37,7 +37,6 @@ typedef enum { ST_BOOT, ST_ON, ST_OFF } state_t;
 
 static state_t s_state;
 static bool s_init;
-static volatile bool s_off_request;
 static TickType_t s_step_at, s_off_at, s_key_at, s_pairing_at, s_standby_at;
 static uint16_t s_off_orange_ms;
 static bool s_cold;      /* power-on reset (batteries in), not our own restart */
@@ -54,8 +53,8 @@ static pwr_debounce_t s_sw;
 static bool s_sw_raw;
 static pwr_switch_t s_switch;
 static pwr_warn_t s_warn;
-static pwr_blink_t s_blue;
-static bool s_warn_on, s_blue_on;
+static pwr_blink_t s_blue, s_orange;
+static bool s_warn_on, s_blue_on, s_orange_on;
 
 /* PC5 pull-up (switch to ground; stock pull unknown); PC13 and the PB7-PB9 detector outputs
  * without pulls (stock configuration not found). */
@@ -80,8 +79,8 @@ static uint8_t batt_raw(void) {
     return pwr_batt_raw_level(!(idr & (1U << 7)), !(idr & (1U << 8)), !(idr & (1U << 9)));
 }
 
-void hybrid_power_request_off(void) {
-    s_off_request = true;
+void hybrid_power_confirm_forget(void) {
+    pwr_blink_start(&s_orange, 3, SLOT_BLINK_HALF);
 }
 
 /* ---- OFF state: STOP mode until the switch is held 1 s or USB power appears, then reset ---- */
@@ -255,7 +254,7 @@ static void off_begin(TickType_t now, uint16_t orange_ms) {
 }
 
 /* Manual p.12: a light press blinks the Bluetooth slot number, or lights 1 s on USB. */
-static void show_slot(void) {
+void hybrid_power_show_slot(void) {
     if (hybrid_ble_transport_active()) {
         pwr_blink_start(&s_blue, hybrid_ble_slot(), SLOT_BLINK_HALF);
     } else {
@@ -282,6 +281,7 @@ static void step(TickType_t now, bool usb) {
     }
     s_warn_on = pwr_warn_step(&s_warn, level, s_state == ST_ON && !usb && hybrid_ble_transport_active());
     s_blue_on = pwr_blink_step(&s_blue);
+    s_orange_on = pwr_blink_step(&s_orange);
 }
 
 static void auto_off_check(TickType_t now, bool usb) {
@@ -343,8 +343,8 @@ void hybrid_power_tick(TickType_t now) {
     }
     if (s_state != ST_OFF) {
         pwr_sw_event_t ev = pwr_switch_update(&s_switch, pressed, now);
-        if (ev == PWR_SW_SHORT && s_state == ST_ON) show_slot();
-        if (ev == PWR_SW_OFF || s_off_request) {
+        if (ev == PWR_SW_SHORT && s_state == ST_ON) hybrid_power_show_slot();
+        if (ev == PWR_SW_OFF) {
             off_begin(now, OFF_ORANGE_MS);
         } else if (s_state == ST_ON) {
             auto_off_check(now, usb);
@@ -374,6 +374,7 @@ void hybrid_power_leds(bool *blue, bool *orange) {
         /* nRF52 update in progress: orange 2 blinks/s */
         if (hybrid_ble_update_active()) *orange = (xTaskGetTickCount() / pdMS_TO_TICKS(250)) & 1U;
         if (pwr_blink_busy(&s_warn.blink)) *orange = s_warn_on;
+        if (pwr_blink_busy(&s_orange)) *orange = s_orange_on;
     }
     if (*orange) *blue = false; /* stock LED driver: one colour at a time, orange first */
 }

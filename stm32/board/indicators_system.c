@@ -44,9 +44,8 @@ void indicators_leds_off(void) { board_leds_off(); }
 
 void keyboard_platform_init(void) { update_system_layer(); }
 
-#ifdef VIAL_ENABLE
-/* Notify blinks: alternating 150 ms on and off halves; start is set before the count. */
-#define BLINK_HALF pdMS_TO_TICKS(150)
+/* Notify blinks: alternating 300 ms on and off halves, as the Hybrid's slot blinks; start is set before the count. */
+#define BLINK_HALF pdMS_TO_TICKS(300)
 static volatile TickType_t s_blink_start;
 static volatile uint8_t s_blink_halves;
 
@@ -73,9 +72,6 @@ static TickType_t blink_timeout(TickType_t now, TickType_t timeout) {
     TickType_t edge = BLINK_HALF - (now - s_blink_start) % BLINK_HALF;
     return edge < timeout ? edge : timeout;
 }
-#else
-#define blink_timeout(now, timeout) (timeout)
-#endif
 
 #ifdef HHKB_HYBRID
 /* Next 125 ms LED phase (4 blinks/s while pairing) or the power module's next poll. */
@@ -97,7 +93,9 @@ void keyboard_platform_tick(TickType_t now) {
 #endif
     bool suspended = tud_suspended();
 #ifdef BOARD_USB_RECOVERY_DFU /* boards without a recovery switch: no USB host in 15 s, ST's DFU loader */
-    if (!mounted && now >= pdMS_TO_TICKS(15000)) platform_bootloader_jump();
+    static bool s_was_mounted; /* only since start-up: a later re-enumeration (VIA mode) never counts */
+    if (mounted) s_was_mounted = true;
+    if (!s_was_mounted && now >= pdMS_TO_TICKS(15000)) platform_bootloader_jump();
 #endif
     bool lit[2];
     for (uint8_t i = 0; i < 2; i++) {
@@ -122,12 +120,16 @@ void keyboard_platform_tick(TickType_t now) {
         }
         lit[i] = on && !suspended;
     }
+    bool blink, blinking = blink_state(now, &blink);
+    if (blinking) lit[BOARD_NOTIFY_LED] = blink;
 #ifdef HHKB_HYBRID
-    hybrid_power_leds(&lit[0], &lit[1]); /* PA8 blue, PA9 orange */
+    hybrid_power_leds(&lit[0], &lit[1]); /* PA8 blue, PA9 orange; orange wins */
 #endif
-#ifdef VIAL_ENABLE
-    bool blink;
-    if (blink_state(now, &blink)) lit[BOARD_NOTIFY_LED] = blink;
+#ifdef BOARD_NOTIFY_SOLO
+    if (blinking) {
+        board_leds_notify(blink);
+        return;
+    }
 #endif
     board_leds_write(lit[0], lit[1], HOST_LEDS(suspended));
 }

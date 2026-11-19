@@ -31,15 +31,18 @@ int main(void) {
     // Fn+Ctrl+0: USB. Fn+Ctrl+other keys: nothing.
     assert(hybrid_chord(POS_0, true, false, false, false, &slot) == CHORD_USB);
     assert(hybrid_chord(POS_1 + 4, true, false, false, false, &slot) == CHORD_NONE); // 5
-    assert(hybrid_chord(POS_Q, true, false, false, false, &slot) == CHORD_NONE);
-    // Fn+Q standby, Fn+X cancels only while pairing or in standby, Fn+Z+Delete in standby clears.
-    assert(hybrid_chord(POS_Q, false, false, false, false, &slot) == CHORD_STANDBY);
-    assert(hybrid_chord(POS_X, false, false, false, false, &slot) == CHORD_NONE);
-    assert(hybrid_chord(POS_X, false, false, true, false, &slot) == CHORD_CANCEL);
-    assert(hybrid_chord(POS_X, false, false, false, true, &slot) == CHORD_CANCEL);
-    assert(hybrid_chord(POS_Z, false, true, true, false, &slot) == CHORD_CLEAR_ALL);
-    assert(hybrid_chord(POS_Z, false, false, true, false, &slot) == CHORD_NONE);
-    assert(hybrid_chord(POS_Z, false, true, false, false, &slot) == CHORD_NONE);
+    // Fn+Ctrl+Q standby, Fn+Ctrl+X cancels only while pairing or in standby, Fn+Ctrl+Z+Delete in standby
+    // clears. Without Ctrl, Q, X and Z are the keymap's (PFU's chords took Fn alone).
+    assert(hybrid_chord(POS_Q, true, false, false, false, &slot) == CHORD_STANDBY);
+    assert(hybrid_chord(POS_X, true, false, false, false, &slot) == CHORD_NONE);
+    assert(hybrid_chord(POS_X, true, false, true, false, &slot) == CHORD_CANCEL);
+    assert(hybrid_chord(POS_X, true, false, false, true, &slot) == CHORD_CANCEL);
+    assert(hybrid_chord(POS_Z, true, true, true, false, &slot) == CHORD_CLEAR_ALL);
+    assert(hybrid_chord(POS_Z, true, false, true, false, &slot) == CHORD_NONE);
+    assert(hybrid_chord(POS_Z, true, true, false, false, &slot) == CHORD_NONE);
+    assert(hybrid_chord(POS_Q, false, false, false, false, &slot) == CHORD_NONE);
+    assert(hybrid_chord(POS_X, false, false, true, true, &slot) == CHORD_NONE);
+    assert(hybrid_chord(POS_Z, false, true, true, false, &slot) == CHORD_NONE);
     // Fn+1 without Ctrl is F1 for the host.
     assert(hybrid_chord(POS_1, false, false, false, false, &slot) == CHORD_NONE);
     puts("hybrid chord tests passed");

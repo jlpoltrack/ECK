@@ -317,7 +317,7 @@ static void pm_evt_handler(pm_evt_t const *p_evt) {
         queue_drain();
         break;
     case PM_EVT_CONN_SEC_CONFIG_REQ: {
-        /* A host that forgot us may pair again only while the user asked for pairing (Fn+Q). */
+        /* A host that forgot us may pair again only while the user asked for pairing (Fn+Ctrl+Q). */
         pm_conn_sec_config_t cfg = {.allow_repairing = m_pairing};
         pm_conn_sec_config_reply(p_evt->conn_handle, &cfg);
         break;
@@ -447,7 +447,7 @@ static void slot_delete(uint8_t slot) {
     m_bonded_slots &= (uint8_t)~(1U << (slot - 1));
 }
 
-/* Fn+Q, Fn+Ctrl+slot: select the slot, forget its host and accept a new one for PAIR_WINDOW_MS. */
+/* Fn+Ctrl+Q, then Fn+Ctrl+slot: select the slot, forget its host and accept a new one for PAIR_WINDOW_MS. */
 static void pair_slot(uint8_t slot) {
     m_slot = slot;
     m_pairing = true;

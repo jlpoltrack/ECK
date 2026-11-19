@@ -3,6 +3,8 @@
 #include "matrix_scan.h"
 #include "board_init.h"
 #ifdef ECK_BOARD_R3S
+#include "board.h"
+#include "board_config.h" /* ROM_DFU_KEEP_IOP */
 #include "rom_dfu.h"
 #endif
 #include "stm32l0xx.h"
@@ -89,6 +91,7 @@ void platform_bootloader_jump(void) {
     if (board_bootloader_jump()) return;
 #endif
 #ifdef ECK_BOARD_R3S
+    board_leds_dfu();
     (void)rom_dfu_enter(); /* ST's USB DFU loader; returns only on an unknown ROM */
 #endif
     __disable_irq();

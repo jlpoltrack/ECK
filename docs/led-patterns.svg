@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="734" font-family="Helvetica, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="28" font-size="17" font-weight="bold" fill="#222">LED Patterns</text>
+<text x="20" y="74" font-size="14" font-weight="bold" fill="#222">Blue</text>
+<text x="464.0" y="74" font-size="10" fill="#888">0 s</text>
+<text x="530.6666666666666" y="74" font-size="10" fill="#888">1 s</text>
+<text x="597.3333333333334" y="74" font-size="10" fill="#888">2 s</text>
+<text x="664.0" y="74" font-size="10" fill="#888">3 s</text>
+<rect x="14" y="84" width="672" height="40" rx="3" fill="#f4f6f8"/>
+<text x="20" y="101" font-size="12" font-weight="bold" fill="#222">Turning on</text>
+<text x="20" y="116" font-size="11" fill="#555">Lit while the power switch is held, then 1 s</text>
+<rect x="470" y="102" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="96" width="66.7" height="16" rx="3" fill="#2f6fd6"/>
+<text x="20" y="141" font-size="12" font-weight="bold" fill="#222">Bluetooth slot 1-4</text>
+<text x="20" y="156" font-size="11" fill="#555">Fn + Ctrl + 1-4, or a light press of the switch: 1-4 blinks (4 shown)</text>
+<rect x="470" y="142" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="136" width="20.0" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="510.0" y="136" width="20.0" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="550.0" y="136" width="20.0" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="590.0" y="136" width="20.0" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="14" y="164" width="672" height="40" rx="3" fill="#f4f6f8"/>
+<text x="20" y="181" font-size="12" font-weight="bold" fill="#222">USB</text>
+<text x="20" y="196" font-size="11" fill="#555">Fn + Ctrl + 0, or a light press of the switch on USB</text>
+<rect x="470" y="182" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="176" width="66.7" height="16" rx="3" fill="#2f6fd6"/>
+<text x="20" y="221" font-size="12" font-weight="bold" fill="#222">Pairing standby</text>
+<text x="20" y="236" font-size="11" fill="#555">After Fn + Ctrl + Q, up to 10 min</text>
+<rect x="470" y="222" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="216" width="16.7" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="503.3" y="216" width="16.7" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="536.7" y="216" width="16.7" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="570.0" y="216" width="16.7" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="603.3" y="216" width="16.7" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="636.7" y="216" width="16.7" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="14" y="244" width="672" height="40" rx="3" fill="#f4f6f8"/>
+<text x="20" y="261" font-size="12" font-weight="bold" fill="#222">Pairing</text>
+<text x="20" y="276" font-size="11" fill="#555">After Fn + Ctrl + 1-4 in standby, or while the host shows a passkey</text>
+<rect x="470" y="262" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="256" width="8.3" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="486.7" y="256" width="8.3" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="503.3" y="256" width="8.3" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="520.0" y="256" width="8.3" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="536.7" y="256" width="8.3" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="553.3" y="256" width="8.3" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="570.0" y="256" width="8.3" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="586.7" y="256" width="8.3" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="603.3" y="256" width="8.3" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="620.0" y="256" width="8.3" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="636.7" y="256" width="8.3" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="653.3" y="256" width="8.3" height="16" rx="3" fill="#2f6fd6"/>
+<text x="20" y="301" font-size="12" font-weight="bold" fill="#222">Pairing cancelled</text>
+<text x="20" y="316" font-size="11" fill="#555">Fn + Ctrl + X</text>
+<rect x="470" y="302" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="296" width="66.7" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="14" y="324" width="672" height="40" rx="3" fill="#f4f6f8"/>
+<text x="20" y="341" font-size="12" font-weight="bold" fill="#222">Win / Mac</text>
+<text x="20" y="356" font-size="11" fill="#555">Fn + Ctrl + W: 1 blink Win (or HHK), 2 blinks Mac (Mac shown)</text>
+<rect x="470" y="342" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="336" width="20.0" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="510.0" y="336" width="20.0" height="16" rx="3" fill="#2f6fd6"/>
+<text x="20" y="381" font-size="12" font-weight="bold" fill="#222">VIA mode</text>
+<text x="20" y="396" font-size="11" fill="#555">Fn + Ctrl + V: 2 blinks into VIA mode, 1 back to Vial (VIA shown)</text>
+<rect x="470" y="382" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="376" width="20.0" height="16" rx="3" fill="#2f6fd6"/>
+<rect x="510.0" y="376" width="20.0" height="16" rx="3" fill="#2f6fd6"/>
+<text x="20" y="430" font-size="14" font-weight="bold" fill="#222">Orange</text>
+<text x="464.0" y="430" font-size="10" fill="#888">0 s</text>
+<text x="530.6666666666666" y="430" font-size="10" fill="#888">1 s</text>
+<text x="597.3333333333334" y="430" font-size="10" fill="#888">2 s</text>
+<text x="664.0" y="430" font-size="10" fill="#888">3 s</text>
+<rect x="14" y="440" width="672" height="40" rx="3" fill="#f4f6f8"/>
+<text x="20" y="457" font-size="12" font-weight="bold" fill="#222">Turning off</text>
+<text x="20" y="472" font-size="11" fill="#555">Power switch held 2 s</text>
+<rect x="470" y="458" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="452" width="66.7" height="16" rx="3" fill="#e8891c"/>
+<text x="20" y="497" font-size="12" font-weight="bold" fill="#222">Pairings forgotten</text>
+<text x="20" y="512" font-size="11" fill="#555">Fn + Ctrl + Q, then Fn + Ctrl + Delete + 1-4 or Z: always 3 blinks</text>
+<rect x="470" y="498" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="492" width="20.0" height="16" rx="3" fill="#e8891c"/>
+<rect x="510.0" y="492" width="20.0" height="16" rx="3" fill="#e8891c"/>
+<rect x="550.0" y="492" width="20.0" height="16" rx="3" fill="#e8891c"/>
+<rect x="14" y="520" width="672" height="40" rx="3" fill="#f4f6f8"/>
+<text x="20" y="537" font-size="12" font-weight="bold" fill="#222">Batteries low</text>
+<text x="20" y="552" font-size="11" fill="#555">One blink every ~33 s (on batteries, using Bluetooth)</text>
+<rect x="470" y="538" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="532" width="40.0" height="16" rx="3" fill="#e8891c"/>
+<text x="20" y="577" font-size="12" font-weight="bold" fill="#222">Replace batteries</text>
+<text x="20" y="592" font-size="11" fill="#555">Two blinks every ~16.5 s (on batteries, using Bluetooth)</text>
+<rect x="470" y="578" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="572" width="40.0" height="16" rx="3" fill="#e8891c"/>
+<rect x="550.0" y="572" width="40.0" height="16" rx="3" fill="#e8891c"/>
+<rect x="14" y="600" width="672" height="40" rx="3" fill="#f4f6f8"/>
+<text x="20" y="617" font-size="12" font-weight="bold" fill="#222">Batteries empty</text>
+<text x="20" y="632" font-size="11" fill="#555">At power-on, then the keyboard turns off</text>
+<rect x="470" y="618" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="612" width="133.3" height="16" rx="3" fill="#e8891c"/>
+<text x="20" y="657" font-size="12" font-weight="bold" fill="#222">Firmware update</text>
+<text x="20" y="672" font-size="11" fill="#555">Solid while the main chip is being updated</text>
+<rect x="470" y="658" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="652" width="200.0" height="16" rx="3" fill="#e8891c"/>
+<rect x="14" y="680" width="672" height="40" rx="3" fill="#f4f6f8"/>
+<text x="20" y="697" font-size="12" font-weight="bold" fill="#222">Bluetooth update</text>
+<text x="20" y="712" font-size="11" fill="#555">Two blinks a second while the Bluetooth chip updates or recovers</text>
+<rect x="470" y="698" width="200" height="4" rx="2" fill="#dde1e6"/>
+<rect x="470.0" y="692" width="16.7" height="16" rx="3" fill="#e8891c"/>
+<rect x="503.3" y="692" width="16.7" height="16" rx="3" fill="#e8891c"/>
+<rect x="536.7" y="692" width="16.7" height="16" rx="3" fill="#e8891c"/>
+<rect x="570.0" y="692" width="16.7" height="16" rx="3" fill="#e8891c"/>
+<rect x="603.3" y="692" width="16.7" height="16" rx="3" fill="#e8891c"/>
+<rect x="636.7" y="692" width="16.7" height="16" rx="3" fill="#e8891c"/>
+</svg>

@@ -9,5 +9,9 @@
 void board_leds_init(void);
 void board_leds_off(void);
 void board_leds_write(bool lit0, bool lit1, uint8_t host_leds);
+/* A confirmation blink (BOARD_NOTIFY_SOLO): Simple Mode alone, blue. */
+void board_leds_notify(bool on);
+/* Before ST's DFU loader: Simple Mode stays lit magenta through the update. */
+void board_leds_dfu(void);
 
 #endif

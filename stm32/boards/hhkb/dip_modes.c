@@ -20,7 +20,7 @@ enum { MODE_HHK, MODE_WIN, MODE_MAC };
 
 static uint8_t s_dips;     /* bit n = SW(n+1) ON, read once at power-on */
 static uint8_t s_dip_mode; /* mode SW1/SW2 select */
-static uint8_t s_mode;     /* current mode; Fn+Ctrl+W/M change it until power-off */
+static uint8_t s_mode;     /* current mode; Fn+Ctrl+W changes it until power-off */
 
 static bool dip_on(dip_switch_num_t sw) { return (s_dips >> sw) & 1U; }
 
@@ -68,8 +68,8 @@ static bool held(unsigned pos) { return (s_held >> pos) & 1U; }
 bool hhkb_fn_held(void) { return held(POS_FN) || (dip_on(DIP_SW4) && held(POS_LGUI)); }
 bool hhkb_ctrl_held(void) { return held(POS_CTRL); }
 
-/* Fn+Ctrl+W selects Win mode (HHK if SW1/SW2 select HHK), Fn+Ctrl+M Mac mode, Fn+Ctrl+V
- * toggles VIA mode (Vial builds); those presses never reach the host. */
+/* Fn+Ctrl+W toggles Mac mode and Win mode (HHK if SW1/SW2 select HHK), blinking 2 or 1 times;
+ * Fn+Ctrl+V toggles VIA mode (Vial builds). Those presses never reach the host. */
 bool dip_modes_matrix_change(uint8_t row, uint8_t col, bool pressed) {
     int16_t pos = keyboard_get_flat_key_index(row, col);
     if (pos < 0 || pos >= 64) return false;
@@ -83,9 +83,8 @@ bool dip_modes_matrix_change(uint8_t row, uint8_t col, bool pressed) {
     s_held |= bit;
     if (!hhkb_fn_held() || !hhkb_ctrl_held()) return false;
     if (pos == POS_W) {
-        s_mode = (s_dip_mode == MODE_HHK) ? MODE_HHK : MODE_WIN;
-    } else if (pos == POS_M) {
-        s_mode = MODE_MAC;
+        s_mode = s_mode != MODE_MAC ? MODE_MAC : (s_dip_mode == MODE_HHK) ? MODE_HHK : MODE_WIN;
+        indicators_blink(s_mode == MODE_MAC ? 2 : 1);
 #ifdef VIAL_ENABLE
     } else if (pos == POS_V) {
         via_mode_toggle();

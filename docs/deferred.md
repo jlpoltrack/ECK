@@ -14,7 +14,7 @@ Decided but not done, or waiting on a decision. Delete an item when it's done.
 
 ## Hybrid open items
 
-- **Hand test not done:** Rapid Trigger. Tested (2026-11-17): slots 1 and 2 in daily use (slot 1 survives pairing slot 2), Fn+X cancel, DIP SW1/SW3/SW5 (owner's settings); SW2, SW4, SW6 checked by code review and `tests/test_dip_modes.c` / `test_hybrid_power.c` only. LESC passkey pairing with a Mac (slot 4, 2026-11-16).
+- **Hand test not done:** Rapid Trigger. Tested (2026-11-17): slots 1 and 2 in daily use (slot 1 survives pairing slot 2), Fn+X cancel (now Fn+Ctrl+X), DIP SW1/SW3/SW5 (owner's settings); SW2, SW4, SW6 checked by code review and `tests/test_dip_modes.c` / `test_hybrid_power.c` only. LESC passkey pairing with a Mac (slot 4, 2026-11-16).
 - **nRF52 P0.11/P0.12** (stock inputs with pull-ups): not traced. Other unknowns: [Hybrid hardware](hybrid-hardware.md#7-open-questions).
 - **HSI48 start fix:** matches ST's HAL; Bank 1 leaves HSI48 running on the Hybrid, so verify on a Classic.
 - **Link version:** the STM32 never checks `BLE_LINK_VERSION`. Left so: the `.hfb` always packs matching firmware, and refusing a mismatched nRF52 would block the update that fixes it.

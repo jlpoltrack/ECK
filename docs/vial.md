@@ -10,7 +10,7 @@ Build: on by default (CMake option `ECK_VIAL`; the code is under `VIAL_ENABLE`).
 
 The Vial app accepts only VIA protocol 9, and at protocol 9 the VIA web app wants an old-format definition without custom menus, so the **HHKB Settings** menu (scan rate, calibration, Rapid Trigger, LEDs) can't show. The app asks for the protocol version before anything else, so the keyboard can't tell the two apps apart.
 
-**Fn + Ctrl + V** switches to VIA mode: the keyboard reports protocol 12 and usevia.app shows the menu ([VIA](via.md)). Press it again, or restart the keyboard (unplug it; on the Hybrid on batteries, power it off), to go back to Vial. Each switch blinks the notify LED twice (the blue LED on the Hybrid, LED 0 on the Classic and Type-S, the Simple Mode LED on the R3S) and drops the keyboard off USB for 100 ms, so the open app reconnects and reads the new mode by itself. The chord goes by key position (the Fn key, or the left ◇ with SW4 on the HHKB; left Ctrl; V), whatever the keymap holds there, and isn't sent to the host.
+**Fn + Ctrl + V** switches to VIA mode: the keyboard reports protocol 12 and usevia.app shows the menu ([VIA](via.md)). Press it again, or restart the keyboard (unplug it; on the Hybrid on batteries, power it off), to go back to Vial. Each switch blinks the notify LED, twice into VIA mode and once back to Vial (the blue LED on the Hybrid, LED 0 on the Classic and Type-S, the Simple Mode LED on the R3S) and drops the keyboard off USB for 100 ms, so the open app reconnects and reads the new mode by itself. The chord goes by key position (the Fn key, or the left ◇ with SW4 on the HHKB; left Ctrl; V), whatever the keymap holds there, and isn't sent to the host.
 
 ## Size
 

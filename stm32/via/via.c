@@ -275,11 +275,12 @@ void via_init(void) {
 static volatile bool s_via_mode; // until restart: report VIA protocol 12 instead of Vial's 9
 static volatile bool s_via_reconnect;
 
-/* The apps read the protocol only when they connect: reconnect USB, and blink to confirm. */
+/* The apps read the protocol only when they connect: reconnect USB, and blink to confirm
+ * (2 blinks into VIA mode, 1 back to Vial). */
 void via_mode_toggle(void) {
     s_via_mode = !s_via_mode;
     s_via_reconnect = true;
-    indicators_blink(2);
+    indicators_blink(s_via_mode ? 2 : 1);
 }
 
 /* USB task: drop off the bus for 100 ms so the host re-enumerates and the app reconnects. */

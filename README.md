@@ -2,28 +2,57 @@
 
 # ECK
 
-Open firmware for the HHKB Professional Hybrid (and Classic / Classic Type-S). It runs on the keyboard's own STM32L072 and, on the Hybrid, its nRF52832 Bluetooth module, and installs over USB: no hardware changes.
+Open firmware for electrostatic-capacitive (Topre) keyboards built on the STM32L072. It runs on the keyboard's own controller and installs over USB: no soldering, no hardware changes.
 
-Tested on the Hybrid (PD-KB800BS); Classic and Classic Type-S build but are untested on hardware ([models](docs/models.md)).
+## Supported keyboards
 
-- STM32: electrostatic-capacitive key sensing, Rapid Trigger, VIA, USB HID, Hybrid power and battery handling.
-- nRF52 ([`nrf52/`](nrf52/README.md)): BLE HID keyboard on Nordic's S132 v7.2.0 SoftDevice, updated through the STM32.
+| Keyboard | Status | Install |
+| --- | --- | --- |
+| HHKB Professional Hybrid Type-S (`PD-KB800BS`) | **Tested**, USB and Bluetooth | [Web flasher](#web-flasher) or release `.hfb` |
+| HHKB Professional Classic | Builds; untested on hardware | Web flasher or release `.hfb` |
+| HHKB Professional Classic Type-S | Builds; untested on hardware | Web flasher or release `.hfb` |
+| Topre Realforce R3S US TKL (`R3SD13`, wired) | **New, in bring-up:** typing, indicators and VIA checked on the owner's keyboard; not in releases yet | [Build from source](#realforce-r3s) |
 
-Documentation starts at [docs/overview.md](docs/overview.md); open work is in [docs/deferred.md](docs/deferred.md).
+Model numbers, what isn't supported (JIS, HHKB Pro 2, Studio) and why: [docs/models.md](docs/models.md).
 
-## Web flasher
+## Features
 
-**<https://jlpoltrack.github.io/ECK/>** (Chrome or Edge on a desktop; it needs WebHID and WebUSB). It carries the latest release. Click **Connect keyboard** and it offers what applies to your keyboard: first install from stock (on the Hybrid, followed by ECK's boot stub, which enables USB updates and recovery), updates and settings backup on the Hybrid, the SW6 reinstall steps on a Classic, and recovery for a Hybrid that doesn't start.
+- **Key sensing:** scan rates up to 1000 Hz (stock HHKB: ~50 Hz), factory thresholds or per-key calibration, adjustable actuation point and hysteresis, Rapid Trigger.
+- **[Vial](docs/vial.md)** on every keyboard, no definition file needed: keymap, macros, tap dance, combos, key overrides, Caps Word, one-shot keys, QMK settings.
+- **[VIA](docs/via.md)** with the **HHKB Settings** menu (scan rate, calibration, Rapid Trigger, LEDs): press Fn + Ctrl + V to switch to VIA mode until the next restart.
+- Mod-Tap and Layer-Tap, two base/Fn layer pairs, assignable LEDs, stock DIP switch behaviour on the HHKB.
+- **Hybrid:** Bluetooth LE with four host slots on Nordic's S132 SoftDevice ([`nrf52/`](nrf52/README.md)), the stock key combinations, and much lower battery drain ([below](#hybrid-battery-life)).
 
-Tested on a Hybrid running ECK: keyboard and Bluetooth updates, settings backup and restore, and both recovery buttons. First install from stock firmware is not yet tested.
+Full feature list and day-to-day use: [docs/overview.md](docs/overview.md). Open work: [docs/deferred.md](docs/deferred.md).
+
+## Install
+
+### Web flasher
+
+**<https://jlpoltrack.github.io/ECK/>** (HHKB only; Chrome or Edge on a desktop, for WebHID and WebUSB). It carries the latest release. Click **Connect keyboard** and it offers what fits your keyboard: first install from stock (on the Hybrid, followed by ECK's boot stub, which enables USB updates and recovery), updates and settings backup on the Hybrid, the SW6 reinstall steps on a Classic, and recovery for a Hybrid that doesn't start.
+
+Tested on a Hybrid running ECK: keyboard and Bluetooth updates, settings backup and restore, both recovery buttons. First install from stock firmware is not yet tested.
 
 > On Windows, ST's DFU loader needs the WinUSB driver once (Zadig, device "DFU in FS Mode").
 
-After installing, change keymaps and settings in [VIA](https://www.usevia.app/) with [`stm32/via/via.json`](stm32/via/via.json).
+Command-line alternatives: [Hybrid updates](docs/hybrid-update.md), [Classic install](docs/install.md), [backup and restore](docs/backup-restore.md).
 
-## Hybrid power
+### Realforce R3S
 
-Stock firmware is either on (5.1 mA idle on batteries) or off; its auto power-off turns the keyboard fully off, and only the power switch or USB power brings it back. On batteries, ECK steps down instead:
+Not in releases yet. Build it (see [Build](#build-test-flash)) and flash over USB; this works from Topre's stock firmware, from ECK, or from ST's DFU loader:
+
+```bash
+./build.sh r3s
+uv run -q --with hidapi python3 tools/r3s/r3s_backup.py flash build/r3s/hhkb_ec_r3s.rfb
+```
+
+Chords (hold Fn + Ctrl): **W** switches Mac mode (Alt and Win swap on both sides, until unplugged; Simple Mode blinks blue twice for Mac, once for Win), **V** VIA mode (twice into VIA, once back to Vial). Num, Caps and Scroll Lock light as the computer reports them (macOS reports only Caps Lock). During a firmware update Simple Mode stays magenta.
+
+The R3S has no recovery switch: if no USB host answers within 15 s of power-up, it starts ST's DFU loader, and `r3s_backup.py` can flash or restore from there (including Topre's stock `.rfb`). Hardware notes and measurements: [docs/r3s-hardware.md](docs/r3s-hardware.md).
+
+## Hybrid battery life
+
+Stock firmware is either on (5.1 mA idle on batteries) or off. On batteries, ECK steps down instead:
 
 | State | When | Battery current | Wake |
 | --- | --- | --- | --- |
@@ -34,43 +63,43 @@ Stock firmware is either on (5.1 mA idle on batteries) or off; its auto power-of
 
 A day of 2 h typing, 6 h idle and 16 h asleep comes to roughly 2-3 months on two AA cells (estimate). Details: [overview](docs/overview.md#hybrid-use), [measurements](docs/hybrid-hardware.md#5-power).
 
-## Layout
-
-| Path | Contents |
-| --- | --- |
-| `stm32/app/` | Startup, keyboard task, FreeRTOS config |
-| `stm32/keys/` | Layers, hold-tap, one-shot, macros |
-| `stm32/via/` | VIA and Vial protocols, HHKB Settings menu, keymap/macro storage, `via.json` |
-| `stm32/usb/` | USB HID (TinyUSB glue, descriptors) |
-| `stm32/board/` | Shared firmware config, clocks, LEDs, EEPROM writer, linker script, FreeRTOS port |
-| `stm32/boards/hhkb/` | HHKB board: matrix, layout and EEPROM map (`board_config.h`), default keymap, matrix scan, DIP switches, board events |
-| `stm32/boards/r3s/` | Realforce R3S board (bring-up): matrix, layout, EEPROM map, scan, indicators |
-| `stm32/ec/` | Scan timing, calibration, Rapid Trigger |
-| `stm32/hybrid/` | Hybrid power, sleep, Bluetooth chords, SPI link to the nRF52 |
-| `stm32/boot/` | Hybrid Bank 1 boot stub |
-| `stm32/vendor/` | FreeRTOS 11.3.3, TinyUSB 0.21.0 subset, ST CMSIS and LL headers |
-| `common/` | `ble_link.h`, shared by the STM32 and nRF52 builds |
-| `nrf52/` | nRF52832 Bluetooth app (nRF5 SDK 17.1.1) |
-| `tools/` | `.hfb` builder, flashers, Hybrid updater, build hash check, web bundler; `tools/bench/` |
-| `web/` | Web flasher |
-| `tests/` | Host unit tests (C and Python) |
-
 ## Build, test, flash
 
 Needs the Arm GNU Toolchain 15.3.Rel2 (`arm-none-eabi-gcc`; CI uses the same), CMake, `uv`, and for the Hybrid `.hfb` the nRF5 SDK 17.1.1 at `../nRF5_SDK_17.1.1`.
 
 ```bash
-./build.sh hybrid    # build/hybrid/hhkb_ec_hybrid.bin and .hfb (also classic, type_s)
+./build.sh hybrid    # build/hybrid/hhkb_ec_hybrid.bin and .hfb; also classic, type_s, r3s
 tests/run_all_tests.sh
 uv run --with hidapi python3 tools/hybrid_update.py stm32 build/hybrid/hhkb_ec_hybrid.bin
 ```
 
 Options, CI and releases: [docs/build.md](docs/build.md).
 
+## Layout
+
+| Path | Contents |
+| --- | --- |
+| `stm32/app/` | Startup, keyboard task, FreeRTOS config |
+| `stm32/keys/` | Layers, hold-tap, one-shot, macros |
+| `stm32/via/` | Vial and VIA protocols, HHKB Settings menu, keymap/macro storage, HHKB `via.json` |
+| `stm32/usb/` | USB HID (TinyUSB glue, descriptors) |
+| `stm32/board/` | Shared firmware config, clocks, LEDs, EEPROM writer, linker script, FreeRTOS port |
+| `stm32/boards/hhkb/` | HHKB board: matrix, layout and EEPROM map (`board_config.h`), default keymap, matrix scan, DIP switches |
+| `stm32/boards/r3s/` | Realforce R3S board: matrix, layout, EEPROM map, scan, indicators, `via.json` |
+| `stm32/ec/` | Scan timing, calibration, Rapid Trigger |
+| `stm32/hybrid/` | Hybrid power, sleep, Bluetooth chords, SPI link to the nRF52 |
+| `stm32/boot/` | Hybrid Bank 1 boot stub |
+| `stm32/vendor/` | FreeRTOS 11.3.3, TinyUSB 0.21.0 subset, ST CMSIS and LL headers |
+| `common/` | `ble_link.h`, shared by the STM32 and nRF52 builds |
+| `nrf52/` | nRF52832 Bluetooth app (nRF5 SDK 17.1.1) |
+| `tools/` | `.hfb` builder, flashers, Hybrid updater, build hash check, web bundler; `tools/bench/` (bench measurements), `tools/r3s/` (R3S flasher and analysis) |
+| `web/` | Web flasher |
+| `tests/` | Host unit tests (C and Python) |
+
 ## Origin and licence
 
 Borrows code from [aroum/dmk](https://github.com/aroum/dmk) (MIT), including aroum's HHKB Classic port.
 
-MIT ([LICENSE](LICENSE)). Third-party parts keep their own licences: FreeRTOS (MIT), TinyUSB (MIT, `stm32/vendor/tinyusb/LICENSE`), ST CMSIS and LL headers (`stm32/vendor/st/*/LICENSE.md`), Nordic linker script (see [nrf52/README.md](nrf52/README.md)). The released firmware also contains Nordic's SoftDevice and nRF5 SDK code; [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists everything in the binaries with its licence and ships with each release. PFU firmware is not included or redistributed.
+MIT ([LICENSE](LICENSE)). Third-party parts keep their own licences: FreeRTOS (MIT), TinyUSB (MIT, `stm32/vendor/tinyusb/LICENSE`), ST CMSIS and LL headers (`stm32/vendor/st/*/LICENSE.md`), Nordic linker script (see [nrf52/README.md](nrf52/README.md)). The released firmware also contains Nordic's SoftDevice and nRF5 SDK code; [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists everything in the binaries with its licence and ships with each release. PFU and Topre firmware is not included or redistributed.
 
-ECK is an independent project, not affiliated with or endorsed by PFU Limited. HHKB and Happy Hacking Keyboard are trademarks of PFU Limited; they are used here only to name the keyboards ECK runs on.
+ECK is an independent project, not affiliated with or endorsed by PFU Limited or Topre Corporation. HHKB and Happy Hacking Keyboard are trademarks of PFU Limited; Realforce is a trademark of Topre Corporation. They are used here only to name the keyboards ECK runs on.

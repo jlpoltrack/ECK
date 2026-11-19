@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* Stock Hybrid Bluetooth chords (PFU manual), all with Fn held: Ctrl+1..4 select a host slot,
- * Ctrl+0 USB; Q pairing standby, then Ctrl+1..4 pairs, Ctrl+Delete+1..4 forgets a host and
- * Z+Delete forgets all; X cancels. */
+/* Hybrid Bluetooth chords, all Fn+Ctrl (PFU's Q, X and Z+Delete take Fn only): 1..4 select a host
+ * slot, 0 USB; Q pairing standby, then 1..4 pairs, Delete+1..4 forgets a host and Delete+Z forgets
+ * all; X cancels. */
 typedef enum {
     CHORD_NONE,
     CHORD_SELECT,    /* *slot */
