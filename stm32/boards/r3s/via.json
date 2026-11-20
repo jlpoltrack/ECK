@@ -23,44 +23,8 @@
       "label": "Settings",
       "content": [
         {
-          "label": "Scan Rate",
+          "label": "Tap-hold",
           "content": [
-            {
-              "label": "USB scan rate",
-              "type": "dropdown",
-              "options": [
-                [
-                  "50 Hz",
-                  0
-                ],
-                [
-                  "125 Hz",
-                  1
-                ],
-                [
-                  "250 Hz",
-                  2
-                ],
-                [
-                  "500 Hz",
-                  3
-                ]
-              ],
-              "content": [
-                "id_hhkb_scan_rate",
-                0,
-                13
-              ]
-            },
-            {
-              "label": "ADC oversampling (4x)",
-              "type": "toggle",
-              "content": [
-                "id_hhkb_adc_oversampling",
-                0,
-                18
-              ]
-            },
             {
               "label": "Tapping term (10 ms units)",
               "type": "range",
@@ -81,15 +45,6 @@
                 "id_hhkb_permissive_hold",
                 0,
                 15
-              ]
-            },
-            {
-              "label": "Tap preferred",
-              "type": "toggle",
-              "content": [
-                "id_hhkb_tap_preferred",
-                0,
-                16
               ]
             },
             {
@@ -154,6 +109,15 @@
               "type": "label",
               "content": [
                 "Status does not update live. Click Refresh status or view HID Console."
+              ]
+            },
+            {
+              "label": "Calibration Monitor (HID Console)",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_debug_cal",
+                0,
+                25
               ]
             },
             {
@@ -547,15 +511,6 @@
                 0,
                 5
               ]
-            },
-            {
-              "label": "Settings EEPROM",
-              "type": "label",
-              "content": [
-                "id_hhkb_settings_status",
-                0,
-                12
-              ]
             }
           ]
         },
@@ -563,10 +518,10 @@
           "label": "Rapid Trigger",
           "content": [
             {
-              "label": "Rapid Trigger",
+              "label": "How it works",
               "type": "label",
               "content": [
-                "After the actuation point, release and re-press follow key movement without returning to the top."
+                "After actuation, release and re-press follow the key's movement."
               ]
             },
             {
@@ -1025,7 +980,7 @@
           ]
         },
         {
-          "label": "Debug",
+          "label": "Firmware",
           "content": [
             {
               "label": "Firmware Version",
@@ -1035,41 +990,45 @@
                 0,
                 28
               ]
-            },
+            }
+          ]
+        },
+        {
+          "label": "Reset",
+          "content": [
             {
-              "label": "EC Matrix Stream",
-              "type": "toggle",
+              "label": "Resets",
+              "type": "label",
               "content": [
-                "id_hhkb_debug_enable",
-                0,
-                19
+                "Calibration, Rapid Trigger, tap-hold, LEDs, System 2."
               ]
             },
             {
-              "label": "VIA Telemetry Diag",
-              "type": "toggle",
+              "label": "Keeps",
+              "type": "label",
               "content": [
-                "id_hhkb_debug_via",
-                0,
-                23
+                "Keymap, macros and Vial entries. The keyboard restarts."
               ]
             },
             {
-              "label": "Polling Rate Monitor",
+              "label": "Allow settings reset",
               "type": "toggle",
               "content": [
-                "id_hhkb_debug_rate",
+                "id_hhkb_reset_arm",
                 0,
-                24
+                32
               ]
             },
             {
-              "label": "Calibration Monitor",
-              "type": "toggle",
+              "label": "Reset all settings",
+              "type": "button",
               "content": [
-                "id_hhkb_debug_cal",
+                "id_hhkb_reset_all",
                 0,
-                25
+                33
+              ],
+              "options": [
+                1
               ]
             }
           ]

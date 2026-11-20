@@ -9,8 +9,7 @@
 #ifdef HHKB_HYBRID
 #include "hybrid_ble.h"
 #include "ble_link.h"
-/* Hybrid and diagnostic IDs follow the shared IDs 1..28. */
-#define HHKB_ID_BLE_SCAN_RATE 29
+/* Hybrid and diagnostic IDs follow the shared IDs 1..28 (29, the Bluetooth scan rate, is retired). */
 #define HHKB_ID_NRF_UPDATE 30 /* tools/hybrid_update.py nrf */
 #define NRF_INSTALL_QUIET_MS 30000U
 
@@ -54,6 +53,9 @@ static bool nrf_update_command(uint8_t const *request, uint8_t *response) {
 }
 #endif
 #define HHKB_ID_ADC_DIAG 31 /* tools/bench/key_depth.py (HHKB_ADC_DIAGNOSTICS builds) */
+#define HHKB_ID_RESET_ARM 32 /* "Allow settings reset": not saved, off at start-up */
+#define HHKB_ID_RESET 33     /* "Reset all settings": only while armed; restarts the keyboard */
+static bool s_reset_armed;
 
 /* Channel 0, the via.json "HHKB Settings" menu: IDs 1..28 on every model, 29..31 as above. */
 bool hhkb_via_command(uint8_t const *request, uint8_t *response) {
@@ -63,14 +65,6 @@ bool hhkb_via_command(uint8_t const *request, uint8_t *response) {
 #ifdef HHKB_ID_NRF_UPDATE
     if (id == HHKB_ID_NRF_UPDATE) return nrf_update_command(request, response);
 #endif
-#ifdef HHKB_ID_BLE_SCAN_RATE
-    if (id == HHKB_ID_BLE_SCAN_RATE) {
-        if (request[0] == 0x08) response[3] = hybrid_ble_scan_rate();
-        else if (request[0] == 0x07) hybrid_ble_set_scan_rate(request[3]);
-        else return false;
-        return true;
-    }
-#endif
 #ifdef HHKB_ADC_DIAGNOSTICS
     if (id == HHKB_ID_ADC_DIAG && request[0] == 0x08) { /* [3] kind, [4] first key */
         if (request[3] == 5) stack_diag_read(&response[5]);
@@ -78,7 +72,15 @@ bool hhkb_via_command(uint8_t const *request, uint8_t *response) {
         return true;
     }
 #endif
+    if (id == HHKB_ID_RESET_ARM || id == HHKB_ID_RESET) {
+        if (request[0] == 0x08) response[3] = id == HHKB_ID_RESET_ARM && s_reset_armed;
+        else if (request[0] != 0x07 || request[3] > 1) return false;
+        else if (id == HHKB_ID_RESET_ARM) s_reset_armed = request[3] != 0;
+        else if (request[3] && s_reset_armed) s_reset_armed = !hhkb_settings_reset_request();
+        return true;
+    }
     if (id < 1 || id > 28) return false;
+    if (id == 13 || id == 16 || id == 18) return false; /* retired: scan rate, tap preferred, oversampling */
     if (request[0] == 0x08) {
         if (id == 12) {
             const char *status = hhkb_settings_storage_writable() ? "Writable" : "Occupied: not saved";
@@ -107,12 +109,8 @@ bool hhkb_via_command(uint8_t const *request, uint8_t *response) {
             hhkb_get_debug_raw_str((char *)&response[3], 28);
         } else if (id == 22) {
             hhkb_get_debug_travel_str((char *)&response[3], 28);
-        } else if (id == 18) {
-            response[3] = hhkb_get_oversampling();
         } else if (id >= 14) {
             response[3] = hhkb_get_hold_tap_setting(id - 14);
-        } else if (id == 13) {
-            response[3] = hhkb_get_scan_rate();
         } else if (id == 2) {
             response[3] = hhkb_calibration_enabled();
         } else if (id == 9 || id == 10) {
@@ -138,13 +136,8 @@ bool hhkb_via_command(uint8_t const *request, uint8_t *response) {
         } else if (id == 25) {
             if (request[3] > 1) return false;
             hhkb_set_debug_flag(DEBUG_FLAG_CAL, request[3] != 0);
-        } else if (id == 18) {
-            if (request[3] > 1) return false;
-            hhkb_set_oversampling(request[3] != 0);
         } else if (id >= 14) {
             hhkb_set_hold_tap_setting(id - 14, request[3]);
-        } else if (id == 13) {
-            hhkb_set_scan_rate(request[3]);
         } else if (id == 2) {
             hhkb_calibration_set_enabled(request[3] != 0);
         } else if (id == 7 && request[3]) {

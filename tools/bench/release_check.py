@@ -25,8 +25,9 @@ from via_hid import open_keyboard, via  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HFB = os.path.join(ROOT, "build/hybrid/hhkb_ec_hybrid.hfb")
+BIN = os.path.join(ROOT, "build/hybrid/hhkb_ec_hybrid.bin")  # the STM32 alone: no nRF5 SDK needed
 DIAG_DEFS = "HHKB_ADC_DIAGNOSTICS,HHKB_SCAN_DIAGNOSTICS"
-VERSION_ID, NRF_ID, OVERSAMPLING_ID = 28, 30, 18   # VIA custom values (stm32/via/hhkb_via_controls.c)
+VERSION_ID, NRF_ID = 28, 30   # VIA custom values (stm32/via/hhkb_via_controls.c)
 UPD_RESTART, UPD_RECOVERY = 4, 5
 # Baselines from AGENTS.md (Bench): interrupts-off scan half 408 us, rest noise median p-p 12-13
 SCAN_HALF_WARN_US, SCAN_WHOLE_LIMIT_US, NOISE_WARN = 450, 1000, 16
@@ -88,29 +89,7 @@ def flash_stm32(hfb, label):
     return code == 0
 
 
-def set_oversampling(value):
-    h = open_keyboard()
-    try:
-        old = via(h, [0x08, 0, OVERSAMPLING_ID])[3]
-        if old != value:
-            via(h, [0x07, 0, OVERSAMPLING_ID, value])
-            time.sleep(1)  # the keyboard saves settings 500 ms after a change
-        return old
-    finally:
-        h.close()
-
-
 def perf():
-    # Oversampling (4x ADC reads) applies at 500 Hz and below, e.g. on Bluetooth: off here, so
-    # the scan times compare with the 1 kHz baselines whichever output is selected.
-    old = set_oversampling(0)
-    try:
-        perf_measure()
-    finally:
-        set_oversampling(old)
-
-
-def perf_measure():
     code, out = run(py("tools/bench/key_depth.py", "scantime", "5"), 60)
     halves = [int(x) for x in re.findall(r"interrupts off: (\d+) us", out)]
     wholes = [int(x) for x in re.findall(r"whole scan: (\d+) us", out)]
@@ -178,7 +157,7 @@ DIAG_INSTALLED = False
 
 def checks(a):
     global DIAG_INSTALLED
-    minutes = 2 + 2 * a.perf + 2 * a.nrf
+    minutes = 1 + a.perf + a.nrf  # measured: --nrf with --hfb 107 s (2026-11-19)
     print(f"Don't use the keyboard until the summary prints (about {minutes} min): typing during the run "
           "skews the measurements and can fail the EEPROM check.\n", flush=True)
 
@@ -193,7 +172,7 @@ def checks(a):
     keyboard_info()  # the backup restarts the keyboard: wait until it is back
 
     if a.perf:
-        if build(DIAG_DEFS) and flash_stm32(HFB, "diagnostics"):
+        if build(DIAG_DEFS) and flash_stm32(BIN, "diagnostics"):
             DIAG_INSTALLED = True
             keyboard_info()
             print("hands off the keyboard for ~15 s ...", flush=True)

@@ -245,6 +245,10 @@ void tud_mount_cb(void) {
 // Invoked when device is unmounted
 void tud_umount_cb(void) {}
 
+bool usb_host_asleep(void) {
+    return tud_mounted() && tud_suspended();
+}
+
 // Invoked when device is suspended
 void tud_suspend_cb(bool remote_wakeup_en) {
     (void)remote_wakeup_en;
@@ -327,7 +331,7 @@ void usb_diag_task(void) {
 
         if (hhkb_get_debug_flag(1U << 2)) { // DEBUG_FLAG_RATE
             static const uint16_t s_target_rates[5] = {50, 125, 250, 500, 1000};
-            uint8_t r_idx = hhkb_get_scan_rate();
+            uint8_t r_idx = hhkb_active_scan_rate();
             uint16_t target_hz = (r_idx <= 4) ? s_target_rates[r_idx] : 1000;
 #ifdef HHKB_SCAN_DIAGNOSTICS
             uint32_t scan_us = 0, scan_max_us = 0, work_max_us = 0, missed = 0, q_full = 0;

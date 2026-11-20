@@ -27,11 +27,13 @@ If it still fails, check `chrome://device-log` for `HID` or `hidraw` entries.
 
 A keyboard with no saved settings uses PFU's factory thresholds with custom calibration and Rapid Trigger off.
 
-- **Scan rate:** 50, 125, 250, 500 or 1000 Hz (default 1000). The Hybrid has a separate Bluetooth rate (default 250 Hz).
-- **ADC oversampling ×4:** averages four conversions per key at 50–500 Hz on USB; 1000 Hz and Hybrid batteries always use ×1. The choice is kept for when the rate drops again.
 - **Tapping term:** 50–500 ms (default 220). **Quick tap:** 0–500 ms (default 150; 0 disables).
 - **Actuation, hysteresis, Rapid Trigger press/release sensitivity:** 0.1–4.0 mm. **RT top dead zone:** 0.0–0.6 mm. Defaults: actuation 3.0 mm, hysteresis 0.4 mm. Millimetres map the calibrated signal range onto a nominal 4 mm travel; they are a scale, not a measurement (the sensor response is non-linear).
 - **LEDs PA8 and PA9:** Off, Debug heartbeat, Caps Lock, Fn layer, System 2, or Bluetooth status (Hybrid). Defaults: Caps Lock and Fn layer (Classic); Bluetooth status and Off (Hybrid).
+
+Scan rates are fixed, not settings: 1000 Hz over USB, 250 Hz over Bluetooth, 50 Hz while the computer sleeps.
+
+**Reset:** turn on **Allow settings reset**, then click **Reset all settings**: every setting above returns to its default, and custom calibration and System 2 are cleared; the keymap, macros, Vial entries, Bluetooth pairings and USB/Bluetooth choice stay. The keyboard restarts. The toggle is off again after any restart. It does nothing if the settings area holds data that isn't ECK's.
 
 **Systems:** assign **System 1** (`0x7E00`) or **System 2** (`0x7E01`) to switch between layers 0/1 and 2/3. Put each selector where the other system can reach it.
 
@@ -42,7 +44,7 @@ A keyboard with no saved settings uses PFU's factory thresholds with custom cali
 3. Fully press every key you want calibrated. To see which are done, open VIA's **Key Tester** with **Test Matrix** on; calibration keeps running across tabs.
 4. Click **Finish and save** (only keys with a valid range are updated).
 
-The status counter doesn't update by itself: click **Refresh status**. For live progress, turn on **Debug → Calibration Monitor** and watch the [HID Console](debug.md).
+The status counter doesn't update by itself: click **Refresh status**. For live progress, turn on **Calibration Monitor (HID Console)** in the same section and watch the [HID Console](debug.md).
 
 ## Storage
 

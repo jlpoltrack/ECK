@@ -15,9 +15,8 @@ bool hybrid_ble_power_off_done(void);
 uint8_t hybrid_ble_slot(void);
 /* True while key reports go to Bluetooth (no USB host, or Bluetooth selected). */
 bool hybrid_ble_transport_active(void);
-/* Matrix scan rate used on Bluetooth, same encoding as hhkb_get_scan_rate (0..4 = 50..1000 Hz). */
-uint8_t hybrid_ble_scan_rate(void);
-void hybrid_ble_set_scan_rate(uint8_t rate);
+/* USB is the output and the host has suspended it. */
+bool hybrid_usb_asleep(void);
 /* Bluetooth status LED in the stock patterns (see hybrid_ble.c). */
 bool hybrid_ble_status_led(TickType_t now);
 /* nRF52 update: queue one BLE_LINK_UPDATE payload (false while the previous one is in flight). */

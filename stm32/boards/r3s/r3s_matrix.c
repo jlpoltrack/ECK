@@ -30,7 +30,6 @@ static uint16_t s_row_pin[MATRIX_ROWS] = {1U << 13, 1U << 14, 1U << 15, 1U << 0,
 static uint16_t s_raw[MATRIX_COLS][MATRIX_ROWS];
 static uint8_t s_col_rows[MATRIX_COLS]; /* rows with a key, per column (from LAYOUT) */
 static uint32_t s_col_addr[MATRIX_COLS]; /* mux address BSRR value per column */
-static bool s_oversampling_applied = false;
 #define BOOT_REST_SKIP 8U    /* scans before averaging: supply and ADC settle */
 #define BOOT_REST_SCANS 16U
 static uint32_t s_boot_sum[MATRIX_COLS][MATRIX_ROWS];
@@ -111,19 +110,6 @@ void hhkb_matrix_hardware_init(void) {
     hhkb_calibration_load();
 }
 
-static void apply_oversampling(bool on) {
-    if (on == s_oversampling_applied) return;
-    while (ADC1->CR & ADC_CR_ADSTART);
-    ADC1->CR |= ADC_CR_ADDIS;
-    while (ADC1->CR & ADC_CR_ADEN);
-    if (on) ADC1->CFGR2 |= ADC_CFGR2_OVSE | LL_ADC_OVS_RATIO_4 | LL_ADC_OVS_SHIFT_RIGHT_2;
-    else ADC1->CFGR2 &= ~ADC_CFGR2_OVSE;
-    ADC1->ISR = ADC_ISR_ADRDY;
-    ADC1->CR |= ADC_CR_ADEN;
-    while (!(ADC1->ISR & ADC_ISR_ADRDY));
-    s_oversampling_applied = on;
-}
-
 /* Previous key's result, done inside the next key's settle wait (as the HHKB's scan). */
 static inline __attribute__((always_inline)) void key_result(matrix_row_t m[], uint8_t col, uint8_t row,
         uint16_t val, const rt_cfg_t *cfg, bool is_calibrating, bool *changed) {
@@ -166,7 +152,6 @@ __attribute__((section(".RamFunc"), optimize("O2")))
 bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
     if (!(RCC->APB1ENR & RCC_APB1ENR_TIM2EN)) return false; // the settle waits need TIM2
     hhkb_record_matrix_scan();
-    apply_oversampling(hhkb_get_oversampling() && hhkb_active_scan_rate() <= 3);
 
     bool capture = hhkb_cal_is_capturing_baseline();
     bool is_calibrating = hhkb_is_calibrating();

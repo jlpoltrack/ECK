@@ -8,8 +8,8 @@ Open firmware for the HHKB Professional Hybrid, Classic and Classic Type-S, and 
 ## Features
 
 - [Vial](vial.md): keymap, macros, tap dance, combos, key overrides and QMK settings, no definition file needed.
-- [VIA](via.md): keymap, macros and the **HHKB Settings** menu (scan rate, calibration, Rapid Trigger, LEDs, debug), in VIA mode (Fn + Ctrl + V).
-- Scan rate 50–1000 Hz (stock: about 50 Hz); the Hybrid has separate USB and Bluetooth rates (defaults 1000 and 250 Hz). Optional ×4 ADC oversampling at 50–500 Hz on USB.
+- [VIA](via.md): keymap, macros and the **HHKB Settings** menu (tap-hold, calibration, Rapid Trigger, LEDs, reset), in VIA mode (Fn + Ctrl + V).
+- Scan rate 1000 Hz over USB (stock: about 50 Hz), 250 Hz over Bluetooth, 50 Hz while the computer sleeps; fixed, not settings.
 - PFU's factory thresholds by default, or per-key calibration with adjustable actuation point and hysteresis.
 - Rapid Trigger (off by default) with separate press and release sensitivity.
 - Mod-Tap and Layer-Tap with tapping term, permissive hold, tap preference and quick tap.
@@ -18,7 +18,7 @@ Open firmware for the HHKB Professional Hybrid, Classic and Classic Type-S, and 
 - DIP switches SW1–SW5 as stock ([details](config.md#dip-switches)); SW6 is Bank 1 recovery on the Classic ([SW6 recovery](backup-restore.md#sw6-recovery)) and auto power-off on the Hybrid.
 - Hybrid: Bluetooth LE with four host slots, the stock key combinations, power switch and battery handling.
 
-The 32 MHz clock and all scan rates are normal MCU operating modes, not overclocking. Classic current from aroum/dmk (not re-measured): stock 7.5 mA, 500 Hz with oversampling 10 mA, 1000 Hz 12 mA; select 50 Hz to return to about stock.
+The 32 MHz clock and all scan rates are normal MCU operating modes, not overclocking. Classic current from aroum/dmk (not re-measured): stock 7.5 mA, 1000 Hz 12 mA. While the computer sleeps (USB suspended), every model scans at 50 Hz, about stock current; a key press still wakes it where SW6 allows.
 
 ## Hybrid use
 

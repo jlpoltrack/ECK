@@ -11,6 +11,7 @@
 #ifdef HHKB_HYBRID
 #include "hybrid.h"
 #include "hybrid_ble.h"
+#include "platform.h"
 /* A key counts as pressed in calibration this far above rest (Hybrid: full press ~2500). */
 #define CAL_MIN_SWING 600U
 #else
@@ -21,9 +22,10 @@
 #define BOARD_TYPICAL_TRAVEL 2370U /* rest to full press without calibration (HHKB) */
 #endif
 #define TOPRE_TYPICAL_TRAVEL_COUNTS BOARD_TYPICAL_TRAVEL
-#ifndef BOARD_DEFAULT_SCAN_RATE
-#define BOARD_DEFAULT_SCAN_RATE 4 // 1000 Hz
+#ifndef BOARD_SCAN_RATE
+#define BOARD_SCAN_RATE 4 /* USB scan rate, fixed: 1000 Hz */
 #endif
+#define BLE_SCAN_RATE 2U /* Bluetooth, fixed: 250 Hz, above the 15-30 ms connection interval and kind to batteries */
 #define CAL_BASELINE_SAMPLES 16U
 #define HHKB_SETTINGS_SAVE_DELAY_MS 500U
 
@@ -81,12 +83,9 @@ static rt_cfg_t s_rt_cfg = {
 };
 static uint16_t s_classic_release_pm = 100; // Default 10% travel hysteresis (0.4 mm)
 
-static uint8_t s_scan_rate = BOARD_DEFAULT_SCAN_RATE;
-static bool s_oversampling_requested = false;
 static uint8_t s_tapping_term_10ms = 22; // 220 ms
 static uint8_t s_quick_tap_10ms = 15;    // 150 ms
 static uint8_t s_permissive_hold = 1;
-static uint8_t s_tap_preferred = 0;
 #ifdef HHKB_HYBRID
 static const uint8_t k_led_default[2] = {HHKB_LED_MODE_BLE, 0}; // stock: off except status patterns
 #else
@@ -183,12 +182,10 @@ void hhkb_calibration_save_to_eeprom(void) {
     cal.led_modes = (uint8_t)((s_led_mode[0] & 0x0F) | (s_led_mode[1] << 4));
     cal.rt = s_rt_cfg;
     cal.classic_release_pm = s_classic_release_pm;
-    cal.scan_rate = s_scan_rate;
+    cal.scan_rate = BOARD_SCAN_RATE; /* no longer a setting; the field stays for the record layout */
     cal.tapping_term_10ms = s_tapping_term_10ms;
     cal.quick_tap_10ms = s_quick_tap_10ms;
-    cal.flags = (s_permissive_hold ? 1 : 0) |
-                (s_tap_preferred ? 2 : 0) |
-                (s_oversampling_requested ? 4 : 0) |
+    cal.flags = (s_permissive_hold ? 1 : 0) | /* bits 1 (tap preferred), 2 (oversampling): retired, 0 */
                 (s_custom_calibration ? 8 : 0) |
                 ((s_debug_flags & DEBUG_FLAG_TOPRE) ? 16 : 0) |
                 ((s_system & 1) << 5);
@@ -237,16 +234,11 @@ _Static_assert(sizeof(hhkb_eeprom_hkcd_t) == sizeof(hhkb_eeprom_cal_t) &&
 /* Settings beyond calibration and rapid trigger, as the HKCD firmware read them. */
 static void load_hkcd_settings(const volatile hhkb_eeprom_hkcd_t *old) {
     uint8_t r0 = old->reserved[0], r1 = old->reserved[1], r2 = old->reserved[2];
-    if ((r0 & 7) >= 1 && (r0 & 7) <= 5) s_scan_rate = (r0 & 7) - 1;
     if (r1 >= 5 && r1 <= 50) {
         s_tapping_term_10ms = r1;
         if ((r2 & 0x7f) <= 50) s_quick_tap_10ms = r2 & 0x7f;
     }
-    if (r2 & 0x80) s_oversampling_requested = (r0 & 0x40) != 0;
-    if (r0 & 0x80) {
-        s_permissive_hold = (r0 & 0x10) != 0;
-        s_tap_preferred = (r0 & 0x20) != 0;
-    }
+    if (r0 & 0x80) s_permissive_hold = (r0 & 0x10) != 0;
     if (old->classic_release_pm >= 25 && old->classic_release_pm <= 1000) s_classic_release_pm = old->classic_release_pm;
     s_custom_calibration = old->custom_calibration == 1;
     for (uint8_t i = 0; i < 2; i++)
@@ -277,12 +269,9 @@ void hhkb_calibration_load(void) {
     // A bad CRC (e.g. power lost mid-save) falls through to the defaults below.
     if (cal->magic == USER_EEPROM_MAGIC && cal->crc16 == compute_crc16((const uint8_t *)&cal->baseline,
                                                      sizeof(*cal) - offsetof(hhkb_eeprom_cal_t, baseline))) {
-        if (cal->scan_rate <= 4) s_scan_rate = cal->scan_rate;
         if (cal->tapping_term_10ms >= 5 && cal->tapping_term_10ms <= 50) s_tapping_term_10ms = cal->tapping_term_10ms;
         if (cal->quick_tap_10ms <= 50) s_quick_tap_10ms = cal->quick_tap_10ms;
         s_permissive_hold = (cal->flags & 1) != 0;
-        s_tap_preferred = (cal->flags & 2) != 0;
-        s_oversampling_requested = (cal->flags & 4) != 0;
         s_custom_calibration = (cal->flags & 8) != 0;
         if (cal->flags & 16) {
             s_debug_flags |= DEBUG_FLAG_TOPRE;
@@ -332,9 +321,27 @@ void hhkb_calibration_load(void) {
     }
 }
 
+/* Reset all settings (VIA): the restart waits until the VIA reply has gone out. */
+#define SETTINGS_RESET_DELAY_MS 200U
+static bool s_reset_pending;
+static TickType_t s_reset_requested;
+
+bool hhkb_settings_reset_request(void) {
+    if (!hhkb_settings_storage_writable()) return false; /* not ECK's record: leave it */
+    s_reset_requested = xTaskGetTickCount();
+    s_reset_pending = true;
+    return true;
+}
+
+static void settings_reset(void) {
+    eeprom_write_word((volatile uint32_t *)USER_EEPROM_ADDR, 0); /* no magic: defaults at start-up */
+    platform_system_reset();
+}
+
 void hhkb_settings_task(void) {
-    if (!s_settings_dirty) return;
     TickType_t now = xTaskGetTickCount();
+    if (s_reset_pending && (now - s_reset_requested) >= pdMS_TO_TICKS(SETTINGS_RESET_DELAY_MS)) settings_reset();
+    if (!s_settings_dirty) return;
     if ((now - s_settings_dirty_time) >= pdMS_TO_TICKS(HHKB_SETTINGS_SAVE_DELAY_MS)) {
         taskENTER_CRITICAL();
         s_settings_dirty = false;
@@ -405,13 +412,22 @@ void hhkb_calibration_set_enabled(bool enabled) {
 }
 bool hhkb_is_calibrating(void) { return s_calibration_mode; }
 
-uint8_t hhkb_get_scan_rate(void) { return s_scan_rate; }
 uint8_t hhkb_active_scan_rate(void) {
 #ifdef HHKB_HYBRID
     if (hybrid_ble_update_active()) return 0; /* 50 Hz: the scan would starve the update relay */
-    if (hybrid_ble_transport_active()) return hybrid_ble_scan_rate();
+    if (hybrid_ble_transport_active()) return BLE_SCAN_RATE;
 #endif
-    return s_scan_rate;
+    return BOARD_SCAN_RATE;
+}
+/* USB host asleep: a key press there only wakes it (or nothing, with power saving), and the
+ * Fn+Ctrl chords, so 50 Hz is enough. */
+bool hhkb_usb_sleep_idle_allowed(void) {
+#ifdef HHKB_HYBRID
+    if (!hybrid_usb_asleep() || hybrid_ble_update_active()) return false;
+#else
+    if (!usb_host_asleep()) return false;
+#endif
+    return !s_calibration_mode;
 }
 bool hhkb_scan_idle_allowed(void) {
 #ifdef HHKB_HYBRID
@@ -421,26 +437,11 @@ bool hhkb_scan_idle_allowed(void) {
     return false;
 #endif
 }
-void hhkb_set_scan_rate(uint8_t rate) {
-    if (rate > 4) return;
-    taskENTER_CRITICAL();
-    s_scan_rate = rate;
-    taskEXIT_CRITICAL();
-    hhkb_settings_mark_dirty();
-}
-
-bool hhkb_get_oversampling(void) { return s_oversampling_requested; }
-void hhkb_set_oversampling(bool enabled) {
-    if (s_oversampling_requested == enabled) return;
-    s_oversampling_requested = enabled;
-    hhkb_settings_mark_dirty();
-}
 
 uint8_t hhkb_get_hold_tap_setting(uint8_t id) {
     switch (id) {
     case 0: return s_tapping_term_10ms;
     case 1: return s_permissive_hold;
-    case 2: return s_tap_preferred;
     case 3: return s_quick_tap_10ms;
     default: return 0;
     }
@@ -450,7 +451,6 @@ void hhkb_set_hold_tap_setting(uint8_t id, uint8_t value) {
     taskENTER_CRITICAL();
     if (id == 0 && value >= 5 && value <= 50) s_tapping_term_10ms = value;
     else if (id == 1 && value <= 1) s_permissive_hold = value;
-    else if (id == 2 && value <= 1) s_tap_preferred = value;
     else if (id == 3 && value <= 50) s_quick_tap_10ms = value;
     else { taskEXIT_CRITICAL(); return; }
     taskEXIT_CRITICAL();
@@ -461,7 +461,6 @@ uint16_t hold_tap_config_value(uint8_t id) {
     switch (id) {
     case 0: return (uint16_t)s_tapping_term_10ms * 10;
     case 1: return s_permissive_hold;
-    case 2: return s_tap_preferred;
     case 3: return (uint16_t)s_quick_tap_10ms * 10;
     default: return 0;
     }

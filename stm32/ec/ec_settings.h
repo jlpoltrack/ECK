@@ -27,10 +27,10 @@ typedef struct __attribute__((aligned(4))) {
     uint16_t baseline[MATRIX_COLS][MATRIX_ROWS]; // HHKB: 120 bytes
     uint16_t peak[MATRIX_COLS][MATRIX_ROWS];     // HHKB: 120 bytes
     rt_cfg_t rt;                                 // 10 bytes
-    uint8_t  scan_rate;                          // 0..4
+    uint8_t  scan_rate;                          // retired: written as the fixed USB rate
     uint8_t  tapping_term_10ms;                  // 5..50
     uint8_t  quick_tap_10ms;                     // 0..50
-    uint8_t  flags;                              // bit 0: permissive_hold, bit 1: tap_pref, bit 2: oversampling, bit 3: custom_cal, bit 4: debug, bit 5: system, bit 6..7: v1 led0
+    uint8_t  flags;                              // bit 0: permissive_hold, bits 1-2: retired (0), bit 3: custom_cal, bit 4: debug, bit 5: system, bit 6..7: v1 led0
     uint16_t classic_release_pm;                 // 25..1000
 } hhkb_eeprom_cal_t;
 _Static_assert(sizeof(hhkb_eeprom_cal_t) == EEPROM_SETTINGS_SIZE, "settings record size is fixed per board (EEPROM map)");
@@ -47,16 +47,17 @@ bool hhkb_is_calibrating(void);
 bool hhkb_settings_storage_writable(void);
 void hhkb_settings_mark_dirty(void);
 void hhkb_settings_task(void);
+/* Erase ECK's settings record and restart with the defaults (keymap and Vial entries stay);
+ * false if the record area isn't ECK's. */
+bool hhkb_settings_reset_request(void);
 
 // Getters & Setters for VIA
-uint8_t hhkb_get_scan_rate(void);
 /* Rate the matrix runs at now: the Hybrid uses its Bluetooth rate while reports go over Bluetooth. */
 uint8_t hhkb_active_scan_rate(void);
 /* Hybrid on batteries over Bluetooth: the matrix may drop to its idle stage after a quiet spell. */
 bool hhkb_scan_idle_allowed(void);
-void hhkb_set_scan_rate(uint8_t rate);
-bool hhkb_get_oversampling(void);
-void hhkb_set_oversampling(bool enabled);
+/* USB is the output and the host has suspended it: scan at the 50 Hz idle rate, without STOP. */
+bool hhkb_usb_sleep_idle_allowed(void);
 uint8_t hhkb_get_hold_tap_setting(uint8_t id);
 void hhkb_set_hold_tap_setting(uint8_t id, uint8_t value);
 uint16_t hold_tap_config_value(uint8_t id);

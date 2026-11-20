@@ -25,7 +25,6 @@ __attribute__((weak)) uint16_t hold_tap_config_value(uint8_t id) {
     switch (id) {
     case 0: return TAPPING_TERM_DEFAULT;
     case 1: return PERMISSIVE_HOLD_ENABLED;
-    case 2: return 0;
     case 3: return QUICK_TAP_TERM;
     default: return 0;
     }
@@ -84,7 +83,7 @@ void hold_tap_permissive_resolve(uint8_t except_row, uint8_t except_col) {
     for (int i = 0; i < MAX_HT_TRACKERS; i++)
         if (ht_trackers[i].row != except_row || ht_trackers[i].col != except_col) ht_trackers[i].interrupted = true;
 #endif
-    if (!hold_tap_config_value(1) || hold_tap_config_value(2)) return;
+    if (!hold_tap_config_value(1)) return;
     for (int i = 0; i < MAX_HT_TRACKERS; i++) {
         if (ht_trackers[i].state == HT_STATE_PRESSED &&
             (ht_trackers[i].row != except_row || ht_trackers[i].col != except_col)) {

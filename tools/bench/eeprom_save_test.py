@@ -1,36 +1,39 @@
 #!/usr/bin/env python3
-"""Check the Hybrid's EEPROM writers over USB, no keypresses: changes a hold-tap setting, the Bluetooth
-scan rate and one layer-3 key at once (three writers in two tasks), checks they survive a reset, then
-restores them and checks the settings (except calibration) and Bluetooth word match the start.
+"""Check the Hybrid's EEPROM writers over USB, no keypresses: changes a hold-tap setting, the Vial combo
+term and one layer-3 key at once (three writers), checks they survive a reset, then restores them and
+checks the settings (except calibration), the Vial record and the Bluetooth word match the start.
 Prints only changed address ranges, never contents (the macro area may hold a password).
 Run: uv run --with hidapi python3 tools/bench/eeprom_save_test.py
 """
 import os
+import struct
 import subprocess
 import sys
 import tempfile
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from via_hid import open_keyboard, via  # noqa: E402
+from via_hid import open_keyboard, send, via  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-TAP_ID, SCAN_ID = 14, 29        # VIA custom values: tapping term (10 ms units), Bluetooth scan rate
+TAP_ID = 14                     # VIA custom value: tapping term (10 ms units)
+COMBO_TERM = 2                  # Vial QMK setting: combo term (ms), kept in the Vial record
 KEY = (3, 0, 0)                 # layer, row, col
 # Data EEPROM offsets in the settings record (stm32/ec/ec_settings.h), skipping its CRC and the
 # calibration arrays: every save also writes the live rest levels, which drift.
 SETTINGS_HEAD, SETTINGS_TAIL = (0x1500, 0x1506), (0x15F8, 0x1608)
-BLE_WORD = (0x17F8, 0x17FC)     # Hybrid Bluetooth settings word (stm32/hybrid/hybrid_ble.c)
+VIAL_RECORD = (0x1608, 0x17F8)  # Vial entries record (stm32/via/vial.c)
+BLE_WORD = (0x17F8, 0x17FC)     # Hybrid Bluetooth settings word (stm32/hybrid/hybrid_ble.c): must not change
 
 
 def get(h):
-    return (via(h, [0x08, 0, TAP_ID])[3], via(h, [0x08, 0, SCAN_ID])[3],
+    return (via(h, [0x08, 0, TAP_ID])[3], struct.unpack("<H", send(h, bytes([0xFE, 0x0A, COMBO_TERM, 0]))[1:3])[0],
             int.from_bytes(via(h, [0x04, *KEY])[4:6], "big"))
 
 
-def put(h, tap, scan, key):
+def put(h, tap, combo, key):
     via(h, [0x07, 0, TAP_ID, tap])
-    via(h, [0x07, 0, SCAN_ID, scan])
+    send(h, bytes([0xFE, 0x0B, COMBO_TERM, 0]) + struct.pack("<H", combo))
     via(h, [0x05, *KEY, key >> 8, key & 0xFF])
 
 
@@ -58,7 +61,8 @@ def ranges(a, b):
 def main():
     h = open_keyboard(wait=20)
     orig = get(h)
-    changed = (orig[0] + 1 if orig[0] < 50 else orig[0] - 1, (orig[1] + 1) % 5, 0x0068 if orig[2] != 0x0068 else 0x0069)
+    changed = (orig[0] + 1 if orig[0] < 50 else orig[0] - 1, orig[1] + 10 if orig[1] < 500 else orig[1] - 10,
+               0x0068 if orig[2] != 0x0068 else 0x0069)
     with tempfile.TemporaryDirectory() as tmp:
         h.close()
         e0 = dump(tmp, "e0")
@@ -78,7 +82,7 @@ def main():
     ok = after_reset == changed and restored == orig
     print(f"changed values survived a reset: {after_reset == changed}; restored values survived: {restored == orig}")
     for name, (lo, hi) in (("settings header", SETTINGS_HEAD), ("settings values", SETTINGS_TAIL),
-                           ("Bluetooth word", BLE_WORD)):
+                           ("Vial record", VIAL_RECORD), ("Bluetooth word", BLE_WORD)):
         same = e0[lo:hi] == e2[lo:hi]
         ok &= same
         print(f"{name}: {'identical to the start' if same else 'DIFFERS from the start'}")

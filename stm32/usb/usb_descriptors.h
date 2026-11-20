@@ -22,6 +22,8 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid);
 void via_flush_pending_report(void);
 // Once-a-second debug console rate and VIA link counters
 void usb_diag_task(void);
+/* Enumerated, and the host has suspended the bus. */
+bool usb_host_asleep(void);
 
 // Debug console output
 void debug_console_write(const char *buf, size_t len);

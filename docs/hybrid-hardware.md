@@ -75,9 +75,9 @@ Data EEPROM. `0x08080000-0x080805FF` and `0x08081000-0x080813FF` are PFU's (keep
 | `0x08081100`, `0x08081200` | Factory press thresholds and offsets per key (index `8*col+row`) | `boards/hhkb/classic_matrix.c` |
 | `0x08081350` | Set by stock E0, cleared by PFU's Bank 1; meaning unknown | stock code |
 | `0x08081400-0x080814FF` | Free (stock keymap save 0) | |
-| `0x08081500` | ECK settings record (264 B: calibration, scan rate, LED modes) | `ec/ec_settings.c` |
+| `0x08081500` | ECK settings record (264 B: calibration, Rapid Trigger, hold-tap, LED modes) | `ec/ec_settings.c` |
 | `0x08081608-0x080817F7` | Free | |
-| `0x080817F8` | Bluetooth settings (slot, transport, Bluetooth scan rate) | `hybrid/hybrid_ble.c` |
+| `0x080817F8` | Bluetooth settings (slot, transport; bits 16-18, the retired Bluetooth scan rate, written 0) | `hybrid/hybrid_ble.c` |
 
 Boot: ECK's stub starts the ROM DFU loader if PC5 is held while PC13 shows USB power, or if Bank 2 fails its check (sane vectors, `0x360` = 1, CRC at `0x370` matches); otherwise it jumps to Bank 2 (tested). Option bytes: RDP 0, no write protection, BFB2 off.
 
@@ -154,7 +154,7 @@ A key press changes the coupling between a row strobe and the column's sense lin
 
 1. Rows deselected (high), op-amp on; on batteries the ADC is enabled for the scan only. After 20 µs for the op-amp, each mux half (columns 0-7, then 8-14, 50 µs settle between) is read with interrupts off, since readings depend on the timing between keys.
 2. Per column: select the mux and set the address.
-3. Per row: wait 2 µs, pulse discharge 2 µs, drive the row low, wait 3 µs, convert PA1 (12 bit, shortest sample time, optional ×4 oversampling), deselect.
+3. Per row: wait 2 µs, pulse discharge 2 µs, drive the row low, wait 3 µs, convert PA1 (12 bit, shortest sample time, one conversion), deselect.
 4. Compare with thresholds (factory threshold with a 50-count release margin by default; otherwise the calibrated range, hysteresis 10 %).
 5. Op-amp off; on batteries the ADC and its regulator off.
 
@@ -162,10 +162,11 @@ PC14 stays high while the keyboard is on.
 
 | Item | Value | Source |
 | --- | --- | --- |
-| Scan rates | 50-1000 Hz, paced by TIM2 | `matrix.c` |
+| Scan rates | Fixed: 1000 Hz on USB, 250 Hz on Bluetooth, paced by TIM2 | `ec_settings.c`, `matrix.c` |
 | Hybrid default | 1000 Hz USB, 250 Hz Bluetooth | `hybrid_ble.c` |
 | During an nRF52 update | 50 Hz | `classic_matrix.c` |
 | Idle stage | 50 Hz, STOP between scans, after 5 s without key changes (batteries, Bluetooth) | `matrix.c` |
+| USB sleep | 50 Hz without STOP while the host has suspended USB (USB output; every model); full rate again on resume | `matrix.c`, `ec_settings.c` |
 | Rest / press levels | Rest 25-690 counts; factory press thresholds 1560-2190 | measured |
 
 ## 5. Power

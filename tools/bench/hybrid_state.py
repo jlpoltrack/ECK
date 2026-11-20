@@ -16,7 +16,7 @@ NRF_ELF = NRF_APP / "_build/nrf52832_xxaa.out"
 STM_ELF = REPO / "build/hybrid/hhkb_ec_hybrid.elf"
 NRF_VARS = {"m_conn_handle": 2, "m_secured": 1, "m_advertising_on": 1, "m_pairing": 1, "m_slot": 1,
             "m_deletes_pending": 1, "m_q_count": 1}
-STM_VARS = {"s_flags": 1, "s_ready": 1, "s_slot": 1, "s_nrf_slot": 1, "s_prefer_ble": 1, "s_ble_scan_rate": 1}
+STM_VARS = {"s_flags": 1, "s_ready": 1, "s_slot": 1, "s_nrf_slot": 1, "s_prefer_ble": 1}
 
 
 def symbols(elf):

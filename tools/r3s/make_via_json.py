@@ -11,7 +11,6 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 HHKB = os.path.join(ROOT, "stm32/via/via.json")
 CONFIG = os.path.join(ROOT, "stm32/boards/r3s/board_config.h")
 OUT = os.path.join(ROOT, "stm32/boards/r3s/via.json")
-MAX_SCAN_RATE = 3  # 500 Hz: the scan takes ~1.6 ms (docs/r3s-hardware.md)
 
 # Physical rows in LAYOUT order (board_config.h): (legend, width, gap before)
 ROWS = [
@@ -60,16 +59,6 @@ def menus(hhkb_menus):
     top = m[0]
     top["label"] = "Settings"
     for section in top["content"]:
-        if section["label"] == "Scan Rate":
-            keep = []
-            for item in section["content"]:
-                ident = item.get("content", [None])[0]
-                if ident == "id_hhkb_ble_scan_rate" or "Hybrid" in str(item.get("content")):
-                    continue  # Bluetooth only
-                if ident == "id_hhkb_scan_rate":
-                    item["options"] = [o for o in item["options"] if o[1] <= MAX_SCAN_RATE]
-                keep.append(item)
-            section["content"] = keep
         if section["label"] == "LED":
             led = next(i for i in section["content"] if i["content"][0] == "id_hhkb_led_1")
             led["label"] = "Simple Mode LED"

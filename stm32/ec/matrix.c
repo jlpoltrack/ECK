@@ -1,10 +1,10 @@
 #include "matrix.h"
 #include "matrix_scan.h"
 #include "queue.h"
+#define IDLE_PERIOD_MS 20U  /* idle stage: 50 Hz, paced by FreeRTOS (TIM2 stops in STOP) */
 #ifdef HHKB_HYBRID
 #include "hybrid_sleep.h"
-#define IDLE_AFTER_MS 5000U /* quiet spell before the idle stage */
-#define IDLE_PERIOD_MS 20U  /* 50 Hz, paced by FreeRTOS: TIM2 stops in STOP */
+#define IDLE_AFTER_MS 5000U /* quiet spell before the battery idle stage */
 #endif
 #include "task.h"
 #include "config.h"
@@ -87,25 +87,33 @@ void matrix_task(void *pvParameters) {
     NVIC_EnableIRQ(TIM2_IRQn);
     TIM2->DIER = TIM_DIER_CC1IE;
     matrix_row_t published_state[MATRIX_ROWS] = {0};
+    bool idle = false;
 #ifdef HHKB_HYBRID
     hybrid_sleep_init();
     TickType_t last_change = xTaskGetTickCount();
-    bool idle = false;
+    bool stop = false;
 #endif
     for (;;) {
+        /* Idle stage, 50 Hz: while the USB host sleeps (any model), and on Hybrid batteries over
+         * Bluetooth after a quiet spell, with STOP between scans (USB needs its clock running). */
+        bool want_idle = hhkb_usb_sleep_idle_allowed();
 #ifdef HHKB_HYBRID
-        bool want_idle = hhkb_scan_idle_allowed() &&
+        bool want_stop = hhkb_scan_idle_allowed() &&
                          (TickType_t)(xTaskGetTickCount() - last_change) >= pdMS_TO_TICKS(IDLE_AFTER_MS);
+        if (want_stop != stop) {
+            stop = want_stop;
+            hybrid_sleep_set_idle(stop);
+        }
+        want_idle = want_idle || stop;
+#endif
         if (want_idle != idle) {
             idle = want_idle;
-            hybrid_sleep_set_idle(idle);
             if (idle) NVIC_DisableIRQ(TIM2_IRQn);
             else s_scan_rate_applied = 0xFF; /* re-arm TIM2 below */
         }
         if (idle) {
             vTaskDelay(pdMS_TO_TICKS(IDLE_PERIOD_MS));
         } else {
-#endif
         if (s_scan_rate_applied != hhkb_active_scan_rate()) {
             NVIC_DisableIRQ(TIM2_IRQn);
             update_scan_period();
@@ -120,9 +128,7 @@ void matrix_task(void *pvParameters) {
 #else
         (void)notifications;
 #endif
-#ifdef HHKB_HYBRID
         }
-#endif
 #ifdef HHKB_SCAN_DIAGNOSTICS
         uint16_t scan_start = (uint16_t)TIM2->CNT;
         if (s_matrix_scan_count != 0) {

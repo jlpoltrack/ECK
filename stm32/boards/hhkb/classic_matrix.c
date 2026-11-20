@@ -44,8 +44,6 @@ static inline void scan_wait_since(uint16_t start, uint16_t us) {
 }
 #define scan_delay_us(us) scan_wait_since((uint16_t)TIM2->CNT, (us))
 
-static bool s_oversampling_applied = false;
-
 static inline uint16_t adc_read_sample(void) {
     uint32_t timeout = 5000;
     while ((ADC1->CR & ADC_CR_ADSTP) && --timeout);
@@ -151,24 +149,6 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
         while (!(ADC1->ISR & ADC_ISR_ADRDY));
     }
 #endif
-    bool oversampling = hhkb_get_oversampling() && hhkb_active_scan_rate() <= 3;
-#ifdef HHKB_HYBRID
-    if (adc_cycle) oversampling = false; /* 4x the ADC time on every key: USB only */
-#endif
-    if (oversampling != s_oversampling_applied) {
-        while (ADC1->CR & ADC_CR_ADSTART);
-        ADC1->CR |= ADC_CR_ADDIS;
-        while (ADC1->CR & ADC_CR_ADEN);
-        if (oversampling)
-            ADC1->CFGR2 |= ADC_CFGR2_OVSE | LL_ADC_OVS_RATIO_4 | LL_ADC_OVS_SHIFT_RIGHT_2;
-        else
-            ADC1->CFGR2 &= ~ADC_CFGR2_OVSE;
-        ADC1->ISR = ADC_ISR_ADRDY;
-        ADC1->CR |= ADC_CR_ADEN;
-        while (!(ADC1->ISR & ADC_ISR_ADRDY));
-        s_oversampling_applied = oversampling;
-    }
-
     bool changed = false;
     static const uint16_t row_pins[MATRIX_ROWS] = {0x1, 0x2, 0x4, 0x400};
     static const uint32_t col_mux_bsrr[MATRIX_COLS] = {

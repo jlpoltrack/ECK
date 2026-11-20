@@ -17,9 +17,9 @@ Model numbers, what isn't supported (JIS, HHKB Pro 2, Studio) and why: [docs/mod
 
 ## Features
 
-- **Key sensing:** scan rates up to 1000 Hz (stock HHKB: ~50 Hz), factory thresholds or per-key calibration, adjustable actuation point and hysteresis, Rapid Trigger.
+- **Key sensing:** 1000 Hz scanning over USB (stock HHKB: ~50 Hz), factory thresholds or per-key calibration, adjustable actuation point and hysteresis, Rapid Trigger.
 - **[Vial](docs/vial.md)** on every keyboard, no definition file needed: keymap, macros, tap dance, combos, key overrides, Caps Word, one-shot keys, QMK settings.
-- **[VIA](docs/via.md)** with the **HHKB Settings** menu (scan rate, calibration, Rapid Trigger, LEDs): press Fn + Ctrl + V to switch to VIA mode until the next restart.
+- **[VIA](docs/via.md)** with the **HHKB Settings** menu (tap-hold, calibration, Rapid Trigger, LEDs): press Fn + Ctrl + V to switch to VIA mode until the next restart.
 - Mod-Tap and Layer-Tap, two base/Fn layer pairs, assignable LEDs, stock DIP switch behaviour on the HHKB.
 - **Hybrid:** Bluetooth LE with four host slots on Nordic's S132 SoftDevice ([`nrf52/`](nrf52/README.md)), the stock key combinations, and much lower battery drain ([below](#hybrid-battery-life)).
 

@@ -8,6 +8,9 @@ Decided but not done, or waiting on a decision. Delete an item when it's done.
 
 - **Vial release, hand checks.** Fn+Ctrl+V and usevia.app's HHKB Settings menu in VIA mode (needs key presses); Vial on the R3S (built, not yet flashed; its record sits at `0x300`). The Hybrid passes `vial_check.py`, `via_keymap_check.py` and `eeprom_save_test.py` (2026-11-18) and was in daily use with Vial on 2026-11-18. Tap dance and combo timing haven't been checked by hand.
 
+- **ANSI Fn + A / S: volume keys swapped against PFU.** PFU's Classic manual (P3PC-6661) and the JIS manuals give Fn + A = Volume Down, Fn + S = Volume Up, Fn + F = Eject; ECK's ANSI keymap has A = Up, S = Down, F unassigned. Changing it changes the ANSI binaries (a release) and `docs/layers.svg`.
+
+
 ## Deferred
 
 - **USB VID/PID.** The firmware uses the test ID `CAFE:4010`. Replace it with a real ID (pid.codes suggested); the owner approves the exact ID. The tools find the keyboard by "HHKB" in the product string, so they keep working.
@@ -18,6 +21,19 @@ Decided but not done, or waiting on a decision. Delete an item when it's done.
 - **nRF52 P0.11/P0.12** (stock inputs with pull-ups): not traced. Other unknowns: [Hybrid hardware](hybrid-hardware.md#7-open-questions).
 - **HSI48 start fix:** matches ST's HAL; Bank 1 leaves HSI48 running on the Hybrid, so verify on a Classic.
 - **Link version:** the STM32 never checks `BLE_LINK_VERSION`. Left so: the `.hfb` always packs matching firmware, and refusing a mismatched nRF52 would block the update that fixes it.
+
+## HHKB JIS (69 keys)
+
+On branch `jis` (2026-11-19), from PFU's JIS images (its `docs/models.md#jis`); builds only, no JIS keyboard has run it. Open:
+
+- **First run on a JIS keyboard:** every key's position (`ECK_PRODUCT=JIS key_depth.py`, or typing), rest and noise levels with the fifth row, scan time (`key_depth.py scantime`; estimated ~510 µs per interrupts-off half, which may need a third unmasked break) and whether 1000 Hz keeps up. Then release the JIS images and add them to the web flasher (its recovery paths assume the ANSI Hybrid image; `deviceModel` and the `0x4010` filter need the JIS models and `0x4012`).
+- **Bluetooth on the Hybrid JIS:** HID country code 0 and product ID `0x4010`, from the shared nRF52 app; PFU's JIS nRF52 image uses country code 15. Needs a JIS build of the nRF52 app or a runtime setting.
+- **Pictures:** `tools/gen_layer_svg.py` draws the ANSI layers and DIP switches only.
+
+## Ideas from aroum/dmk (reviewed 2026-11-19, up to `5aea674`)
+
+- **Done on branch `hhkb-updates`, not yet on the keyboard:** 50 Hz scanning on every model while the host has suspended USB (DMK cuts sensor power instead, with power saving only, which would stop Bluetooth on a USB charger and the Fn+Ctrl chords), a guarded **Reset all settings** in VIA, and the settings review: fixed scan rates, no oversampling or tap-preferred, Debug toggles moved to `tools/debug_channels.py` (owner, 2026-11-19). Flashed on the owner's Hybrid (2026-11-19): `eeprom_save_test.py`, `via_keymap_check.py`, `vial_check.py` and `settings_reset_check.py` pass. Left: the reset from usevia.app (menu shows), a key press waking the Mac with SW6 ON, typing right after the Mac wakes (the 50 Hz stage itself can't be watched over a suspended USB link; a USB power meter would show the drop).
+- Not planned: the per-key travel curve (user-measured ADC points at 1/2/3 mm; adds work to the scan's hot path), Le Capybara board and WS2812 drivers (other hardware). DMK's scan-loop optimisations from 2026-11-15 are already in ECK.
 
 ## Realforce R3S (wired TKL) port
 

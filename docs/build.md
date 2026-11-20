@@ -21,7 +21,7 @@ Run from the repository root. Output goes to `build/<variant>/`: `hhkb_ec_<varia
 - Board-specific code lives in `stm32/boards/<board>/`: `board_config.h` (name, matrix, layout, EEPROM map), `default_keymap.h`, the matrix scan driver and board-only modules. `CMakeLists.txt` picks the board (`r3s` for the Realforce R3S, `hhkb` otherwise); shared code reaches board hardware through `board.h`, `board_init.h` and `ec/matrix_scan.h`; shared settings are in `stm32/board/config.h`.
 - `tools/build_hashes.sh <source> <out>` builds every variant with a fixed version string and prints the hashes, to show a refactor leaves the binaries unchanged.
 
-Everything else (Rapid Trigger, calibration, oversampling, scan rate, LEDs, hold-tap timing) is a runtime VIA setting.
+Everything else (Rapid Trigger, calibration, LEDs, hold-tap timing) is a runtime VIA setting; scan rates are fixed.
 
 ## HFB container
 

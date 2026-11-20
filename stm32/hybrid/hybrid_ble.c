@@ -75,15 +75,13 @@ static volatile bool s_battery_dirty;
 static volatile bool s_power_off_done; /* nRF52 told to power off: the link stays idle */
 static bool s_recovery;                /* PB6 held high: the nRF52 was restarted into recovery mode */
 
-/* Host slot (1..4), whether Bluetooth wins over a connected USB host (bit 8) and the Bluetooth
- * scan rate + 1 (bits 16-18, 0 = default), kept in one EEPROM word past ECK's settings
- * (all zero in the stock Hybrid EEPROM). */
+/* Host slot (1..4) and whether Bluetooth wins over a connected USB host (bit 8), kept in one
+ * EEPROM word past ECK's settings (all zero in the stock Hybrid EEPROM). Bits 16-18 held the
+ * retired Bluetooth scan rate setting; written 0, which older firmware reads as its default. */
 #define SETTINGS_ADDR EEPROM_BLE_SETTINGS_ADDR
 #define SETTINGS_MAGIC 0xB7000000UL
-#define BLE_SCAN_RATE_DEFAULT 2U /* 250 Hz: faster than the 15-30 ms connection interval, saves power */
 static uint8_t s_slot = 1;
 static bool s_prefer_ble;
-static uint8_t s_ble_scan_rate = BLE_SCAN_RATE_DEFAULT;
 
 static void settings_load(void) {
     uint32_t w = *(volatile const uint32_t *)SETTINGS_ADDR;
@@ -91,12 +89,10 @@ static void settings_load(void) {
     uint8_t slot = (uint8_t)w;
     if (slot >= 1 && slot <= BLE_LINK_SLOTS) s_slot = slot;
     s_prefer_ble = (w >> 8) & 1U;
-    uint8_t rate = (w >> 16) & 7U;
-    if (rate >= 1 && rate <= 5) s_ble_scan_rate = rate - 1U;
 }
 
 static void settings_save(void) {
-    uint32_t w = SETTINGS_MAGIC | ((uint32_t)(s_ble_scan_rate + 1U) << 16) | (s_prefer_ble ? 0x100U : 0) | s_slot;
+    uint32_t w = SETTINGS_MAGIC | (s_prefer_ble ? 0x100U : 0) | s_slot;
     eeprom_write_word((volatile uint32_t *)SETTINGS_ADDR, w);
 }
 
@@ -488,15 +484,10 @@ bool hybrid_ble_transport_active(void) {
     return s_prefer_ble || !tud_mounted();
 }
 
-uint8_t hybrid_ble_scan_rate(void) {
-    return s_ble_scan_rate;
+bool hybrid_usb_asleep(void) {
+    return !s_prefer_ble && usb_host_asleep();
 }
 
-void hybrid_ble_set_scan_rate(uint8_t rate) {
-    if (rate > 4 || rate == s_ble_scan_rate) return;
-    s_ble_scan_rate = rate;
-    settings_save();
-}
 
 /* Stock Hybrid chords (hybrid_chords.h), detected by key position so a VIA remap of Fn,
  * Ctrl or the number row cannot break them. */
