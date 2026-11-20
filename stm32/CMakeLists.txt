@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-# ECK firmware for the STM32L072. Build: ./build.sh hybrid|classic|type_s|r3s (or cmake -DHHKB_VARIANT=...)
+# ECK firmware for the STM32L072. Build: ./build.sh hybrid|classic|type_s|hybrid_jis|type_s_jis|r3s (or cmake -DHHKB_VARIANT=...)
 
 get_filename_component(STM32_ROOT "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
 get_filename_component(REPO_ROOT "${STM32_ROOT}/.." ABSOLUTE)
@@ -13,11 +13,11 @@ set(TINYUSB_DIR "${VENDOR_DIR}/tinyusb")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Variant preset (build.sh passes it) and optional bench options, comma-separated.
-set(HHKB_VARIANT "hybrid" CACHE STRING "Keyboard: hybrid, classic, type_s or r3s")
-set_property(CACHE HHKB_VARIANT PROPERTY STRINGS hybrid classic type_s r3s)
+set(HHKB_VARIANT "hybrid" CACHE STRING "Keyboard: hybrid, classic, type_s, hybrid_jis, type_s_jis or r3s")
+set_property(CACHE HHKB_VARIANT PROPERTY STRINGS hybrid classic type_s hybrid_jis type_s_jis r3s)
 set(HHKB_EXTRA_DEFINES "" CACHE STRING "Bench options, e.g. HHKB_ADC_DIAGNOSTICS,HHKB_SCAN_DIAGNOSTICS")
-if(NOT HHKB_VARIANT MATCHES "^(hybrid|classic|type_s|r3s)$")
-    message(FATAL_ERROR "HHKB_VARIANT must be hybrid, classic, type_s or r3s (got '${HHKB_VARIANT}')")
+if(NOT HHKB_VARIANT MATCHES "^(hybrid|classic|type_s|hybrid_jis|type_s_jis|r3s)$")
+    message(FATAL_ERROR "HHKB_VARIANT must be hybrid, classic, type_s, hybrid_jis, type_s_jis or r3s (got '${HHKB_VARIANT}')")
 endif()
 # Board: matrix, layout, EEPROM map and board-only modules (stm32/boards/<board>/).
 # The HHKB's sources keep their order in the list below: it fixes the link order (and so its binaries).
@@ -27,6 +27,9 @@ else()
     set(ECK_BOARD "hhkb")
 endif()
 set(BOARD_DIR "${STM32_ROOT}/boards/${ECK_BOARD}")
+if(HHKB_VARIANT MATCHES "_jis$")
+    add_compile_definitions(HHKB_JIS) # 69-key JIS matrix and layout (boards/hhkb/board_config.h)
+endif()
 if(ECK_BOARD STREQUAL "hhkb")
     set(BOARD_SOURCES_DIP "${BOARD_DIR}/dip_modes.c" "${BOARD_DIR}/dip_switch.c")
     set(BOARD_SOURCES_SCAN "${BOARD_DIR}/classic_matrix.c")
@@ -153,7 +156,7 @@ add_compile_definitions(
 # Flash layout: Bank 2 starts at 0x08010000 (64 KB)
 set(LINKER_SCRIPT "${STM32_ROOT}/board/stm32l072_bank2.ld")
 
-if(HHKB_VARIANT STREQUAL "hybrid")
+if(HHKB_VARIANT MATCHES "^hybrid")
     set(HHKB_HYBRID ON)
     add_compile_definitions(HHKB_HYBRID TICKLESS_SLEEP_HOOK=hybrid_sleep) # STOP between scans on batteries
 else()
@@ -241,6 +244,8 @@ target_sources(${TARGET_NAME} PRIVATE
 # Vial (ECK_VIAL, on by default): definition built from the board's VIA definition
 if(ECK_BOARD STREQUAL "r3s")
     set(VIA_JSON "${BOARD_DIR}/via.json")
+elseif(HHKB_VARIANT MATCHES "_jis$")
+    set(VIA_JSON "${STM32_ROOT}/via/via_jis.json")
 else()
     set(VIA_JSON "${STM32_ROOT}/via/via.json")
 endif()
@@ -269,6 +274,11 @@ target_link_libraries(${TARGET_NAME} PRIVATE
 target_link_options(${TARGET_NAME} PRIVATE -Wl,--gc-sections)
 
 # Post-build packaging into .bin and HHKB .hfb container
+if(HHKB_VARIANT STREQUAL "hybrid_jis")
+    set(HFB_HYBRID_MODEL_ARG "--model" "AHJX01" "--version" "A2.49") # PFU's Hybrid JIS image (HHKB820_FW_JP_A249)
+else()
+    set(HFB_HYBRID_MODEL_ARG "")
+endif()
 if(HHKB_HYBRID)
     if(NOT EXISTS "${HHKB_HYBRID_NRF_APP}" OR NOT EXISTS "${HHKB_HYBRID_SOFTDEVICE}")
         # Without the nRF52 app and SoftDevice the STM32 .bin alone still updates the firmware (hybrid_update.py stm32).
@@ -283,7 +293,7 @@ if(HHKB_HYBRID)
         set_property(TARGET ${TARGET_NAME} APPEND PROPERTY LINK_DEPENDS ${HHKB_HYBRID_NRF_APP})
         add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
             COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${TARGET_NAME}> ${CMAKE_BINARY_DIR}/${TARGET_NAME}.bin
-            COMMAND python3 ${REPO_ROOT}/tools/make_hfb.py ${CMAKE_BINARY_DIR}/${TARGET_NAME}.bin ${CMAKE_BINARY_DIR}/${TARGET_NAME}.hfb --nrf-app ${HHKB_HYBRID_NRF_APP} --softdevice ${HHKB_HYBRID_SOFTDEVICE}
+            COMMAND python3 ${REPO_ROOT}/tools/make_hfb.py ${CMAKE_BINARY_DIR}/${TARGET_NAME}.bin ${CMAKE_BINARY_DIR}/${TARGET_NAME}.hfb --nrf-app ${HHKB_HYBRID_NRF_APP} --softdevice ${HHKB_HYBRID_SOFTDEVICE} ${HFB_HYBRID_MODEL_ARG}
             COMMAND ${CMAKE_SIZE} $<TARGET_FILE:${TARGET_NAME}>
             COMMENT "Generating binary and HHKB Hybrid .hfb for ${TARGET_NAME}"
         )
@@ -299,6 +309,9 @@ else()
     if(HHKB_VARIANT STREQUAL "type_s")
         set(HFB_MODEL_ARG "--model" "AHHS01" "--version" "A8.50")
         set(MODEL_COMMENT "Type-S (AHHS01)")
+    elseif(HHKB_VARIANT STREQUAL "type_s_jis")
+        set(HFB_MODEL_ARG "--model" "AHKS01" "--version" "A9.50") # PFU's JIS Type-S image: AHKS01 A9.04
+        set(MODEL_COMMENT "Type-S JIS (AHKS01)")
     else()
         set(HFB_MODEL_ARG "--model" "AHHX01" "--version" "A4.50")
         set(MODEL_COMMENT "Classic (AHHX01)")

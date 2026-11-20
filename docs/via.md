@@ -7,7 +7,7 @@ ECK speaks the [VIA](https://www.usevia.app/) protocol (v3: keymap, macros, cust
 ## Load the definition
 
 1. Open the [VIA web app](https://www.usevia.app/), go to **Settings** and enable **Show Design tab**.
-2. In **Design**, choose **Load Draft Definition** and select `stm32/via/via.json` (the same file for all three HHKBs; the Realforce R3S uses `stm32/boards/r3s/via.json`, generated from it by `tools/r3s/make_via_json.py`).
+2. In **Design**, choose **Load Draft Definition** and select `stm32/via/via.json` (the same file for all three ANSI HHKBs; the JIS HHKBs use `stm32/via/via_jis.json` and the Realforce R3S `stm32/boards/r3s/via.json`, generated from it by `tools/make_jis_via_json.py` and `tools/r3s/make_via_json.py`).
 3. Press Fn + Ctrl + V (VIA mode: two blinks; one blink means it went back to Vial), connect the keyboard and open **HHKB Settings** (on the R3S: **Settings**).
 
 If Layer 0 shows blank keys, click Layer 1 and back (a VIA rendering race).

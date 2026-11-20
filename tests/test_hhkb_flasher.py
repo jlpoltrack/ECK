@@ -32,14 +32,17 @@ class FlasherValidationTest(unittest.TestCase):
         # Type-S models (AHHS01)
         for model in ('PD-KB401WSC', 'PD-KB401BSC', 'PD-KB401YSC'):
             self.assertEqual(flasher.device_model(model), 'AHHS01')
-        # JIS models (PD-KB421)
+        # JIS models: Type-S PD-KB421 (AHKS01), Hybrid PD-KB820 (AHJX01)
         for model in ('PD-KB421BSC', 'PD-KB421WSC', 'PD-KB421YSC'):
-            self.assertEqual(flasher.device_model(model), 'JIS_UNSUPPORTED')
+            self.assertEqual(flasher.device_model(model), 'AHKS01')
+        self.assertEqual(flasher.device_model('PD-KB820BS'), 'AHJX01')
         self.assertIsNone(flasher.device_model('unknown'))
         self.assertEqual(flasher.validate_container(self.good, 'AHHX01'), 'AHHX01')
         with self.assertRaises(ValueError): flasher.validate_container(self.good, 'AHHS01')
         with self.assertRaises(ValueError): flasher.validate_container(self.good, None)
-        with self.assertRaisesRegex(ValueError, 'JIS models'): flasher.validate_container(self.good, 'JIS_UNSUPPORTED')
+        with self.assertRaisesRegex(ValueError, 'does not match'): flasher.validate_container(self.good, 'AHKS01')
+        jis = flasher.wrap_binary_to_hfb(b'\x00\x50\x00\x20\x01\x00\x01\x08', model='AHKS01')
+        self.assertEqual(flasher.validate_container(jis, 'AHKS01'), 'AHKS01')
         self.assertEqual(flasher.validate_container(self.good, None, check_model=False), 'AHHX01')
 
     def test_crc_checks_independent_of_model(self):

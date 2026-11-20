@@ -57,6 +57,18 @@ jobs:
         run: ./build.sh classic -c
       - name: Classic Type-S
         run: ./build.sh type_s -c
+      # JIS (69 keys): untested on hardware, so built as CI artifacts only, not released.
+      - name: Hybrid JIS (reuses the nRF52 app built above)
+        run: ./build.sh hybrid_jis && test -f build/hybrid_jis/hhkb_ec_hybrid_jis.hfb
+      - name: Classic Type-S JIS
+        run: ./build.sh type_s_jis -c
+      - uses: actions/upload-artifact@v7
+        with:
+          name: jis
+          path: |
+            build/hybrid_jis/hhkb_ec_hybrid_jis.hfb
+            build/type_s_jis/hhkb_ec_type_s_jis.hfb
+            stm32/via/via_jis.json
       - name: Realforce R3S
         run: ./build.sh r3s -c && test -f build/r3s/hhkb_ec_r3s.rfb
       - name: Hybrid boot stub

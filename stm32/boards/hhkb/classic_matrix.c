@@ -74,8 +74,13 @@ void hhkb_matrix_hardware_init(void) {
         (3U << (12 * 2)) | (3U << (13 * 2)) | (3U << (14 * 2)) | (3U << (15 * 2))
     );
 
+#ifdef HHKB_JIS
+    GPIOB->MODER = (GPIOB->MODER & ~(3U << (11 * 2))) | (1U << (11 * 2)); /* fifth row strobe */
+    GPIOB->OSPEEDR |= 3U << (11 * 2);
+#endif
+
     // Row drive pins idle HIGH (unselected)
-    GPIOB->BSRR = 0x0407;
+    GPIOB->BSRR = HHKB_ROW_MASK;
 
     // Analog control: PC6, PC7, PC8 and sensor board power PC14 as Push-Pull Output
     GPIOC->MODER &= ~((3U << (6 * 2)) | (3U << (7 * 2)) | (3U << (8 * 2)) | (3U << (14 * 2)));
@@ -150,7 +155,11 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
     }
 #endif
     bool changed = false;
+#ifdef HHKB_JIS
+    static const uint16_t row_pins[MATRIX_ROWS] = {0x1, 0x2, 0x4, 0x400, 0x800};
+#else
     static const uint16_t row_pins[MATRIX_ROWS] = {0x1, 0x2, 0x4, 0x400};
+#endif
     static const uint32_t col_mux_bsrr[MATRIX_COLS] = {
         0x70000000, 0x60001000, 0x50002000, 0x40003000,
         0x30004000, 0x20005000, 0x10006000, 0x7000,
@@ -158,7 +167,7 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
         0x30004000, 0x20005000, 0x10006000
     };
 
-    GPIOB->BSRR = 0x0407;    // Deselect all rows
+    GPIOB->BSRR = HHKB_ROW_MASK; // Deselect all rows
     GPIOC->BSRR = (1U << 7); // Enable OpAmp
 
     GPIOC->BSRR = (1U << 6);

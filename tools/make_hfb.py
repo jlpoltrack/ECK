@@ -12,7 +12,7 @@ Format breakdown (65,570 bytes total):
 - bytes [2:4]  : Inner CRC-16/MCRF4XX over the 64 KB code payload [4:65540], little-endian.
 - bytes [4:65540] : 64 KB Bank 2 firmware binary (padded with 0xFF).
 - bytes [65540:65554] : 14 bytes 0xFF padding.
-- bytes [65554:65560] : 6 bytes Model ID ASCII (e.g. 'AHHX01', 'AHHS01').
+- bytes [65554:65560] : 6 bytes Model ID ASCII (e.g. 'AHHX01', 'AHHS01', 'AHKS01' for the JIS Type-S).
 - bytes [65560:65564] : 4 bytes BCD version (e.g. 0A 04 02 09 -> A4.29).
 - bytes [65564:65570] : 6 bytes 0xFF padding.
 
@@ -130,7 +130,7 @@ def read_ihex(path: str, start: int, end: int) -> bytes:
 
 
 def make_hybrid_hfb(bin_path: str, nrf_app_path: str, softdevice_hex: str, out_path: str,
-                    version_str: str = HYBRID_VERSION):
+                    version_str: str = HYBRID_VERSION, model: str = HYBRID_MODEL):
     """HHKB Hybrid container: STM32 Bank 2 image, then the nRF52 image from 0x1000 (Nordic's
     S132 v7.2.0 SoftDevice + ECK's app at 0x26000), which PFU's nRF52 bootloader rewrites whole."""
     with open(bin_path, "rb") as f:
@@ -146,13 +146,13 @@ def make_hybrid_hfb(bin_path: str, nrf_app_path: str, softdevice_hex: str, out_p
         raise ValueError(f"{softdevice_hex}: no SoftDevice info magic at 0x3004")
     nrf = sd + app + b"\xff" * (NRF_APP_MAX - len(app))
     section = data + b"\xff" * (BANK2_SIZE - len(data))
-    trailer = HYBRID_MODEL.encode() + parse_version_bytes(version_str) + b"\xff" * 6
+    trailer = model.encode() + parse_version_bytes(version_str) + b"\xff" * 6
     body = (compute_crc16_mcrf4xx(section).to_bytes(2, "little") + section + b"\xff" * 12 +
             hashlib.md5(nrf).digest() + nrf + trailer)
     hfb = compute_crc16_mcrf4xx(body).to_bytes(2, "little") + body
     with open(out_path, "wb") as f:
         f.write(hfb)
-    print(f"Generated {out_path}: {len(hfb)} bytes (model {HYBRID_MODEL}, version {version_str}, "
+    print(f"Generated {out_path}: {len(hfb)} bytes (model {model}, version {version_str}, "
           f"outer CRC {hfb[0:2].hex()}, STM32 CRC {hfb[2:4].hex()})")
 
 
@@ -160,7 +160,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Wrap binary into HHKB .hfb firmware package")
     parser.add_argument("input", help="Input raw .bin file")
     parser.add_argument("output", help="Output .hfb file")
-    parser.add_argument("--model", default="AHHX01", help="Model code (default: AHHX01, e.g. AHHS01 for Classic Type-S)")
+    parser.add_argument("--model", default=None,
+                        help="Model code (default AHHX01, or AHUX01 for the Hybrid; AHHS01 Type-S, AHKS01 Type-S JIS, AHJX01 Hybrid JIS)")
     parser.add_argument("--version", default=None, help="Firmware version (default: A4.50 for Classic, A8.50 for Type-S)")
     parser.add_argument("--nrf-app", default=None, help="HHKB Hybrid: nRF52 app .bin linked at 0x26000")
     parser.add_argument("--softdevice", default=None, help="HHKB Hybrid: Nordic s132_nrf52_7.2.0_softdevice.hex")
@@ -170,7 +171,8 @@ if __name__ == "__main__":
     if args.nrf_app or args.softdevice:
         if not (args.nrf_app and args.softdevice):
             parser.error("the Hybrid needs both --nrf-app and --softdevice")
-        make_hybrid_hfb(args.input, args.nrf_app, args.softdevice, args.output, args.version or HYBRID_VERSION)
+        make_hybrid_hfb(args.input, args.nrf_app, args.softdevice, args.output, args.version or HYBRID_VERSION,
+                        args.model or HYBRID_MODEL)
         sys.exit(0)
 
     if args.rfb:
@@ -179,4 +181,4 @@ if __name__ == "__main__":
         open(args.output, "wb").write(data)
         print(f"Generated {args.output}: {len(data)} bytes ({R3S_MODEL}, inner CRC {data[2:4].hex()})")
         sys.exit(0)
-    make_hfb(args.input, args.output, model=args.model, version_str=args.version)
+    make_hfb(args.input, args.output, model=args.model or "AHHX01", version_str=args.version)

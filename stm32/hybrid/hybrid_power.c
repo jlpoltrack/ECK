@@ -116,7 +116,7 @@ static void pins_idle(void) {
         RCC->APB2ENR &= ~RCC_APB2ENR_ADC1EN;
     }
     GPIOC->BRR = (1U << 14) | (1U << 6) | (1U << 7) | (1U << 8);
-    GPIOB->BRR = (1U << 0) | (1U << 1) | (1U << 2) | (1U << 10) | (0xFU << 12);
+    GPIOB->BRR = HHKB_ROW_MASK | (0xFU << 12);
     SPI1->CR1 = 0;
     RCC->APB2ENR &= ~RCC_APB2ENR_SPI1EN;
     /* CS (PA15) stays high against the nRF52's pull-up. */
@@ -197,7 +197,7 @@ __attribute__((noreturn)) static void enter_off(void) {
     if (key_wake) NVIC_EnableIRQ(LPTIM1_IRQn);
     matrix_row_t keys[MATRIX_ROWS] = {0};
     if (key_wake) {
-        GPIOB->BSRR = (1U << 0) | (1U << 1) | (1U << 2) | (1U << 10); /* rows deselected */
+        GPIOB->BSRR = HHKB_ROW_MASK;    /* rows deselected */
         GPIOC->BSRR = 1U << 14;                                         /* sensor supply */
         uint16_t t0 = (uint16_t)TIM2->CNT;
         while ((uint16_t)(TIM2->CNT - t0) < SENSOR_SETTLE_US * HHKB_SCAN_TIMER_TICKS_PER_US) {}

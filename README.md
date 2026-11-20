@@ -11,9 +11,10 @@ Open firmware for electrostatic-capacitive (Topre) keyboards built on the STM32L
 | HHKB Professional Hybrid Type-S (`PD-KB800BS`) | **Tested**, USB and Bluetooth | [Web flasher](#web-flasher) or release `.hfb` |
 | HHKB Professional Classic | Builds; untested on hardware | Web flasher or release `.hfb` |
 | HHKB Professional Classic Type-S | Builds; untested on hardware | Web flasher or release `.hfb` |
+| HHKB Classic Type-S JIS, Hybrid JIS | Builds; untested on hardware | CI artifacts, `tools/hhkb_flasher.py` ([JIS](docs/models.md#jis)) |
 | Topre Realforce R3S US TKL (`R3SD13`) | **Tested**, USB | Web flasher or release `.rfb` |
 
-Model numbers, what isn't supported (JIS, HHKB Pro 2, Studio) and why: [docs/models.md](docs/models.md).
+Model numbers, what isn't supported (HHKB Pro 2, Studio) and why: [docs/models.md](docs/models.md).
 
 ## Features
 
@@ -68,7 +69,7 @@ A day of 2 h typing, 6 h idle and 16 h asleep comes to roughly 2-3 months on two
 Needs the Arm GNU Toolchain 15.3.Rel2 (`arm-none-eabi-gcc`; CI uses the same), CMake, `uv`, and for the Hybrid `.hfb` the nRF5 SDK 17.1.1 at `../nRF5_SDK_17.1.1`.
 
 ```bash
-./build.sh hybrid    # build/hybrid/hhkb_ec_hybrid.bin and .hfb; also classic, type_s, r3s
+./build.sh hybrid    # build/hybrid/hhkb_ec_hybrid.bin and .hfb; also classic, type_s, hybrid_jis, type_s_jis, r3s
 tests/run_all_tests.sh
 uv run --with hidapi python3 tools/hybrid_update.py stm32 build/hybrid/hhkb_ec_hybrid.bin
 ```

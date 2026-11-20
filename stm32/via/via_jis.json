@@ -1,0 +1,1181 @@
+{
+  "name": "HHKB Professional Classic / Hybrid JIS",
+  "vendorId": "0xCAFE",
+  "productId": "0x4012",
+  "customKeycodes": [
+    {
+      "name": "System 1",
+      "title": "Select System 1",
+      "shortName": "Sys 1"
+    },
+    {
+      "name": "System 2",
+      "title": "Select System 2",
+      "shortName": "Sys 2"
+    }
+  ],
+  "matrix": {
+    "rows": 5,
+    "cols": 15
+  },
+  "menus": [
+    {
+      "label": "HHKB Settings",
+      "content": [
+        {
+          "label": "Tap-hold",
+          "content": [
+            {
+              "label": "Tapping term (10 ms units)",
+              "type": "range",
+              "options": [
+                5,
+                50
+              ],
+              "content": [
+                "id_hhkb_tapping_term",
+                0,
+                14
+              ]
+            },
+            {
+              "label": "Permissive hold",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_permissive_hold",
+                0,
+                15
+              ]
+            },
+            {
+              "label": "Quick tap (10 ms units; 0 disables)",
+              "type": "range",
+              "options": [
+                0,
+                50
+              ],
+              "content": [
+                "id_hhkb_quick_tap",
+                0,
+                17
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Calibration",
+          "content": [
+            {
+              "label": "1. Prepare",
+              "type": "label",
+              "content": [
+                "Enable custom calibration and release all keys."
+              ]
+            },
+            {
+              "label": "2. Measure",
+              "type": "label",
+              "content": [
+                "Press Start, then fully press the keys you want to calibrate."
+              ]
+            },
+            {
+              "label": "3. Save",
+              "type": "label",
+              "content": [
+                "Press Finish. Disable custom calibration to use defaults."
+              ]
+            },
+            {
+              "label": "Use custom calibration",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_calibration",
+                0,
+                2
+              ]
+            },
+            {
+              "label": "Calibration status",
+              "type": "label",
+              "content": [
+                "id_hhkb_cal_status",
+                0,
+                26
+              ]
+            },
+            {
+              "label": "Live updates",
+              "type": "label",
+              "content": [
+                "Status does not update live. Click Refresh status or view HID Console."
+              ]
+            },
+            {
+              "label": "Calibration Monitor (HID Console)",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_debug_cal",
+                0,
+                25
+              ]
+            },
+            {
+              "label": "Start calibration",
+              "type": "button",
+              "options": [
+                1
+              ],
+              "content": [
+                "id_hhkb_cal_start",
+                0,
+                7
+              ]
+            },
+            {
+              "label": "Refresh status",
+              "type": "button",
+              "options": [
+                1
+              ],
+              "content": [
+                "id_hhkb_cal_refresh",
+                0,
+                27
+              ]
+            },
+            {
+              "label": "Finish and save",
+              "type": "button",
+              "options": [
+                1
+              ],
+              "content": [
+                "id_hhkb_cal_finish",
+                0,
+                8
+              ]
+            },
+            {
+              "label": "Actuation point",
+              "type": "dropdown",
+              "options": [
+                [
+                  "0.1 mm",
+                  1
+                ],
+                [
+                  "0.2 mm",
+                  2
+                ],
+                [
+                  "0.3 mm",
+                  3
+                ],
+                [
+                  "0.4 mm",
+                  4
+                ],
+                [
+                  "0.5 mm",
+                  5
+                ],
+                [
+                  "0.6 mm",
+                  6
+                ],
+                [
+                  "0.7 mm",
+                  7
+                ],
+                [
+                  "0.8 mm",
+                  8
+                ],
+                [
+                  "0.9 mm",
+                  9
+                ],
+                [
+                  "1.0 mm",
+                  10
+                ],
+                [
+                  "1.1 mm",
+                  11
+                ],
+                [
+                  "1.2 mm",
+                  12
+                ],
+                [
+                  "1.3 mm",
+                  13
+                ],
+                [
+                  "1.4 mm",
+                  14
+                ],
+                [
+                  "1.5 mm",
+                  15
+                ],
+                [
+                  "1.6 mm",
+                  16
+                ],
+                [
+                  "1.7 mm",
+                  17
+                ],
+                [
+                  "1.8 mm",
+                  18
+                ],
+                [
+                  "1.9 mm",
+                  19
+                ],
+                [
+                  "2.0 mm",
+                  20
+                ],
+                [
+                  "2.1 mm",
+                  21
+                ],
+                [
+                  "2.2 mm",
+                  22
+                ],
+                [
+                  "2.3 mm",
+                  23
+                ],
+                [
+                  "2.4 mm",
+                  24
+                ],
+                [
+                  "2.5 mm",
+                  25
+                ],
+                [
+                  "2.6 mm",
+                  26
+                ],
+                [
+                  "2.7 mm",
+                  27
+                ],
+                [
+                  "2.8 mm",
+                  28
+                ],
+                [
+                  "2.9 mm",
+                  29
+                ],
+                [
+                  "3.0 mm",
+                  30
+                ],
+                [
+                  "3.1 mm",
+                  31
+                ],
+                [
+                  "3.2 mm",
+                  32
+                ],
+                [
+                  "3.3 mm",
+                  33
+                ],
+                [
+                  "3.4 mm",
+                  34
+                ],
+                [
+                  "3.5 mm",
+                  35
+                ],
+                [
+                  "3.6 mm",
+                  36
+                ],
+                [
+                  "3.7 mm",
+                  37
+                ],
+                [
+                  "3.8 mm",
+                  38
+                ],
+                [
+                  "3.9 mm",
+                  39
+                ],
+                [
+                  "4.0 mm",
+                  40
+                ]
+              ],
+              "content": [
+                "id_hhkb_actuation",
+                0,
+                1
+              ]
+            },
+            {
+              "label": "Hysteresis",
+              "type": "label",
+              "content": [
+                "Classic mode: release travel below the actuation point."
+              ]
+            },
+            {
+              "label": "With Rapid Trigger",
+              "type": "label",
+              "content": [
+                "Use RT release sensitivity instead of hysteresis."
+              ]
+            },
+            {
+              "label": "Release hysteresis",
+              "type": "dropdown",
+              "options": [
+                [
+                  "0.1 mm",
+                  1
+                ],
+                [
+                  "0.2 mm",
+                  2
+                ],
+                [
+                  "0.3 mm",
+                  3
+                ],
+                [
+                  "0.4 mm",
+                  4
+                ],
+                [
+                  "0.5 mm",
+                  5
+                ],
+                [
+                  "0.6 mm",
+                  6
+                ],
+                [
+                  "0.7 mm",
+                  7
+                ],
+                [
+                  "0.8 mm",
+                  8
+                ],
+                [
+                  "0.9 mm",
+                  9
+                ],
+                [
+                  "1.0 mm",
+                  10
+                ],
+                [
+                  "1.1 mm",
+                  11
+                ],
+                [
+                  "1.2 mm",
+                  12
+                ],
+                [
+                  "1.3 mm",
+                  13
+                ],
+                [
+                  "1.4 mm",
+                  14
+                ],
+                [
+                  "1.5 mm",
+                  15
+                ],
+                [
+                  "1.6 mm",
+                  16
+                ],
+                [
+                  "1.7 mm",
+                  17
+                ],
+                [
+                  "1.8 mm",
+                  18
+                ],
+                [
+                  "1.9 mm",
+                  19
+                ],
+                [
+                  "2.0 mm",
+                  20
+                ],
+                [
+                  "2.1 mm",
+                  21
+                ],
+                [
+                  "2.2 mm",
+                  22
+                ],
+                [
+                  "2.3 mm",
+                  23
+                ],
+                [
+                  "2.4 mm",
+                  24
+                ],
+                [
+                  "2.5 mm",
+                  25
+                ],
+                [
+                  "2.6 mm",
+                  26
+                ],
+                [
+                  "2.7 mm",
+                  27
+                ],
+                [
+                  "2.8 mm",
+                  28
+                ],
+                [
+                  "2.9 mm",
+                  29
+                ],
+                [
+                  "3.0 mm",
+                  30
+                ],
+                [
+                  "3.1 mm",
+                  31
+                ],
+                [
+                  "3.2 mm",
+                  32
+                ],
+                [
+                  "3.3 mm",
+                  33
+                ],
+                [
+                  "3.4 mm",
+                  34
+                ],
+                [
+                  "3.5 mm",
+                  35
+                ],
+                [
+                  "3.6 mm",
+                  36
+                ],
+                [
+                  "3.7 mm",
+                  37
+                ],
+                [
+                  "3.8 mm",
+                  38
+                ],
+                [
+                  "3.9 mm",
+                  39
+                ],
+                [
+                  "4.0 mm",
+                  40
+                ]
+              ],
+              "content": [
+                "id_hhkb_classic_hysteresis",
+                0,
+                5
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Rapid Trigger",
+          "content": [
+            {
+              "label": "How it works",
+              "type": "label",
+              "content": [
+                "After actuation, release and re-press follow the key's movement."
+              ]
+            },
+            {
+              "label": "Rapid Trigger",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_rapid_trigger",
+                0,
+                3
+              ]
+            },
+            {
+              "label": "Press sensitivity",
+              "type": "label",
+              "content": [
+                "Downward travel required to re-press after release."
+              ],
+              "showIf": "{id_hhkb_rapid_trigger} == 1"
+            },
+            {
+              "label": "RT press sensitivity",
+              "type": "dropdown",
+              "options": [
+                [
+                  "0.1 mm",
+                  1
+                ],
+                [
+                  "0.2 mm",
+                  2
+                ],
+                [
+                  "0.3 mm",
+                  3
+                ],
+                [
+                  "0.4 mm",
+                  4
+                ],
+                [
+                  "0.5 mm",
+                  5
+                ],
+                [
+                  "0.6 mm",
+                  6
+                ],
+                [
+                  "0.7 mm",
+                  7
+                ],
+                [
+                  "0.8 mm",
+                  8
+                ],
+                [
+                  "0.9 mm",
+                  9
+                ],
+                [
+                  "1.0 mm",
+                  10
+                ],
+                [
+                  "1.1 mm",
+                  11
+                ],
+                [
+                  "1.2 mm",
+                  12
+                ],
+                [
+                  "1.3 mm",
+                  13
+                ],
+                [
+                  "1.4 mm",
+                  14
+                ],
+                [
+                  "1.5 mm",
+                  15
+                ],
+                [
+                  "1.6 mm",
+                  16
+                ],
+                [
+                  "1.7 mm",
+                  17
+                ],
+                [
+                  "1.8 mm",
+                  18
+                ],
+                [
+                  "1.9 mm",
+                  19
+                ],
+                [
+                  "2.0 mm",
+                  20
+                ],
+                [
+                  "2.1 mm",
+                  21
+                ],
+                [
+                  "2.2 mm",
+                  22
+                ],
+                [
+                  "2.3 mm",
+                  23
+                ],
+                [
+                  "2.4 mm",
+                  24
+                ],
+                [
+                  "2.5 mm",
+                  25
+                ],
+                [
+                  "2.6 mm",
+                  26
+                ],
+                [
+                  "2.7 mm",
+                  27
+                ],
+                [
+                  "2.8 mm",
+                  28
+                ],
+                [
+                  "2.9 mm",
+                  29
+                ],
+                [
+                  "3.0 mm",
+                  30
+                ],
+                [
+                  "3.1 mm",
+                  31
+                ],
+                [
+                  "3.2 mm",
+                  32
+                ],
+                [
+                  "3.3 mm",
+                  33
+                ],
+                [
+                  "3.4 mm",
+                  34
+                ],
+                [
+                  "3.5 mm",
+                  35
+                ],
+                [
+                  "3.6 mm",
+                  36
+                ],
+                [
+                  "3.7 mm",
+                  37
+                ],
+                [
+                  "3.8 mm",
+                  38
+                ],
+                [
+                  "3.9 mm",
+                  39
+                ],
+                [
+                  "4.0 mm",
+                  40
+                ]
+              ],
+              "content": [
+                "id_hhkb_press",
+                0,
+                4
+              ],
+              "showIf": "{id_hhkb_rapid_trigger} == 1"
+            },
+            {
+              "label": "Release sensitivity",
+              "type": "label",
+              "content": [
+                "Upward travel from the deepest point required to release."
+              ],
+              "showIf": "{id_hhkb_rapid_trigger} == 1"
+            },
+            {
+              "label": "RT release sensitivity",
+              "type": "dropdown",
+              "options": [
+                [
+                  "0.1 mm",
+                  1
+                ],
+                [
+                  "0.2 mm",
+                  2
+                ],
+                [
+                  "0.3 mm",
+                  3
+                ],
+                [
+                  "0.4 mm",
+                  4
+                ],
+                [
+                  "0.5 mm",
+                  5
+                ],
+                [
+                  "0.6 mm",
+                  6
+                ],
+                [
+                  "0.7 mm",
+                  7
+                ],
+                [
+                  "0.8 mm",
+                  8
+                ],
+                [
+                  "0.9 mm",
+                  9
+                ],
+                [
+                  "1.0 mm",
+                  10
+                ],
+                [
+                  "1.1 mm",
+                  11
+                ],
+                [
+                  "1.2 mm",
+                  12
+                ],
+                [
+                  "1.3 mm",
+                  13
+                ],
+                [
+                  "1.4 mm",
+                  14
+                ],
+                [
+                  "1.5 mm",
+                  15
+                ],
+                [
+                  "1.6 mm",
+                  16
+                ],
+                [
+                  "1.7 mm",
+                  17
+                ],
+                [
+                  "1.8 mm",
+                  18
+                ],
+                [
+                  "1.9 mm",
+                  19
+                ],
+                [
+                  "2.0 mm",
+                  20
+                ],
+                [
+                  "2.1 mm",
+                  21
+                ],
+                [
+                  "2.2 mm",
+                  22
+                ],
+                [
+                  "2.3 mm",
+                  23
+                ],
+                [
+                  "2.4 mm",
+                  24
+                ],
+                [
+                  "2.5 mm",
+                  25
+                ],
+                [
+                  "2.6 mm",
+                  26
+                ],
+                [
+                  "2.7 mm",
+                  27
+                ],
+                [
+                  "2.8 mm",
+                  28
+                ],
+                [
+                  "2.9 mm",
+                  29
+                ],
+                [
+                  "3.0 mm",
+                  30
+                ],
+                [
+                  "3.1 mm",
+                  31
+                ],
+                [
+                  "3.2 mm",
+                  32
+                ],
+                [
+                  "3.3 mm",
+                  33
+                ],
+                [
+                  "3.4 mm",
+                  34
+                ],
+                [
+                  "3.5 mm",
+                  35
+                ],
+                [
+                  "3.6 mm",
+                  36
+                ],
+                [
+                  "3.7 mm",
+                  37
+                ],
+                [
+                  "3.8 mm",
+                  38
+                ],
+                [
+                  "3.9 mm",
+                  39
+                ],
+                [
+                  "4.0 mm",
+                  40
+                ]
+              ],
+              "content": [
+                "id_hhkb_rt_release",
+                0,
+                11
+              ],
+              "showIf": "{id_hhkb_rapid_trigger} == 1"
+            },
+            {
+              "label": "Top dead zone",
+              "type": "label",
+              "content": [
+                "Returning here releases the key and disarms Rapid Trigger."
+              ],
+              "showIf": "{id_hhkb_rapid_trigger} == 1"
+            },
+            {
+              "label": "Top dead zone",
+              "type": "dropdown",
+              "options": [
+                [
+                  "0.0 mm",
+                  0
+                ],
+                [
+                  "0.1 mm",
+                  1
+                ],
+                [
+                  "0.2 mm",
+                  2
+                ],
+                [
+                  "0.3 mm",
+                  3
+                ],
+                [
+                  "0.4 mm",
+                  4
+                ],
+                [
+                  "0.5 mm",
+                  5
+                ],
+                [
+                  "0.6 mm",
+                  6
+                ]
+              ],
+              "content": [
+                "id_hhkb_reset",
+                0,
+                6
+              ],
+              "showIf": "{id_hhkb_rapid_trigger} == 1"
+            }
+          ]
+        },
+        {
+          "label": "LED",
+          "content": [
+            {
+              "label": "LED 0 (PA8)",
+              "type": "dropdown",
+              "options": [
+                [
+                  "Off",
+                  0
+                ],
+                [
+                  "Debug heartbeat",
+                  1
+                ],
+                [
+                  "Caps Lock",
+                  2
+                ],
+                [
+                  "Fn layer",
+                  3
+                ],
+                [
+                  "System 2",
+                  4
+                ],
+                [
+                  "Bluetooth status (Hybrid)",
+                  5
+                ]
+              ],
+              "content": [
+                "id_hhkb_led_0",
+                0,
+                9
+              ]
+            },
+            {
+              "label": "LED 1 (PA9)",
+              "type": "dropdown",
+              "options": [
+                [
+                  "Off",
+                  0
+                ],
+                [
+                  "Debug heartbeat",
+                  1
+                ],
+                [
+                  "Caps Lock",
+                  2
+                ],
+                [
+                  "Fn layer",
+                  3
+                ],
+                [
+                  "System 2",
+                  4
+                ],
+                [
+                  "Bluetooth status (Hybrid)",
+                  5
+                ]
+              ],
+              "content": [
+                "id_hhkb_led_1",
+                0,
+                10
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Firmware",
+          "content": [
+            {
+              "label": "Firmware Version",
+              "type": "label",
+              "content": [
+                "id_hhkb_fw_version",
+                0,
+                28
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Reset",
+          "content": [
+            {
+              "label": "Resets",
+              "type": "label",
+              "content": [
+                "Calibration, Rapid Trigger, tap-hold, LEDs, System 2."
+              ]
+            },
+            {
+              "label": "Keeps",
+              "type": "label",
+              "content": [
+                "Keymap, macros and Vial entries. The keyboard restarts."
+              ]
+            },
+            {
+              "label": "Allow settings reset",
+              "type": "toggle",
+              "content": [
+                "id_hhkb_reset_arm",
+                0,
+                32
+              ]
+            },
+            {
+              "label": "Reset all settings",
+              "type": "button",
+              "content": [
+                "id_hhkb_reset_all",
+                0,
+                33
+              ],
+              "options": [
+                1
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "layouts": {
+    "keymap": [
+      [
+        "4,0\nEsc",
+        "4,3\n!\n1",
+        "4,2\n\"\n2",
+        "4,4\n#\n3",
+        "4,5\n$\n4",
+        "4,6\n%\n5",
+        "4,7\n&\n6",
+        "4,11\n'\n7",
+        "4,8\n(\n8",
+        "4,9\n)\n9",
+        "4,10\n0",
+        "4,12\n=\n-",
+        "4,14\n~\n^",
+        "4,13\n|\n¥",
+        "2,13\nBS"
+      ],
+      [
+        {
+          "w": 1.5
+        },
+        "2,0\nTab",
+        "2,3\nQ",
+        "2,2\nW",
+        "2,4\nE",
+        "2,5\nR",
+        "2,6\nT",
+        "2,7\nY",
+        "2,11\nU",
+        "2,8\nI",
+        "2,9\nO",
+        "2,10\nP",
+        "2,12\n`\n@",
+        "2,14\n{\n[",
+        {
+          "x": 0.25,
+          "w": 1.25,
+          "h": 2,
+          "w2": 1.5,
+          "h2": 1,
+          "x2": -0.25
+        },
+        "0,13\nEnter"
+      ],
+      [
+        {
+          "w": 1.75
+        },
+        "0,0\nCtrl",
+        "0,3\nA",
+        "0,2\nS",
+        "0,4\nD",
+        "0,5\nF",
+        "0,6\nG",
+        "0,7\nH",
+        "0,11\nJ",
+        "0,8\nK",
+        "0,9\nL",
+        "0,10\n+\n;",
+        "0,12\n*\n:",
+        "0,14\n}\n]"
+      ],
+      [
+        {
+          "w": 2
+        },
+        "3,0\nShift",
+        "3,3\nZ",
+        "3,2\nX",
+        "3,4\nC",
+        "3,5\nV",
+        "3,6\nB",
+        "3,7\nN",
+        "3,11\nM",
+        "3,8\n<\n,",
+        "3,9\n>\n.",
+        "3,10\n?\n/",
+        "3,12\n_\n\\",
+        "3,14\n↑",
+        "3,13\nShift"
+      ],
+      [
+        "4,1\nFn",
+        "1,1\n半角/全角",
+        "1,3\n◇",
+        "0,1\nAlt",
+        "3,1\n無変換",
+        {
+          "w": 3
+        },
+        "1,6\nSpace",
+        "1,11\n変換",
+        "1,8\nかな",
+        "1,9\nAlt",
+        "1,10\nFn",
+        "1,12\n←",
+        "1,14\n↓",
+        "1,13\n→"
+      ]
+    ]
+  }
+}

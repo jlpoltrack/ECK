@@ -8,6 +8,8 @@ Run from the repository root. Output goes to `build/<variant>/`: `hhkb_ec_<varia
 ./build.sh hybrid    # build/hybrid/hhkb_ec_hybrid.{bin,hfb}
 ./build.sh classic   # build/classic/hhkb_ec_classic.{bin,hfb}
 ./build.sh type_s    # build/type_s/hhkb_ec_type_s.{bin,hfb}
+./build.sh hybrid_jis   # build/hybrid_jis/hhkb_ec_hybrid_jis.{bin,hfb}: JIS (docs/models.md#jis)
+./build.sh type_s_jis   # build/type_s_jis/hhkb_ec_type_s_jis.{bin,hfb}
 ./build.sh r3s       # build/r3s/hhkb_ec_r3s.{bin,rfb} (Realforce R3S; flash with tools/r3s/r3s_backup.py flash)
 ```
 
@@ -57,6 +59,6 @@ RAM is the static layout (RAM code, `.data`, `.bss` with all task stacks; FreeRT
 
 ## CI and releases
 
-[CI](../.github/workflows/ci.yml) runs on every push and pull request with the Arm GNU Toolchain 15.3.Rel2 (SHA-256 pinned, cached), the same compiler as bench builds: host tests, then clean builds of all three variants (fetching the nRF5 SDK, SHA-256 checked, so the Hybrid `.hfb` is built) and the boot stub (`make -C stm32/boot`). Each run uploads the Hybrid images as an artifact.
+[CI](../.github/workflows/ci.yml) runs on every push and pull request with the Arm GNU Toolchain 15.3.Rel2 (SHA-256 pinned, cached), the same compiler as bench builds: host tests, then clean builds of all three variants (fetching the nRF5 SDK, SHA-256 checked, so the Hybrid `.hfb` is built), the two JIS variants and the boot stub (`make -C stm32/boot`). Each run uploads the Hybrid images and the JIS images (with `via_jis.json`) as artifacts; releases don't carry the JIS images until one has run on a JIS keyboard.
 
 A `v*` tag also publishes a GitHub release with the three `.hfb` files, the R3S `.rfb` and `r3s_via.json`, `hybrid_boot.bin` and `eck-web-flasher-<tag>.zip` (the web flasher with those images, built by `tools/web_bundle.sh`; serve it with e.g. `python3 -m http.server`). `.github/workflows/pages.yml` then publishes the web flasher with that release's images to <https://jlpoltrack.github.io/ECK/>; run it from the Actions tab to republish.

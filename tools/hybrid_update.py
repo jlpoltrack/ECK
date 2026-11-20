@@ -10,7 +10,8 @@ bootloader installs it at the next nRF52 reset. Commands:
                     --recovery stages it through the nRF52's recovery mode (for an app whose
                     Bluetooth side is broken; needs an app with link v6)
   stm32 FILE        write ECK (.hfb or .bin) to Bank 2 and its boot tag; refuses unless Bank 1
-                    holds the boot stub (--force overrides)
+                    holds the boot stub and the image's layout (ANSI or JIS) matches the
+                    keyboard's (--force overrides)
   boot              write ECK's boot stub to Bank 1 (replaces PFU's updater; enables recovery);
                     the first time, saves Bank 1 and the data EEPROM to files for going back to stock
   restore-stm32     write stock Bank 2 (from a PFU .hfb) and Bank 1 (from a backup), last
@@ -258,6 +259,20 @@ def stm32_section(path):
     return sec
 
 
+def check_layout(sec):
+    """Refuse an ANSI image for a JIS keyboard or the reverse; the product string names the layout."""
+    h = open_keyboard(required=False)
+    if h is None:
+        return  # already in DFU: nothing running to compare with
+    try:
+        product = h.get_product_string() or ""
+    finally:
+        h.close()
+    if ("JIS" in product) != (b"Hybrid JIS" in sec):
+        sys.exit(f"the keyboard is {product!r} but the image is for the {'JIS' if b'Hybrid JIS' in sec else 'ANSI'} "
+                 "layout: pass --force to write it anyway")
+
+
 def write_bank2(sec):
     write_verified(2, TAG_CRC, bytes(4), "boot tag cleared")  # a half-written Bank 2 never boots
     write_verified(0, BANK2, sec, "Bank 2")
@@ -291,7 +306,7 @@ def main():
     p.add_argument("--recovery", action="store_true", help="stage through the nRF52's recovery mode (no Bluetooth)")
     p = sub.add_parser("stm32")
     p.add_argument("file")
-    p.add_argument("--force", action="store_true", help="write even if Bank 1 lacks the boot stub")
+    p.add_argument("--force", action="store_true", help="write even if Bank 1 lacks the boot stub or the layout differs")
     sub.add_parser("boot").add_argument("--stub", default=STUB)
     p = sub.add_parser("restore-stm32")
     p.add_argument("--hfb", required=True, help="PFU firmware file, e.g. HHKB800_FW_A048.hfb")
@@ -305,6 +320,8 @@ def main():
         nrf_update(a.file, a.recovery)
     elif a.cmd == "stm32":
         sec = stm32_section(a.file)
+        if not a.force:
+            check_layout(sec)
         enter_dfu()
         if not a.force:
             require_boot_stub()

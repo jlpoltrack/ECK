@@ -93,6 +93,20 @@ class HybridContainerTest(unittest.TestCase):
         self.assertEqual(out, crc(body).to_bytes(2, 'little') + body)
         self.assertEqual(flasher.validate_container(out, 'AHUX01'), 'AHUX01')
 
+    def test_hybrid_jis_model(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            self.write_hex(tmp / 'sd.hex', self.softdevice()[:0x20000])
+            (tmp / 'eck.bin').write_bytes(b'\x33' * 300)
+            (tmp / 'app.bin').write_bytes(b'\x44' * 500)
+            make_hfb.make_hybrid_hfb(str(tmp / 'eck.bin'), str(tmp / 'app.bin'), str(tmp / 'sd.hex'),
+                                     str(tmp / 'out.hfb'), 'A2.49', 'AHJX01')
+            out = (tmp / 'out.hfb').read_bytes()
+        self.assertEqual(out[-16:], b'AHJX01' + bytes([0x0A, 2, 4, 9]) + b'\xff' * 6)
+        self.assertEqual(flasher.validate_container(out, 'AHJX01'), 'AHJX01')
+        with self.assertRaises(ValueError):
+            flasher.validate_container(out, 'AHUX01')
+
     def test_hybrid_rejects_bad_inputs(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

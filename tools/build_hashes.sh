@@ -11,6 +11,8 @@ variants=(
   hybrid       "hybrid"
   classic      "classic"
   type_s       "type_s"
+  hybrid_jis   "hybrid_jis"
+  type_s_jis   "type_s_jis"
 )
 for name in ${(ko)variants}; do
   spec=(${=variants[$name]})
