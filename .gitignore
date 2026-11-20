@@ -20,3 +20,4 @@ __pycache__/
 /web/firmware/
 /.claude/worktrees/
 /tools/r3s/_build/
+/tools/web_bench/node_modules/

@@ -43,14 +43,24 @@ progress::-moz-progress-bar { background: var(--accent); }
 .ok { color: var(--ok); }
 summary { cursor: pointer; font-weight: 600; }
 #gate { background: var(--accent); color: var(--on-accent); }
+.tabs { display: flex; gap: 4px; margin: 16px 0 0; border-bottom: 1px solid var(--line); }
+.tabs button { background: transparent; color: var(--muted); border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 8px 14px; }
+.tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 </style>
 </head>
 <body>
 <main>
   <h1><img src="icon.svg" alt="">ECK Flasher</h1>
-  <p class="muted">Install and update ECK firmware on the HHKB Professional Hybrid Type-S, Classic and Classic Type-S.</p>
+  <p class="muted">Install and update ECK firmware on the HHKB Professional Hybrid Type-S, Classic and Classic Type-S, and the Realforce R3S US TKL.</p>
   <p id="support" class="warn" hidden><b>This browser cannot reach USB devices.</b> Open this page in Chrome or Edge on a desktop computer.</p>
   <script>if (!('hid' in navigator) || !('usb' in navigator)) document.getElementById('support').hidden = false;</script>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="t-hhkb" aria-selected="true">HHKB</button>
+    <button role="tab" id="t-r3s" aria-selected="false">Realforce R3S</button>
+  </nav>
+
+  <div id="tab-hhkb">
 
   <section class="card">
     <h2>Connect your keyboard</h2>
@@ -103,12 +113,57 @@ summary { cursor: pointer; font-weight: 600; }
     <p><b>Bluetooth broken</b> (the keyboard works over USB): click Recover Bluetooth firmware, then pick the keyboard.</p>
     <div class="row"><button id="b-nrf-recover">Recover Bluetooth firmware</button></div>
   </section>
+  </div>
+
+  <div id="tab-r3s" hidden>
+  <section class="card">
+    <h2>Connect your keyboard</h2>
+    <p>Plug the Realforce R3S in with a USB cable and click Connect. Your browser then asks which device to use: pick REALFORCE R3S (Topre's firmware) or ECK Realforce R3S.</p>
+    <div class="row"><button id="r-connect">Connect keyboard</button> <a href="#r-recover" id="l-r-recover">Keyboard doesn't start?</a></div>
+    <p class="muted">Only the US TKL (R3SD13) is supported. Windows: update mode needs the WinUSB driver once. Install it with Zadig for "DFU in FS Mode".</p>
+  </section>
+
+  <section class="card" id="rkb" hidden>
+    <h2 id="rkb-title"></h2>
+    <p id="rkb-sub" class="muted"></p>
+
+    <div id="r-act-stock" hidden>
+      <p>Installs ECK through Topre's updater. Takes about 30 s; keep the keyboard plugged in. Topre's settings stay in the keyboard, and Topre's firmware can go back on later (Advanced, below).</p>
+      <div class="row"><button id="r-install">Install ECK</button></div>
+    </div>
+
+    <div id="r-act-eck" hidden>
+      <h3>Update</h3>
+      <div class="row"><button id="r-update">Update firmware</button></div>
+      <p class="muted">Keeps the keymap and settings. While it runs, the Simple Mode light stays magenta.</p>
+      <h3>Back up and restore settings</h3>
+      <p class="muted">Keymap, macros, settings and Topre's own data. The file holds macros in plain text: keep it private. Restore only to this keyboard.</p>
+      <div class="row"><button id="r-backup">Back up settings</button><button id="r-restore">Restore settings</button><input type="file" id="r-eepromfile" accept=".bin" hidden></div>
+    </div>
+
+    <p id="rkb-msg" hidden></p>
+  </section>
+
+  <section class="card" id="r-via" hidden>
+    <h2>Keymap and settings (VIA)</h2>
+    <p>Change the keymap, macros and ECK's settings in VIA with this keyboard definition.</p>
+    <div class="row"><a id="r-vialink" class="button" download="r3s_via.json">Download via.json</a></div>
+    <p class="muted">In <a href="https://usevia.app">usevia.app</a> (Chrome or Edge): Settings, enable <b>Show Design tab</b>; then Design, <b>Load Draft Definition</b>, and choose the file.</p>
+  </section>
+
+  <section class="card" id="r-recover" hidden>
+    <h2>Keyboard doesn't start (Realforce R3S)</h2>
+    <p><b>The computer lists "DFU in FS Mode":</b> the keyboard is in ST's update mode. ECK goes there by itself when no computer answers within 15 s of power-up (a sleeping computer, a charger). Click Recover firmware to install ECK again, or just unplug and plug it in to restart.</p>
+    <p><b>The computer lists REALFORCE R3S but it doesn't type:</b> Topre's updater is waiting for firmware. Connect it above and click Install ECK.</p>
+    <div class="row"><button id="r-recover-b">Recover firmware</button></div>
+  </section>
+  </div>
 
   <details class="card">
-    <summary>Advanced: use a local .hfb file</summary>
-    <p class="muted">Install and update use the release named below unless you choose a file here; it must match your keyboard.</p>
+    <summary>Advanced: use a local firmware file</summary>
+    <p class="muted">Install and update use the release named below unless you choose a file here (.hfb for an HHKB, .rfb for the R3S); it must match your keyboard. On the R3S, Update with Topre's own .rfb (from Topre's site) puts Topre's firmware back.</p>
     <p id="fwinfo" class="muted">Loading the bundled release...</p>
-    <input type="file" id="hfbfile" accept=".hfb">
+    <input type="file" id="hfbfile" accept=".hfb,.rfb">
   </details>
 
   <section class="card" id="status">

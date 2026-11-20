@@ -1,0 +1,10 @@
+{
+  "name": "eck-web-bench",
+  "private": true,
+  "description": "Drives web/eck.js from Node against a keyboard on the bench (WebUSB and WebHID shims)",
+  "type": "module",
+  "dependencies": {
+    "node-hid": "^3.4.0",
+    "usb": "^3.3.1"
+  }
+}

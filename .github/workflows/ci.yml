@@ -57,12 +57,11 @@ jobs:
         run: ./build.sh classic -c
       - name: Classic Type-S
         run: ./build.sh type_s -c
-      # Bring-up only: built to keep it compiling, not released.
       - name: Realforce R3S
         run: ./build.sh r3s -c && test -f build/r3s/hhkb_ec_r3s.rfb
       - name: Hybrid boot stub
         run: make -C stm32/boot
-      # A v* tag publishes a release: the three .hfb files, the boot stub, and the web flasher with them bundled.
+      # A v* tag publishes a release: the .hfb and .rfb files, the boot stub, and the web flasher with them bundled.
       - name: Release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -74,5 +73,5 @@ jobs:
           # A re-pushed tag (history squash) keeps its existing release
           gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1 && exit 0
           gh release create "$GITHUB_REF_NAME" --title "ECK $GITHUB_REF_NAME" --generate-notes \
-            web/firmware/*.hfb web/firmware/hybrid_boot.bin "eck-web-flasher-$GITHUB_REF_NAME.zip" \
-            stm32/via/via.json LICENSE THIRD_PARTY_NOTICES.md
+            web/firmware/*.hfb web/firmware/hhkb_ec_r3s.rfb web/firmware/hybrid_boot.bin "eck-web-flasher-$GITHUB_REF_NAME.zip" \
+            stm32/via/via.json web/firmware/r3s_via.json LICENSE THIRD_PARTY_NOTICES.md

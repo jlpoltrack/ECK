@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
-import { crc16mcrf4xx, md5, parseHfb, hasBootStub } from './eck.js';
+import { crc16mcrf4xx, md5, parseHfb, hasBootStub, deviceModel, isTopreBank1, RFB_SIZE } from './eck.js';
 
 const repo = fileURLToPath(new URL('..', import.meta.url));
 const py = (code) => execFileSync('python3', ['-c', code], { cwd: repo }).toString().trim();
@@ -18,6 +18,20 @@ stub.set([0x00, 0x40, 0x00, 0x20, 0x75, 0x00, 0x00, 0x08]);
 assert.ok(hasBootStub(stub));
 stub[0x1500] = 0;
 assert.ok(!hasBootStub(stub));
+// R3S: an .rfb from tools/make_hfb.py parses with its model and version; the Bank 1 check
+const rfb = Buffer.from(py(`import sys;sys.path.insert(0,'tools');from make_hfb import wrap_binary_to_rfb as w;` +
+    `print(w(bytes.fromhex('0050002001010108') + bytes(1000)).hex())`), 'hex');
+assert.equal(rfb.length, RFB_SIZE);
+const r = parseHfb(new Uint8Array(rfb));
+assert.deepEqual([r.model, r.version, r.hybrid, r.stm32.length], ['R3SD####', 'A0.11', false, 0x10000]);
+rfb[100] ^= 1;
+assert.throws(() => parseHfb(new Uint8Array(rfb)), /CRC/);
+assert.equal(deviceModel('R3SD13'), 'R3SD####');
+assert.equal(deviceModel('PD-KB800BS'), 'AHUX01');
+const bank1 = new Uint8Array(0x10000).fill(0xff);
+assert.ok(!isTopreBank1(bank1));
+bank1.set(new TextEncoder().encode('Topre Corporation'), 31804);
+assert.ok(isTopreBank1(bank1));
 for (const f of process.argv.slice(2)) {
     const h = parseHfb(new Uint8Array(readFileSync(f)));
     console.log(f, h.model, h.version, h.hybrid ? 'hybrid' : 'classic');

@@ -3,7 +3,8 @@ import * as eck from './eck.js';
 
 const $ = (id) => document.getElementById(id);
 const logEl = $('log'), stateEl = $('state'), bar = $('progress'), gate = $('gate');
-const controls = ['b-connect', 'b-install', 'b-stm32', 'b-nrf', 'b-backup', 'b-recover', 'b-nrf-recover', 'b-restore', 'eepromfile', 'hfbfile'].map($);
+const controls = ['b-connect', 'b-install', 'b-stm32', 'b-nrf', 'b-backup', 'b-recover', 'b-nrf-recover', 'b-restore', 'eepromfile', 'hfbfile',
+    'r-connect', 'r-install', 'r-update', 'r-backup', 'r-restore', 'r-eepromfile', 'r-recover-b'].map($);
 const windows = navigator.userAgent.includes('Windows');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let manifest = null;
@@ -103,7 +104,7 @@ async function run(title, fn) {
         stateEl.className = 'warn';
         log(`Error: ${e.message}`);
         if (inDfu)
-            log("The keyboard is still in update mode and won't type: use Recover keyboard firmware (below).");
+            log(`The keyboard is still in update mode and won't type: use ${tab === 'r3s' ? 'Recover firmware' : 'Recover keyboard firmware'} (below).`);
     } finally {
         gate.classList.remove('on');
         controls.forEach((b) => (b.disabled = false));
@@ -169,15 +170,14 @@ async function enterDfu(via) {
     return dfu;
 }
 
-/** After PFU's updater re-enumerates: a granted device, or one picked in a dialog after 10 s. */
-async function pfuReconnect() {
-    const find = async () =>
-        (await navigator.hid.getDevices()).find((d) => d.vendorId === 0x04fe && d.collections.some((c) => c.usagePage === 0xff00));
+/** After PFU's (Topre's) updater re-enumerates: a granted device, or one picked in a dialog after 10 s. */
+async function pfuReconnect(filter = eck.PFU_FILTER, name = "PFU's updater (HHKB)") {
+    const find = async () => (await navigator.hid.getDevices()).find((d) => eck.isUpdater(d, filter));
     for (const end = Date.now() + 10000; Date.now() < end; await sleep(300)) {
         const d = await find();
         if (d) return d;
     }
-    say("Select PFU's updater (HHKB) in the next dialog.");
+    say(`Select ${name} in the next dialog.`);
     let done = false;
     const poll = (async () => {
         while (!done) {
@@ -187,7 +187,7 @@ async function pfuReconnect() {
         }
     })();
     const ask = needGesture('Select updater').then(async () => {
-        const [d] = await navigator.hid.requestDevice({ filters: [eck.PFU_FILTER] });
+        const [d] = await navigator.hid.requestDevice({ filters: [filter] });
         if (!d) throw new Error('no updater selected');
         return d;
     });
@@ -307,7 +307,7 @@ $('b-install').onclick = async () => {
         const stub = hybrid ? await bootStub() : null;
         kb.pfu = null;
         if (hybrid) log('Stage 1 of 2: install ECK on both chips.');
-        await eck.pfuInstall(pfu, data, { reconnect: pfuReconnect, log, progress });
+        await eck.pfuInstall(pfu, data, { reconnect: () => pfuReconnect(), log, progress });
         if (!hybrid) return;
         say('Stage 2 of 2: set up updates and recovery. Click Continue, then pick the keyboard again (it now runs ECK).');
         await needGesture('Continue');
@@ -414,14 +414,223 @@ $('b-nrf-recover').onclick = async () => {
     await redetect();
 };
 
-// ---------- start ----------
+// ---------- Realforce R3S ----------
+
+let rk = null; // the connected R3S: {kind: 'stock' | 'eck' | 'unsupported', ...}
+const isTopre = (d) => eck.isUpdater(d, eck.TOPRE_FILTER);
+
+/** R3S firmware: the local file (Advanced) if chosen, else the bundled release. Checked here. */
+async function r3sFirmware() {
+    const f = $('hfbfile').files[0];
+    let data;
+    if (f) data = new Uint8Array(await f.arrayBuffer());
+    else if (manifest?.files.r3s) data = await fetchBytes(`firmware/${manifest.files.r3s}`);
+    else throw new Error('no bundled R3S release here: choose a local .rfb under Advanced');
+    const { model } = eck.parseHfb(data);
+    if (model !== 'R3SD####') throw new Error(`the file is for ${model}, not the Realforce R3S`);
+    return data;
+}
+
+function r3sRender() {
+    show('rkb', !!rk);
+    ['r-act-stock', 'r-act-eck', 'rkb-msg'].forEach((id) => show(id, false));
+    if (!rk) return;
+    const latest = manifest ? `Latest release: ${manifest.version}.` : '';
+    if (rk.kind === 'stock') {
+        $('rkb-title').textContent = `Realforce R3S (${rk.type})`;
+        $('rkb-sub').textContent = `Running Topre's firmware. ${latest}`;
+        show('r-act-stock', true);
+    } else if (rk.kind === 'eck') {
+        $('rkb-title').textContent = 'Realforce R3S';
+        $('rkb-sub').textContent = `Running ECK ${rk.version || '(version unknown)'}. ${latest}`;
+        show('r-act-eck', true);
+    } else {
+        $('rkb-title').textContent = `Unsupported keyboard (${rk.type})`;
+        $('rkb-sub').textContent = '';
+        $('rkb-msg').textContent = 'ECK supports the Realforce R3S US TKL (R3SD13).';
+        show('rkb-msg', true);
+    }
+}
+
+async function r3sDetect(dev) {
+    if (isTopre(dev)) {
+        const pfu = await eck.Pfu.open(dev);
+        const info = await pfu.info();
+        rk = info.model === 'R3SD####' ? { kind: 'stock', pfu, ...info } : { kind: 'unsupported', type: info.type };
+    } else if (eck.isR3s(dev)) {
+        const via = await eck.Via.open(dev);
+        rk = { kind: 'eck', via, version: await via.version() };
+    } else {
+        throw new Error(`${dev.productName || 'this device'} is not a Realforce R3S`);
+    }
+    log(`Connected: ${dev.productName || 'Realforce R3S'}`);
+    r3sRender();
+}
+
+const r3sPick = (devs) => devs.find(isTopre) || devs.find(eck.isR3s);
+
+async function r3sAutoDetect() {
+    const dev = r3sPick(await navigator.hid.getDevices());
+    if (dev) await r3sDetect(dev).catch(() => {});
+    return !!rk;
+}
+
+async function r3sClose() {
+    for (const k of [rk?.via, rk?.pfu]) if (k) await k.close();
+    rk = null;
+}
+
+/** After an action the R3S restarts as a new device: look again; ST's loader means Recover. */
+async function r3sRedetect() {
+    const shown = !!rk;
+    await r3sClose();
+    if (shown) $('rkb-sub').textContent = 'Reconnecting…';
+    controls.forEach((b) => (b.disabled = true));
+    for (let i = 0; i < 20 && !rk && !inDfu; i++) {
+        await sleep(1000);
+        await r3sAutoDetect();
+    }
+    controls.forEach((b) => (b.disabled = false));
+    if (rk) return;
+    r3sRender();
+    if (inDfu || (await eck.Dfu.find())) {
+        show('r-recover', true);
+        say('The keyboard is in update mode: click Recover firmware.');
+        return;
+    }
+    say('The keyboard did not come back by itself: click Select keyboard and pick it.');
+    await needGesture('Select keyboard');
+    await r3sConnect();
+}
+
+/** ECK on the R3S: the connected one, a granted one, or one picked in a dialog. */
+async function r3sVia() {
+    if (rk?.via) {
+        const v = rk.via;
+        rk.via = null;
+        return v;
+    }
+    const granted = (await navigator.hid.getDevices()).find(eck.isR3s);
+    if (granted) return eck.Via.open(granted);
+    say('Select the keyboard (ECK Realforce R3S) in the next dialog.');
+    return withGesture('Select keyboard', async () => {
+        const dev = (await navigator.hid.requestDevice({ filters: [eck.R3S_FILTER] })).find(eck.isR3s);
+        if (!dev) throw new Error('no R3S running ECK selected');
+        return eck.Via.open(dev);
+    });
+}
+
+const r3sConnect = () =>
+    run('Connect', async () => {
+        await r3sClose();
+        r3sRender();
+        const dev = r3sPick(await navigator.hid.requestDevice({ filters: [eck.TOPRE_FILTER, eck.R3S_FILTER] }));
+        if (!dev) throw new Error('no Realforce R3S selected');
+        await r3sDetect(dev);
+    });
+$('r-connect').onclick = r3sConnect;
+
+$('r-install').onclick = async () => {
+    await run('Install ECK', async () => {
+        const data = await r3sFirmware();
+        const { pfu } = rk;
+        rk.pfu = null;
+        const reconnect = () => pfuReconnect(eck.TOPRE_FILTER, "Topre's updater (REALFORCE R3S)");
+        await eck.pfuInstall(pfu, data, { reconnect, log, progress });
+    });
+    if (manifest?.files.r3s_via) log('Next: load the R3S via.json in VIA to change the keymap and settings (Download via.json on this page).');
+    await r3sRedetect();
+};
+
+$('r-update').onclick = async () => {
+    await run('Update firmware', async () => {
+        const data = await r3sFirmware();
+        const dfu = await enterDfu(await r3sVia());
+        await eck.r3sUpdate(dfu, data, { log, progress });
+        inDfu = false;
+    });
+    await r3sRedetect();
+};
+
+$('r-backup').onclick = async () => {
+    await run('Back up settings', async () => {
+        const write = await pickFile(`eck-r3s-settings-${new Date().toISOString().slice(0, 10)}.bin`);
+        const dfu = await enterDfu(await r3sVia());
+        const eeprom = await eck.backup(dfu);
+        await dfu.leave();
+        inDfu = false;
+        await write(eeprom);
+    });
+    await r3sRedetect();
+};
+
+$('r-restore').onclick = () => $('r-eepromfile').click();
+
+$('r-eepromfile').onchange = async () => {
+    const file = $('r-eepromfile').files[0];
+    $('r-eepromfile').value = '';
+    if (!file) return;
+    await run('Restore settings', async () => {
+        const data = new Uint8Array(await file.arrayBuffer());
+        if (data.length !== eck.EEPROM_SIZE) throw new Error(`${file.name} is not a settings backup (${data.length} bytes)`);
+        if (!confirm(`Restore ${file.name}? It replaces this keyboard's keymap, macros and settings.`))
+            throw new Error('cancelled: nothing changed');
+        const dfu = await enterDfu(await r3sVia());
+        await eck.restoreEeprom(dfu, data, { log, r3s: true });
+        inDfu = false;
+    });
+    await r3sRedetect();
+};
+
+$('l-r-recover').onclick = (e) => {
+    e.preventDefault();
+    show('r-recover', true);
+    $('r-recover').scrollIntoView({ behavior: 'smooth' });
+};
+
+$('r-recover-b').onclick = async () => {
+    await run('Recover firmware', async () => {
+        const data = await r3sFirmware();
+        let dev = await eck.Dfu.find();
+        const hid = await navigator.hid.getDevices();
+        if (!dev && hid.some(eck.isR3s)) throw new Error('the keyboard is running ECK, not in update mode: use Update firmware');
+        if (!dev && hid.some(isTopre)) throw new Error("the keyboard is in Topre's updater: connect it above and click Install ECK");
+        if (!dev) {
+            say('Select "DFU in FS Mode" (STMicroelectronics) in the next dialog.');
+            dev = await withGesture('Select update mode device', () => eck.Dfu.request());
+        }
+        const dfu = await eck.Dfu.open(dev);
+        inDfu = true;
+        await eck.r3sUpdate(dfu, data, { log, progress });
+        inDfu = false;
+    });
+    await r3sRedetect();
+};
+
+// ---------- tabs and start ----------
+
+let tab = 'hhkb';
+function setTab(name) {
+    tab = name;
+    for (const t of ['hhkb', 'r3s']) {
+        show(`tab-${t}`, t === name);
+        $(`t-${t}`).setAttribute('aria-selected', String(t === name));
+    }
+    history.replaceState(null, '', name === 'r3s' ? '#r3s' : location.pathname + location.search);
+}
+$('t-hhkb').onclick = () => setTab('hhkb');
+$('t-r3s').onclick = () => setTab('r3s');
+setTab(location.hash === '#r3s' ? 'r3s' : 'hhkb');
 
 $('win-note').hidden = !windows;
 if (!('hid' in navigator) || !('usb' in navigator)) {
     $('support').hidden = false; /* also shown by the page's inline check */
     controls.forEach((b) => (b.disabled = true));
 } else {
-    autoDetect();
+    // A granted R3S (and no HHKB) opens on the R3S tab
+    Promise.all([autoDetect(), r3sAutoDetect()]).then(([, r3s]) => {
+        if (r3s && !kb) setTab('r3s');
+    });
 }
 
 fetch('firmware/manifest.json')
@@ -433,6 +642,11 @@ fetch('firmware/manifest.json')
             $('vialink').href = `firmware/${m.files.via}`;
             $('via').hidden = false;
         }
+        if (m.files.r3s_via) {
+            $('r-vialink').href = `firmware/${m.files.r3s_via}`;
+            $('r-via').hidden = false;
+        }
         render();
+        r3sRender();
     })
     .catch(() => ($('fwinfo').textContent = 'No bundled release here: choose a local .hfb.'));

@@ -13,7 +13,17 @@ const size_t keymap_layers = 1;
 
 void bootloader_jump(void) {}
 int16_t keyboard_get_flat_key_index(uint8_t row, uint8_t col) { (void)row; (void)col; return 0; }
-void keyboard_send_key(uint16_t key, bool pressed) { (void)key; (void)pressed; }
+// Key events sent by the macro player
+static uint16_t s_sent_key[8];
+static bool s_sent_pressed[8];
+static size_t s_sent_count;
+void keyboard_send_key(uint16_t key, bool pressed) {
+    if (s_sent_count < 8) {
+        s_sent_key[s_sent_count] = key;
+        s_sent_pressed[s_sent_count] = pressed;
+    }
+    s_sent_count++;
+}
 static bool s_mock_matrix[16][32] = {{0}};
 bool matrix_is_pressed(uint8_t row, uint8_t col) {
     if (row < 16 && col < 32) return s_mock_matrix[row][col];
@@ -28,6 +38,32 @@ void via_keymap_load(void) {}
 void via_keymap_save(void) {}
 void via_keymap_poll(void) {}
 bool hhkb_via_command(uint8_t const *request, uint8_t *response) { (void)request; (void)response; return false; }
+void via_macro_send(uint8_t id);
+bool via_macro_has_active(void);
+TickType_t via_macro_check_timeouts(TickType_t now);
+
+// Store one character as macro 0, play it, and check it types `kc` (with Left Shift if `shift`)
+static void assert_macro_types(char c, uint8_t kc, bool shift) {
+    uint8_t req[32] = {0x0F, 0, 0, 2, (uint8_t)c, 0}; // DYNAMIC_KEYMAP_MACRO_SET_BUFFER at offset 0
+    uint8_t resp[32] = {0};
+    via_process_packet(req, resp);
+    s_sent_count = 0;
+    via_macro_send(0);
+    TickType_t now = g_mock_ticks;
+    while (via_macro_has_active()) {
+        TickType_t wait = via_macro_check_timeouts(now);
+        if (wait == portMAX_DELAY) break;
+        now += wait;
+    }
+    const size_t k = shift ? 1 : 0; // index of the key's press
+    assert(s_sent_count == (shift ? 4u : 2u));
+    assert(s_sent_key[k] == kc && s_sent_pressed[k]);
+    assert(s_sent_key[k + 1] == kc && !s_sent_pressed[k + 1]);
+    if (shift) {
+        assert(s_sent_key[0] == 0xE1 && s_sent_pressed[0]);
+        assert(s_sent_key[3] == 0xE1 && !s_sent_pressed[3]);
+    }
+}
 
 int main(void) {
     // EEPROM keeps keys as 16-bit VIA codes: every internal code VIA can set, and every kind
@@ -134,6 +170,26 @@ int main(void) {
     uint8_t rgb_req[32] = {0x08, 0x02, 0x01};
     via_process_packet(rgb_req, resp);
     assert(resp[0] == 0xFF);
+
+    // 7. Macro text: every printable ASCII character types its US-layout key, shifted where needed.
+    // Each row is a run of adjacent HID usages: the first usage, then its unshifted and shifted characters.
+    static const struct {
+        uint8_t first;
+        const char *plain, *shifted;
+    } rows[] = {{0x04, "abcdefghijklmnopqrstuvwxyz1234567890", "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()"},
+                {0x2D, "-=[]\\", "_+{}|"},
+                {0x33, ";'`,./", ":\"~<>?"}};
+    size_t typed = 0;
+    for (size_t r = 0; r < sizeof rows / sizeof rows[0]; r++) {
+        for (size_t i = 0; rows[r].plain[i]; i++, typed += 2) {
+            assert_macro_types(rows[r].plain[i], (uint8_t)(rows[r].first + i), false);
+            assert_macro_types(rows[r].shifted[i], (uint8_t)(rows[r].first + i), true);
+        }
+    }
+    assert_macro_types(' ', 0x2C, false);
+    assert(typed + 1 == 0x7E - 0x20 + 1); // all of printable ASCII
+    assert_macro_types('\n', 0x28, false);
+    assert_macro_types('\t', 0x2B, false);
 
     puts("via keycode translation tests passed");
     return 0;
