@@ -58,7 +58,7 @@ jobs:
       - name: Classic Type-S
         run: ./build.sh type_s -c
       # JIS (69 keys): untested on hardware, so built as CI artifacts only, not released.
-      - name: Hybrid JIS (reuses the nRF52 app built above)
+      - name: Hybrid JIS (its own nRF52 app, make JIS=1)
         run: ./build.sh hybrid_jis && test -f build/hybrid_jis/hhkb_ec_hybrid_jis.hfb
       - name: Classic Type-S JIS
         run: ./build.sh type_s_jis -c

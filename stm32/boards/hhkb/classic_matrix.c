@@ -53,7 +53,21 @@ static inline uint16_t adc_read_sample(void) {
     return (uint16_t)(ADC1->DR & 0x0FFF);
 }
 
+#ifdef HHKB_JIS
+/* JIS: six matrix positions have no key (LAYOUT); they are read for timing but never pressed. */
+static matrix_row_t s_has_key[MATRIX_ROWS];
+
+static void has_key_init(void) {
+    static const struct { uint8_t r, c; } layout[] = LAYOUT;
+    for (size_t i = 0; i < sizeof(layout) / sizeof(layout[0]); i++)
+        s_has_key[layout[i].r] |= (matrix_row_t)(1U << layout[i].c);
+}
+#endif
+
 void hhkb_matrix_hardware_init(void) {
+#ifdef HHKB_JIS
+    has_key_init();
+#endif
 #ifdef HHKB_HYBRID
     hybrid_hardware_init();
 #endif
@@ -258,6 +272,9 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
                 }
             }
 
+#ifdef HHKB_JIS
+            is_pressed = is_pressed && (s_has_key[row] & (1U << col));
+#endif
             if (is_pressed) current_matrix[row] |= (1U << col);
             else current_matrix[row] &= ~(1U << col);
 
