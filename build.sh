@@ -19,12 +19,13 @@ while getopts "cd:" opt; do
 done
 JOBS=$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)
 
-if [[ "$CLEAN" == true ]]; then rm -rf "$BUILD_DIR" "$ROOT/nrf52/_build"; fi
+if [[ "$CLEAN" == true ]]; then rm -rf "$BUILD_DIR" "$ROOT/nrf52/_build" "$ROOT/nrf52/_build_jis"; fi
 
 # The Hybrid .hfb packs the nRF52 app; build it first when the nRF5 SDK is present.
 if [[ "$VARIANT" == hybrid* ]]; then
     if [[ -d "$ROOT/../nRF5_SDK_17.1.1" ]]; then
-        make --no-print-directory -C "$ROOT/nrf52" -j"$JOBS" # GNU make 4 would leak "Entering directory" into the SDK link line
+        NRF_JIS=0; [[ "$VARIANT" == hybrid_jis ]] && NRF_JIS=1 # JIS: country code and product ID (nrf52/_build_jis)
+        make --no-print-directory -C "$ROOT/nrf52" -j"$JOBS" JIS=$NRF_JIS # GNU make 4 would leak "Entering directory" into the SDK link line
     else
         echo "nRF5 SDK not found at ../nRF5_SDK_17.1.1: building the STM32 .bin only" >&2
     fi

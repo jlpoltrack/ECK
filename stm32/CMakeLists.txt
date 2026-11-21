@@ -168,7 +168,12 @@ endif()
 set(HHKB_HYBRID_SOFTDEVICE "${REPO_ROOT}/../nRF5_SDK_17.1.1/components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex" CACHE FILEPATH "Nordic S132 v7.2.0 SoftDevice .hex for the Hybrid .hfb")
 # The nRF52 Bluetooth app from nrf52/ (built with make). Required:
 # with PFU's nRF52 app both chips would drive the link as SPI master.
-set(HHKB_HYBRID_NRF_APP "${REPO_ROOT}/nrf52/_build/nrf52832_xxaa.bin" CACHE FILEPATH "nRF52 app placed in the Hybrid .hfb")
+if(HHKB_VARIANT STREQUAL "hybrid_jis")
+    set(NRF_BUILD_DIR _build_jis) # make JIS=1: JIS country code and product ID
+else()
+    set(NRF_BUILD_DIR _build)
+endif()
+set(HHKB_HYBRID_NRF_APP "${REPO_ROOT}/nrf52/${NRF_BUILD_DIR}/nrf52832_xxaa.bin" CACHE FILEPATH "nRF52 app placed in the Hybrid .hfb")
 
 project(hhkb_ec ASM C CXX)
 

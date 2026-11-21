@@ -13,7 +13,7 @@ make                           # or: make SDK_ROOT=/path/to/nRF5_SDK_17.1.1
 make clean && make NRF_LOG=1   # with the SEGGER RTT log for SWD debugging (~15 KB larger)
 ```
 
-Output: `_build/nrf52832_xxaa.bin` and `.hex`, linked at `0x26000`. It must fit the 64 KB app slot, hence `-Os`. `./build.sh hybrid` at the root builds it and packs it into the Hybrid `.hfb`.
+Output: `_build/nrf52832_xxaa.bin` and `.hex`, linked at `0x26000`. It must fit the 64 KB app slot, hence `-Os`. `./build.sh hybrid` at the root builds it and packs it into the Hybrid `.hfb`. `make JIS=1` builds the Hybrid JIS app into `_build_jis/` (HID country code 15, product ID `0x4012`), which `./build.sh hybrid_jis` packs.
 
 ## Install
 

@@ -714,9 +714,15 @@ static void gap_init(void) {
     APP_ERROR_CHECK(nrf_ble_gatt_init(&m_gatt, NULL));
 }
 
+#ifdef ECK_JIS
+#define HID_PRODUCT_ID 0x4012 /* the JIS keyboard's USB IDs and country code (Japan), as PFU's JIS image */
+#else
+#define HID_PRODUCT_ID 0x4010
+#endif
+
 static void dis_init(void) {
     ble_dis_init_t init;
-    ble_dis_pnp_id_t pnp = {.vendor_id_source = 0x02, .vendor_id = 0xCAFE, .product_id = 0x4010,
+    ble_dis_pnp_id_t pnp = {.vendor_id_source = 0x02, .vendor_id = 0xCAFE, .product_id = HID_PRODUCT_ID,
                             .product_version = 0x0001}; /* same IDs as ECK's USB device */
     memset(&init, 0, sizeof(init));
     ble_srv_ascii_to_utf8(&init.manufact_name_str, MANUFACTURER_NAME);
@@ -786,6 +792,9 @@ static void hids_init(void) {
     init.rep_map.data_len = sizeof(report_map);
     init.rep_map.p_data = (uint8_t *)report_map;
     init.hid_information.bcd_hid = 0x0111;
+#ifdef ECK_JIS
+    init.hid_information.b_country_code = 15;
+#endif
     init.hid_information.flags = HID_INFO_FLAG_REMOTE_WAKE_MSK | HID_INFO_FLAG_NORMALLY_CONNECTABLE_MSK;
     /* Encrypted access (SEC_JUST_WORKS: no MITM needed per attribute); unset fields are SEC_NO_ACCESS. */
     init.rep_map.rd_sec = SEC_JUST_WORKS;

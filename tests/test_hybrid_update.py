@@ -44,7 +44,7 @@ class LayoutCheck(unittest.TestCase):
         saved = upd.open_keyboard
         upd.open_keyboard = lambda required=True: None if product is None else FakeKeyboard(product)
         try:
-            upd.check_layout(sec)
+            upd.check_layout(b"Hybrid JIS" in sec)
         finally:
             upd.open_keyboard = saved
 
@@ -58,6 +58,11 @@ class LayoutCheck(unittest.TestCase):
             self.check("HHKB Professional Hybrid", b"..HHKB Professional Hybrid JIS\0..")
         with self.assertRaisesRegex(SystemExit, "ANSI layout"):
             self.check("HHKB Professional Hybrid JIS", b"..HHKB Professional Hybrid\0..")
+
+    def test_hfb_model_names_layout(self):
+        trailer = lambda model: model + bytes([0x02, 0x00, 0x04, 0x09]) + b"\xff" * 6
+        self.assertTrue(upd.hfb_is_jis(b"\0" * 100 + trailer(b"AHJX01")))
+        self.assertFalse(upd.hfb_is_jis(b"\0" * 100 + trailer(b"AHUX01")))
 
 
 if __name__ == '__main__':

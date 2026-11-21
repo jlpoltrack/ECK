@@ -13,7 +13,7 @@ Run from the repository root. Output goes to `build/<variant>/`: `hhkb_ec_<varia
 ./build.sh r3s       # build/r3s/hhkb_ec_r3s.{bin,rfb} (Realforce R3S; flash with tools/r3s/r3s_backup.py flash)
 ```
 
-- `-c` cleans first (including `nrf52/_build`).
+- `-c` cleans first (including `nrf52/_build` and `nrf52/_build_jis`).
 - Vial is on by default; `cmake -DECK_VIAL=OFF` builds VIA-only ([Vial](vial.md)).
 - `-d A,B` adds bench options: `HHKB_ADC_DIAGNOSTICS` (per-key readings over VIA for `tools/bench/key_depth.py`), `HHKB_SCAN_DIAGNOSTICS` (scan timing counters, shown by the Polling Rate Monitor), `HHKB_HYBRID_TEST_CMD` (bridge commands over SWD for `tools/bench/hybrid_cmd.py`).
 - The Hybrid build first builds the nRF52 app (`nrf52/`) and packs it with Nordic's S132 v7.2.0 SoftDevice from `../nRF5_SDK_17.1.1`; without the SDK only the `.bin` is built.
