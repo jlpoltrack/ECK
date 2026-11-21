@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="428" font-family="Helvetica, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="28" font-size="17" font-weight="bold" fill="#222">DIP switches (back of the keyboard, read at power-on)</text>
+<text x="20" y="56" font-size="12" fill="#555">SW1 selects the mode. Fn + Ctrl + W switches Mac ↔ Win until power-off.</text>
+<text x="20" y="84" font-size="12" font-weight="bold" fill="#222">SW1</text>
+<text x="70" y="84" font-size="12" font-weight="bold" fill="#222">Mode</text>
+<text x="190" y="84" font-size="12" font-weight="bold" fill="#222">What changes</text>
+<rect x="14" y="94" width="672" height="28" rx="3" fill="#f4f6f8"/>
+<text x="20" y="114" font-size="12" font-weight="bold" fill="#222">OFF</text>
+<text x="70" y="114" font-size="12" fill="#444">Win</text>
+<text x="190" y="114" font-size="12" fill="#444">No extras</text>
+<text x="20" y="142" font-size="12" font-weight="bold" fill="#222">ON</text>
+<text x="70" y="142" font-size="12" fill="#444">Mac</text>
+<text x="190" y="142" font-size="12" fill="#444">半角/全角 is Caps Lock, 無変換 is 英数, 変換 is かな, かな is right ◇ (Command)</text>
+<text x="20" y="176" font-size="12" font-weight="bold" fill="#222">Switch</text>
+<text x="90" y="176" font-size="12" font-weight="bold" fill="#222">OFF</text>
+<text x="390" y="176" font-size="12" font-weight="bold" fill="#222">ON</text>
+<rect x="14" y="186" width="672" height="44" rx="3" fill="#f4f6f8"/>
+<text x="20" y="206" font-size="12" font-weight="bold" fill="#222">SW2</text>
+<text x="90" y="206" font-size="12" fill="#444">Control is Ctrl, left Fn is Fn</text>
+<text x="390" y="206" font-size="12" fill="#444">Control is 英数, left Fn is Ctrl (also for</text>
+<text x="390" y="222" font-size="12" fill="#444">the Fn + Ctrl chords)</text>
+<text x="20" y="250" font-size="12" font-weight="bold" fill="#222">SW3</text>
+<text x="90" y="250" font-size="12" fill="#444">BS key is Backspace</text>
+<text x="90" y="266" font-size="12" fill="#444">Fn + BS is Delete</text>
+<text x="390" y="250" font-size="12" fill="#444">BS key is Delete</text>
+<text x="390" y="266" font-size="12" fill="#444">Fn + BS is Backspace</text>
+<rect x="14" y="274" width="672" height="28" rx="3" fill="#f4f6f8"/>
+<text x="20" y="294" font-size="12" font-weight="bold" fill="#222">SW4</text>
+<text x="90" y="294" font-size="12" fill="#444">Arrow keys are arrows</text>
+<text x="390" y="294" font-size="12" fill="#444">↑ is Shift, ↓ is ◇, ← is Delete, → is Ctrl</text>
+<text x="20" y="322" font-size="12" font-weight="bold" fill="#222">SW5</text>
+<text x="90" y="322" font-size="12" fill="#444">Left ◇ and left Alt in their stock places</text>
+<text x="390" y="322" font-size="12" fill="#444">Left ◇ and left Alt swapped</text>
+<rect x="14" y="330" width="672" height="60" rx="3" fill="#f4f6f8"/>
+<text x="20" y="350" font-size="12" font-weight="bold" fill="#222">SW6</text>
+<text x="90" y="350" font-size="12" fill="#444">Hybrid: power saving (keys don't wake the</text>
+<text x="90" y="366" font-size="12" fill="#444">computer), auto power-off on batteries</text>
+<text x="90" y="382" font-size="12" fill="#444">Type-S: normal</text>
+<text x="390" y="350" font-size="12" fill="#444">Hybrid: keys wake the computer, no auto</text>
+<text x="390" y="366" font-size="12" fill="#444">power-off</text>
+<text x="390" y="382" font-size="12" fill="#444">Type-S: Bank 1 recovery</text>
+<text x="20" y="412" font-size="12" fill="#555">The switches change only keys that still hold their default keycodes, so Vial / VIA remaps are kept.</text>
+</svg>

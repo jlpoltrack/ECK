@@ -1,0 +1,450 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1034" font-family="Helvetica, Arial, sans-serif">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="28" font-size="17" font-weight="bold" fill="#222">Layer 0: base. Fn is held for layer 1</text>
+<rect x="22.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="42.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">Esc</text>
+<rect x="66.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="86.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">1</text>
+<rect x="110.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="130.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">2</text>
+<rect x="154.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="174.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">3</text>
+<rect x="198.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="218.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">4</text>
+<rect x="242.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="262.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">5</text>
+<rect x="286.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="306.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">6</text>
+<rect x="330.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="350.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">7</text>
+<rect x="374.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="394.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">8</text>
+<rect x="418.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="438.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">9</text>
+<rect x="462.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="482.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">0</text>
+<rect x="506.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="526.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">-</text>
+<rect x="550.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="570.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">^</text>
+<rect x="594.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="614.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">¥</text>
+<rect x="638.0" y="58.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="658.0" y="82.0" font-size="12" text-anchor="middle" fill="#333">BS</text>
+<rect x="22.0" y="102.0" width="62.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="53.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">Tab</text>
+<rect x="88.0" y="102.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="108.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">Q</text>
+<rect x="132.0" y="102.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="152.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">W</text>
+<rect x="176.0" y="102.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="196.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">E</text>
+<rect x="220.0" y="102.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="240.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">R</text>
+<rect x="264.0" y="102.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="284.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">T</text>
+<rect x="308.0" y="102.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="328.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">Y</text>
+<rect x="352.0" y="102.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="372.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">U</text>
+<rect x="396.0" y="102.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="416.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">I</text>
+<rect x="440.0" y="102.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="460.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">O</text>
+<rect x="484.0" y="102.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="504.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">P</text>
+<rect x="528.0" y="102.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="548.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">@</text>
+<rect x="572.0" y="102.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="592.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">[</text>
+<path d="M616.0,102.0 H678.0 V186.0 H627.0 V142.0 H616.0 Z" fill="#f2f2f2" stroke="#c8c8c8" stroke-linejoin="round"/>
+<text x="647.0" y="126.0" font-size="12" text-anchor="middle" fill="#333">Enter</text>
+<rect x="22.0" y="146.0" width="73.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="58.5" y="170.0" font-size="12" text-anchor="middle" fill="#333">Ctrl</text>
+<rect x="99.0" y="146.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="119.0" y="170.0" font-size="12" text-anchor="middle" fill="#333">A</text>
+<rect x="143.0" y="146.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="163.0" y="170.0" font-size="12" text-anchor="middle" fill="#333">S</text>
+<rect x="187.0" y="146.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="207.0" y="170.0" font-size="12" text-anchor="middle" fill="#333">D</text>
+<rect x="231.0" y="146.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="251.0" y="170.0" font-size="12" text-anchor="middle" fill="#333">F</text>
+<rect x="275.0" y="146.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="295.0" y="170.0" font-size="12" text-anchor="middle" fill="#333">G</text>
+<rect x="319.0" y="146.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="339.0" y="170.0" font-size="12" text-anchor="middle" fill="#333">H</text>
+<rect x="363.0" y="146.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="383.0" y="170.0" font-size="12" text-anchor="middle" fill="#333">J</text>
+<rect x="407.0" y="146.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="427.0" y="170.0" font-size="12" text-anchor="middle" fill="#333">K</text>
+<rect x="451.0" y="146.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="471.0" y="170.0" font-size="12" text-anchor="middle" fill="#333">L</text>
+<rect x="495.0" y="146.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="515.0" y="170.0" font-size="12" text-anchor="middle" fill="#333">;</text>
+<rect x="539.0" y="146.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="559.0" y="170.0" font-size="12" text-anchor="middle" fill="#333">:</text>
+<rect x="583.0" y="146.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="603.0" y="170.0" font-size="12" text-anchor="middle" fill="#333">]</text>
+<rect x="22.0" y="190.0" width="84.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="64.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">Shift</text>
+<rect x="110.0" y="190.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="130.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">Z</text>
+<rect x="154.0" y="190.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="174.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">X</text>
+<rect x="198.0" y="190.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="218.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">C</text>
+<rect x="242.0" y="190.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="262.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">V</text>
+<rect x="286.0" y="190.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="306.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">B</text>
+<rect x="330.0" y="190.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="350.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">N</text>
+<rect x="374.0" y="190.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="394.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">M</text>
+<rect x="418.0" y="190.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="438.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">,</text>
+<rect x="462.0" y="190.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="482.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">.</text>
+<rect x="506.0" y="190.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="526.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">/</text>
+<rect x="550.0" y="190.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="570.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">ろ</text>
+<rect x="594.0" y="190.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="614.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">↑</text>
+<rect x="638.0" y="190.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="658.0" y="214.0" font-size="12" text-anchor="middle" fill="#333">Shift</text>
+<rect x="22.0" y="234.0" width="40.0" height="40.0" rx="4" fill="#444" stroke="#c8c8c8"/>
+<text x="42.0" y="258.0" font-size="12" text-anchor="middle" fill="#fff">Fn</text>
+<rect x="66.0" y="234.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="86.0" y="251.0" font-size="12" text-anchor="middle" fill="#333">半角</text>
+<text x="86.0" y="265.0" font-size="12" text-anchor="middle" fill="#333">全角</text>
+<rect x="110.0" y="234.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="130.0" y="258.0" font-size="12" text-anchor="middle" fill="#333">◇</text>
+<rect x="154.0" y="234.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="174.0" y="258.0" font-size="12" text-anchor="middle" fill="#333">Alt</text>
+<rect x="198.0" y="234.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="218.0" y="258.0" font-size="12" text-anchor="middle" fill="#333">無変換</text>
+<rect x="242.0" y="234.0" width="128.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="306.0" y="258.0" font-size="12" text-anchor="middle" fill="#333"></text>
+<rect x="374.0" y="234.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="394.0" y="258.0" font-size="12" text-anchor="middle" fill="#333">変換</text>
+<rect x="418.0" y="234.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="438.0" y="258.0" font-size="12" text-anchor="middle" fill="#333">かな</text>
+<rect x="462.0" y="234.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="482.0" y="258.0" font-size="12" text-anchor="middle" fill="#333">Alt</text>
+<rect x="506.0" y="234.0" width="40.0" height="40.0" rx="4" fill="#444" stroke="#c8c8c8"/>
+<text x="526.0" y="258.0" font-size="12" text-anchor="middle" fill="#fff">Fn</text>
+<rect x="550.0" y="234.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="570.0" y="258.0" font-size="12" text-anchor="middle" fill="#333">←</text>
+<rect x="594.0" y="234.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="614.0" y="258.0" font-size="12" text-anchor="middle" fill="#333">↓</text>
+<rect x="638.0" y="234.0" width="40.0" height="40.0" rx="4" fill="#f2f2f2" stroke="#c8c8c8"/>
+<text x="658.0" y="258.0" font-size="12" text-anchor="middle" fill="#333">→</text>
+<text x="20" y="297" font-size="12" fill="#555">Layers 2 and 3 (System 2) start as copies of 0 and 1. DIP switches can change some keys (see the DIP switch picture).</text>
+<text x="20" y="335" font-size="17" font-weight="bold" fill="#222">Layer 1: Fn held. Blank keys fall through to layer 0</text>
+<rect x="22.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#e3d9f3" stroke="#c8c8c8"/>
+<text x="42.0" y="389.0" font-size="12" text-anchor="middle" fill="#3d2766">Power</text>
+<rect x="66.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#dde3ea" stroke="#c8c8c8"/>
+<text x="86.0" y="389.0" font-size="12" text-anchor="middle" fill="#2b3640">F1</text>
+<rect x="110.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#dde3ea" stroke="#c8c8c8"/>
+<text x="130.0" y="389.0" font-size="12" text-anchor="middle" fill="#2b3640">F2</text>
+<rect x="154.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#dde3ea" stroke="#c8c8c8"/>
+<text x="174.0" y="389.0" font-size="12" text-anchor="middle" fill="#2b3640">F3</text>
+<rect x="198.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#dde3ea" stroke="#c8c8c8"/>
+<text x="218.0" y="389.0" font-size="12" text-anchor="middle" fill="#2b3640">F4</text>
+<rect x="242.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#dde3ea" stroke="#c8c8c8"/>
+<text x="262.0" y="389.0" font-size="12" text-anchor="middle" fill="#2b3640">F5</text>
+<rect x="286.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#dde3ea" stroke="#c8c8c8"/>
+<text x="306.0" y="389.0" font-size="12" text-anchor="middle" fill="#2b3640">F6</text>
+<rect x="330.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#dde3ea" stroke="#c8c8c8"/>
+<text x="350.0" y="389.0" font-size="12" text-anchor="middle" fill="#2b3640">F7</text>
+<rect x="374.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#dde3ea" stroke="#c8c8c8"/>
+<text x="394.0" y="389.0" font-size="12" text-anchor="middle" fill="#2b3640">F8</text>
+<rect x="418.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#dde3ea" stroke="#c8c8c8"/>
+<text x="438.0" y="389.0" font-size="12" text-anchor="middle" fill="#2b3640">F9</text>
+<rect x="462.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#dde3ea" stroke="#c8c8c8"/>
+<text x="482.0" y="389.0" font-size="12" text-anchor="middle" fill="#2b3640">F10</text>
+<rect x="506.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#dde3ea" stroke="#c8c8c8"/>
+<text x="526.0" y="389.0" font-size="12" text-anchor="middle" fill="#2b3640">F11</text>
+<rect x="550.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#dde3ea" stroke="#c8c8c8"/>
+<text x="570.0" y="389.0" font-size="12" text-anchor="middle" fill="#2b3640">F12</text>
+<rect x="594.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#e3d9f3" stroke="#c8c8c8"/>
+<text x="614.0" y="389.0" font-size="12" text-anchor="middle" fill="#3d2766">Ins</text>
+<rect x="638.0" y="365.0" width="40.0" height="40.0" rx="4" fill="#e3d9f3" stroke="#c8c8c8"/>
+<text x="658.0" y="389.0" font-size="12" text-anchor="middle" fill="#3d2766">Del</text>
+<rect x="22.0" y="409.0" width="62.0" height="40.0" rx="4" fill="#e3d9f3" stroke="#c8c8c8"/>
+<text x="53.0" y="433.0" font-size="12" text-anchor="middle" fill="#3d2766">Caps</text>
+<rect x="88.0" y="409.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="108.0" y="433.0" font-size="12" text-anchor="middle" fill="#bbb">Q</text>
+<rect x="132.0" y="409.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="152.0" y="433.0" font-size="12" text-anchor="middle" fill="#bbb">W</text>
+<rect x="176.0" y="409.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="196.0" y="433.0" font-size="12" text-anchor="middle" fill="#bbb">E</text>
+<rect x="220.0" y="409.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="240.0" y="433.0" font-size="12" text-anchor="middle" fill="#bbb">R</text>
+<rect x="264.0" y="409.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="284.0" y="433.0" font-size="12" text-anchor="middle" fill="#bbb">T</text>
+<rect x="308.0" y="409.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="328.0" y="433.0" font-size="12" text-anchor="middle" fill="#bbb">Y</text>
+<rect x="352.0" y="409.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="372.0" y="433.0" font-size="12" text-anchor="middle" fill="#bbb">U</text>
+<rect x="396.0" y="409.0" width="40.0" height="40.0" rx="4" fill="#e3d9f3" stroke="#c8c8c8"/>
+<text x="416.0" y="433.0" font-size="12" text-anchor="middle" fill="#3d2766">PrtSc</text>
+<rect x="440.0" y="409.0" width="40.0" height="40.0" rx="4" fill="#e3d9f3" stroke="#c8c8c8"/>
+<text x="460.0" y="433.0" font-size="12" text-anchor="middle" fill="#3d2766">ScrLk</text>
+<rect x="484.0" y="409.0" width="40.0" height="40.0" rx="4" fill="#e3d9f3" stroke="#c8c8c8"/>
+<text x="504.0" y="433.0" font-size="12" text-anchor="middle" fill="#3d2766">Pause</text>
+<rect x="528.0" y="409.0" width="40.0" height="40.0" rx="4" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="548.0" y="433.0" font-size="12" text-anchor="middle" fill="#173a63">↑</text>
+<rect x="572.0" y="409.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="592.0" y="433.0" font-size="12" text-anchor="middle" fill="#bbb">[</text>
+<path d="M616.0,409.0 H678.0 V493.0 H627.0 V449.0 H616.0 Z" fill="#f8e4c4" stroke="#c8c8c8" stroke-linejoin="round"/>
+<text x="647.0" y="433.0" font-size="12" text-anchor="middle" fill="#6b4510">Enter</text>
+<rect x="22.0" y="453.0" width="73.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="58.5" y="477.0" font-size="12" text-anchor="middle" fill="#bbb">Ctrl</text>
+<rect x="99.0" y="453.0" width="40.0" height="40.0" rx="4" fill="#cfe8d4" stroke="#c8c8c8"/>
+<text x="119.0" y="477.0" font-size="12" text-anchor="middle" fill="#1d4d2a">Vol-</text>
+<rect x="143.0" y="453.0" width="40.0" height="40.0" rx="4" fill="#cfe8d4" stroke="#c8c8c8"/>
+<text x="163.0" y="477.0" font-size="12" text-anchor="middle" fill="#1d4d2a">Vol+</text>
+<rect x="187.0" y="453.0" width="40.0" height="40.0" rx="4" fill="#cfe8d4" stroke="#c8c8c8"/>
+<text x="207.0" y="477.0" font-size="12" text-anchor="middle" fill="#1d4d2a">Mute</text>
+<rect x="231.0" y="453.0" width="40.0" height="40.0" rx="4" fill="#cfe8d4" stroke="#c8c8c8"/>
+<text x="251.0" y="477.0" font-size="12" text-anchor="middle" fill="#1d4d2a">Eject</text>
+<rect x="275.0" y="453.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="295.0" y="477.0" font-size="12" text-anchor="middle" fill="#bbb">G</text>
+<rect x="319.0" y="453.0" width="40.0" height="40.0" rx="4" fill="#f8e4c4" stroke="#c8c8c8"/>
+<text x="339.0" y="477.0" font-size="12" text-anchor="middle" fill="#6b4510">*</text>
+<rect x="363.0" y="453.0" width="40.0" height="40.0" rx="4" fill="#f8e4c4" stroke="#c8c8c8"/>
+<text x="383.0" y="477.0" font-size="12" text-anchor="middle" fill="#6b4510">/</text>
+<rect x="407.0" y="453.0" width="40.0" height="40.0" rx="4" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="427.0" y="477.0" font-size="12" text-anchor="middle" fill="#173a63">Home</text>
+<rect x="451.0" y="453.0" width="40.0" height="40.0" rx="4" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="471.0" y="477.0" font-size="12" text-anchor="middle" fill="#173a63">PgUp</text>
+<rect x="495.0" y="453.0" width="40.0" height="40.0" rx="4" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="515.0" y="477.0" font-size="12" text-anchor="middle" fill="#173a63">←</text>
+<rect x="539.0" y="453.0" width="40.0" height="40.0" rx="4" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="559.0" y="477.0" font-size="12" text-anchor="middle" fill="#173a63">→</text>
+<rect x="583.0" y="453.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="603.0" y="477.0" font-size="12" text-anchor="middle" fill="#bbb">]</text>
+<rect x="22.0" y="497.0" width="84.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="64.0" y="521.0" font-size="12" text-anchor="middle" fill="#bbb">Shift</text>
+<rect x="110.0" y="497.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="130.0" y="521.0" font-size="12" text-anchor="middle" fill="#bbb">Z</text>
+<rect x="154.0" y="497.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="174.0" y="521.0" font-size="12" text-anchor="middle" fill="#bbb">X</text>
+<rect x="198.0" y="497.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="218.0" y="521.0" font-size="12" text-anchor="middle" fill="#bbb">C</text>
+<rect x="242.0" y="497.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="262.0" y="521.0" font-size="12" text-anchor="middle" fill="#bbb">V</text>
+<rect x="286.0" y="497.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="306.0" y="521.0" font-size="12" text-anchor="middle" fill="#bbb">B</text>
+<rect x="330.0" y="497.0" width="40.0" height="40.0" rx="4" fill="#f8e4c4" stroke="#c8c8c8"/>
+<text x="350.0" y="521.0" font-size="12" text-anchor="middle" fill="#6b4510">+</text>
+<rect x="374.0" y="497.0" width="40.0" height="40.0" rx="4" fill="#f8e4c4" stroke="#c8c8c8"/>
+<text x="394.0" y="521.0" font-size="12" text-anchor="middle" fill="#6b4510">-</text>
+<rect x="418.0" y="497.0" width="40.0" height="40.0" rx="4" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="438.0" y="521.0" font-size="12" text-anchor="middle" fill="#173a63">End</text>
+<rect x="462.0" y="497.0" width="40.0" height="40.0" rx="4" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="482.0" y="521.0" font-size="12" text-anchor="middle" fill="#173a63">PgDn</text>
+<rect x="506.0" y="497.0" width="40.0" height="40.0" rx="4" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="526.0" y="521.0" font-size="12" text-anchor="middle" fill="#173a63">↓</text>
+<rect x="550.0" y="497.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="570.0" y="521.0" font-size="12" text-anchor="middle" fill="#bbb">ろ</text>
+<rect x="594.0" y="497.0" width="40.0" height="40.0" rx="4" fill="#ece4d4" stroke="#c8c8c8"/>
+<text x="614.0" y="521.0" font-size="12" text-anchor="middle" fill="#4a3c22">Shift</text>
+<rect x="638.0" y="497.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="658.0" y="521.0" font-size="12" text-anchor="middle" fill="#bbb">Shift</text>
+<rect x="22.0" y="541.0" width="40.0" height="40.0" rx="4" fill="#444" stroke="#c8c8c8"/>
+<text x="42.0" y="565.0" font-size="12" text-anchor="middle" fill="#fff">Fn</text>
+<rect x="66.0" y="541.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="86.0" y="558.0" font-size="12" text-anchor="middle" fill="#bbb">半角</text>
+<text x="86.0" y="572.0" font-size="12" text-anchor="middle" fill="#bbb">全角</text>
+<rect x="110.0" y="541.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="130.0" y="565.0" font-size="12" text-anchor="middle" fill="#bbb">◇</text>
+<rect x="154.0" y="541.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="174.0" y="565.0" font-size="12" text-anchor="middle" fill="#bbb">Alt</text>
+<rect x="198.0" y="541.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="218.0" y="565.0" font-size="12" text-anchor="middle" fill="#bbb">無変換</text>
+<rect x="242.0" y="541.0" width="128.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="306.0" y="565.0" font-size="12" text-anchor="middle" fill="#bbb"></text>
+<rect x="374.0" y="541.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="394.0" y="565.0" font-size="12" text-anchor="middle" fill="#bbb">変換</text>
+<rect x="418.0" y="541.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="438.0" y="565.0" font-size="12" text-anchor="middle" fill="#bbb">かな</text>
+<rect x="462.0" y="541.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="482.0" y="565.0" font-size="12" text-anchor="middle" fill="#bbb">Alt</text>
+<rect x="506.0" y="541.0" width="40.0" height="40.0" rx="4" fill="#444" stroke="#c8c8c8"/>
+<text x="526.0" y="565.0" font-size="12" text-anchor="middle" fill="#fff">Fn</text>
+<rect x="550.0" y="541.0" width="40.0" height="40.0" rx="4" fill="#e3d9f3" stroke="#c8c8c8"/>
+<text x="570.0" y="565.0" font-size="12" text-anchor="middle" fill="#3d2766">Del</text>
+<rect x="594.0" y="541.0" width="40.0" height="40.0" rx="4" fill="#ece4d4" stroke="#c8c8c8"/>
+<text x="614.0" y="565.0" font-size="12" text-anchor="middle" fill="#4a3c22">◇</text>
+<rect x="638.0" y="541.0" width="40.0" height="40.0" rx="4" fill="#ece4d4" stroke="#c8c8c8"/>
+<text x="658.0" y="565.0" font-size="12" text-anchor="middle" fill="#4a3c22">Ctrl</text>
+<rect x="20" y="593" width="14" height="14" rx="3" fill="#dde3ea" stroke="#c8c8c8"/>
+<text x="40" y="604" font-size="12" fill="#222">F-keys</text>
+<rect x="96" y="593" width="14" height="14" rx="3" fill="#cfe8d4" stroke="#c8c8c8"/>
+<text x="116" y="604" font-size="12" fill="#222">Media</text>
+<rect x="165" y="593" width="14" height="14" rx="3" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="185" y="604" font-size="12" fill="#222">Navigation</text>
+<rect x="269" y="593" width="14" height="14" rx="3" fill="#f8e4c4" stroke="#c8c8c8"/>
+<text x="289" y="604" font-size="12" fill="#222">Keypad</text>
+<rect x="345" y="593" width="14" height="14" rx="3" fill="#e3d9f3" stroke="#c8c8c8"/>
+<text x="365" y="604" font-size="12" fill="#222">System / editing</text>
+<rect x="491" y="593" width="14" height="14" rx="3" fill="#ece4d4" stroke="#c8c8c8"/>
+<text x="511" y="604" font-size="12" fill="#222">Modifier</text>
+<text x="20" y="651" font-size="17" font-weight="bold" fill="#222">Chords: hold Fn + Ctrl, then the key (never sent to the host)</text>
+<rect x="22.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="42.0" y="705.0" font-size="12" text-anchor="middle" fill="#bbb">Esc</text>
+<rect x="66.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="86.0" y="705.0" font-size="12" text-anchor="middle" fill="#173a63">BT 1</text>
+<rect x="110.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="130.0" y="705.0" font-size="12" text-anchor="middle" fill="#173a63">BT 2</text>
+<rect x="154.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="174.0" y="705.0" font-size="12" text-anchor="middle" fill="#173a63">BT 3</text>
+<rect x="198.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="218.0" y="705.0" font-size="12" text-anchor="middle" fill="#173a63">BT 4</text>
+<rect x="242.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="262.0" y="705.0" font-size="12" text-anchor="middle" fill="#bbb">5</text>
+<rect x="286.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="306.0" y="705.0" font-size="12" text-anchor="middle" fill="#bbb">6</text>
+<rect x="330.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="350.0" y="705.0" font-size="12" text-anchor="middle" fill="#bbb">7</text>
+<rect x="374.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="394.0" y="705.0" font-size="12" text-anchor="middle" fill="#bbb">8</text>
+<rect x="418.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="438.0" y="705.0" font-size="12" text-anchor="middle" fill="#bbb">9</text>
+<rect x="462.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="482.0" y="705.0" font-size="12" text-anchor="middle" fill="#173a63">USB</text>
+<rect x="506.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="526.0" y="705.0" font-size="12" text-anchor="middle" fill="#bbb">-</text>
+<rect x="550.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="570.0" y="705.0" font-size="12" text-anchor="middle" fill="#bbb">^</text>
+<rect x="594.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="614.0" y="705.0" font-size="12" text-anchor="middle" fill="#bbb">¥</text>
+<rect x="638.0" y="681.0" width="40.0" height="40.0" rx="4" fill="#f8d4e4" stroke="#c8c8c8"/>
+<text x="658.0" y="705.0" font-size="12" text-anchor="middle" fill="#6e1f45">Forget</text>
+<rect x="22.0" y="725.0" width="62.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="53.0" y="749.0" font-size="12" text-anchor="middle" fill="#bbb">Tab</text>
+<rect x="88.0" y="725.0" width="40.0" height="40.0" rx="4" fill="#f8d4e4" stroke="#c8c8c8"/>
+<text x="108.0" y="749.0" font-size="10" text-anchor="middle" fill="#6e1f45">Pairing</text>
+<rect x="132.0" y="725.0" width="40.0" height="40.0" rx="4" fill="#d3f0ec" stroke="#c8c8c8"/>
+<text x="152.0" y="742.0" font-size="12" text-anchor="middle" fill="#14524a">Win/</text>
+<text x="152.0" y="756.0" font-size="12" text-anchor="middle" fill="#14524a">Mac</text>
+<rect x="176.0" y="725.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="196.0" y="749.0" font-size="12" text-anchor="middle" fill="#bbb">E</text>
+<rect x="220.0" y="725.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="240.0" y="749.0" font-size="12" text-anchor="middle" fill="#bbb">R</text>
+<rect x="264.0" y="725.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="284.0" y="749.0" font-size="12" text-anchor="middle" fill="#bbb">T</text>
+<rect x="308.0" y="725.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="328.0" y="749.0" font-size="12" text-anchor="middle" fill="#bbb">Y</text>
+<rect x="352.0" y="725.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="372.0" y="749.0" font-size="12" text-anchor="middle" fill="#bbb">U</text>
+<rect x="396.0" y="725.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="416.0" y="749.0" font-size="12" text-anchor="middle" fill="#bbb">I</text>
+<rect x="440.0" y="725.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="460.0" y="749.0" font-size="12" text-anchor="middle" fill="#bbb">O</text>
+<rect x="484.0" y="725.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="504.0" y="749.0" font-size="12" text-anchor="middle" fill="#bbb">P</text>
+<rect x="528.0" y="725.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="548.0" y="749.0" font-size="12" text-anchor="middle" fill="#bbb">@</text>
+<rect x="572.0" y="725.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="592.0" y="749.0" font-size="12" text-anchor="middle" fill="#bbb">[</text>
+<path d="M616.0,725.0 H678.0 V809.0 H627.0 V765.0 H616.0 Z" fill="#fafafa" stroke="#c8c8c8" stroke-linejoin="round"/>
+<text x="647.0" y="749.0" font-size="12" text-anchor="middle" fill="#bbb">Enter</text>
+<rect x="22.0" y="769.0" width="73.0" height="40.0" rx="4" fill="#444" stroke="#c8c8c8"/>
+<text x="58.5" y="793.0" font-size="12" text-anchor="middle" fill="#fff">Ctrl</text>
+<rect x="99.0" y="769.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="119.0" y="793.0" font-size="12" text-anchor="middle" fill="#bbb">A</text>
+<rect x="143.0" y="769.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="163.0" y="793.0" font-size="12" text-anchor="middle" fill="#bbb">S</text>
+<rect x="187.0" y="769.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="207.0" y="793.0" font-size="12" text-anchor="middle" fill="#bbb">D</text>
+<rect x="231.0" y="769.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="251.0" y="793.0" font-size="12" text-anchor="middle" fill="#bbb">F</text>
+<rect x="275.0" y="769.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="295.0" y="793.0" font-size="12" text-anchor="middle" fill="#bbb">G</text>
+<rect x="319.0" y="769.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="339.0" y="793.0" font-size="12" text-anchor="middle" fill="#bbb">H</text>
+<rect x="363.0" y="769.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="383.0" y="793.0" font-size="12" text-anchor="middle" fill="#bbb">J</text>
+<rect x="407.0" y="769.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="427.0" y="793.0" font-size="12" text-anchor="middle" fill="#bbb">K</text>
+<rect x="451.0" y="769.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="471.0" y="793.0" font-size="12" text-anchor="middle" fill="#bbb">L</text>
+<rect x="495.0" y="769.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="515.0" y="793.0" font-size="12" text-anchor="middle" fill="#bbb">;</text>
+<rect x="539.0" y="769.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="559.0" y="793.0" font-size="12" text-anchor="middle" fill="#bbb">:</text>
+<rect x="583.0" y="769.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="603.0" y="793.0" font-size="12" text-anchor="middle" fill="#bbb">]</text>
+<rect x="22.0" y="813.0" width="84.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="64.0" y="837.0" font-size="12" text-anchor="middle" fill="#bbb">Shift</text>
+<rect x="110.0" y="813.0" width="40.0" height="40.0" rx="4" fill="#f8d4e4" stroke="#c8c8c8"/>
+<text x="130.0" y="830.0" font-size="12" text-anchor="middle" fill="#6e1f45">Forget</text>
+<text x="130.0" y="844.0" font-size="12" text-anchor="middle" fill="#6e1f45">all</text>
+<rect x="154.0" y="813.0" width="40.0" height="40.0" rx="4" fill="#f8d4e4" stroke="#c8c8c8"/>
+<text x="174.0" y="837.0" font-size="12" text-anchor="middle" fill="#6e1f45">Cancel</text>
+<rect x="198.0" y="813.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="218.0" y="837.0" font-size="12" text-anchor="middle" fill="#bbb">C</text>
+<rect x="242.0" y="813.0" width="40.0" height="40.0" rx="4" fill="#d3f0ec" stroke="#c8c8c8"/>
+<text x="262.0" y="830.0" font-size="12" text-anchor="middle" fill="#14524a">VIA</text>
+<text x="262.0" y="844.0" font-size="12" text-anchor="middle" fill="#14524a">mode</text>
+<rect x="286.0" y="813.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="306.0" y="837.0" font-size="12" text-anchor="middle" fill="#bbb">B</text>
+<rect x="330.0" y="813.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="350.0" y="837.0" font-size="12" text-anchor="middle" fill="#bbb">N</text>
+<rect x="374.0" y="813.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="394.0" y="837.0" font-size="12" text-anchor="middle" fill="#bbb">M</text>
+<rect x="418.0" y="813.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="438.0" y="837.0" font-size="12" text-anchor="middle" fill="#bbb">,</text>
+<rect x="462.0" y="813.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="482.0" y="837.0" font-size="12" text-anchor="middle" fill="#bbb">.</text>
+<rect x="506.0" y="813.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="526.0" y="837.0" font-size="12" text-anchor="middle" fill="#bbb">/</text>
+<rect x="550.0" y="813.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="570.0" y="837.0" font-size="12" text-anchor="middle" fill="#bbb">ろ</text>
+<rect x="594.0" y="813.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="614.0" y="837.0" font-size="12" text-anchor="middle" fill="#bbb">↑</text>
+<rect x="638.0" y="813.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="658.0" y="837.0" font-size="12" text-anchor="middle" fill="#bbb">Shift</text>
+<rect x="22.0" y="857.0" width="40.0" height="40.0" rx="4" fill="#444" stroke="#c8c8c8"/>
+<text x="42.0" y="881.0" font-size="12" text-anchor="middle" fill="#fff">Fn</text>
+<rect x="66.0" y="857.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="86.0" y="874.0" font-size="12" text-anchor="middle" fill="#bbb">半角</text>
+<text x="86.0" y="888.0" font-size="12" text-anchor="middle" fill="#bbb">全角</text>
+<rect x="110.0" y="857.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="130.0" y="881.0" font-size="12" text-anchor="middle" fill="#bbb">◇</text>
+<rect x="154.0" y="857.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="174.0" y="881.0" font-size="12" text-anchor="middle" fill="#bbb">Alt</text>
+<rect x="198.0" y="857.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="218.0" y="881.0" font-size="12" text-anchor="middle" fill="#bbb">無変換</text>
+<rect x="242.0" y="857.0" width="128.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="306.0" y="881.0" font-size="12" text-anchor="middle" fill="#bbb"></text>
+<rect x="374.0" y="857.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="394.0" y="881.0" font-size="12" text-anchor="middle" fill="#bbb">変換</text>
+<rect x="418.0" y="857.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="438.0" y="881.0" font-size="12" text-anchor="middle" fill="#bbb">かな</text>
+<rect x="462.0" y="857.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="482.0" y="881.0" font-size="12" text-anchor="middle" fill="#bbb">Alt</text>
+<rect x="506.0" y="857.0" width="40.0" height="40.0" rx="4" fill="#444" stroke="#c8c8c8"/>
+<text x="526.0" y="881.0" font-size="12" text-anchor="middle" fill="#fff">Fn</text>
+<rect x="550.0" y="857.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="570.0" y="881.0" font-size="12" text-anchor="middle" fill="#bbb">←</text>
+<rect x="594.0" y="857.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="614.0" y="881.0" font-size="12" text-anchor="middle" fill="#bbb">↓</text>
+<rect x="638.0" y="857.0" width="40.0" height="40.0" rx="4" fill="#fafafa" stroke="#c8c8c8"/>
+<text x="658.0" y="881.0" font-size="12" text-anchor="middle" fill="#bbb">→</text>
+<rect x="20" y="909" width="14" height="14" rx="3" fill="#cfe0f5" stroke="#c8c8c8"/>
+<text x="40" y="920" font-size="12" fill="#222">Connection (Hybrid)</text>
+<rect x="187" y="909" width="14" height="14" rx="3" fill="#f8d4e4" stroke="#c8c8c8"/>
+<text x="207" y="920" font-size="12" fill="#222">Pairing (Hybrid)</text>
+<rect x="333" y="909" width="14" height="14" rx="3" fill="#d3f0ec" stroke="#c8c8c8"/>
+<text x="353" y="920" font-size="12" fill="#222">Mode toggle</text>
+<text x="20" y="946" font-size="12" fill="#555">Hybrid only:</text>
+<text x="20" y="963" font-size="12" fill="#555">• Pair a slot: Fn + Ctrl + Q (blue blinks twice a second), then Fn + Ctrl + 1-4.</text>
+<text x="20" y="980" font-size="12" fill="#555">• Cancel pairing: Fn + Ctrl + X.</text>
+<text x="20" y="997" font-size="12" fill="#555">• Forget a slot: Fn + Ctrl + Q, then hold Fn + Ctrl + BS and press 1-4.</text>
+<text x="20" y="1014" font-size="12" fill="#555">• Forget all: Fn + Ctrl + Q, then hold Fn + Ctrl + BS and press Z.</text>
+</svg>
