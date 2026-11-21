@@ -24,6 +24,8 @@ def name(title):
 def load(build):
     frames, calls = {}, {}
     for ci in pathlib.Path(build).rglob("*.ci"):
+        if "CompilerId" in ci.name:  # CMake's compiler check has its own main()
+            continue
         for line in ci.read_text().splitlines():
             if m := NODE.match(line):
                 if b := re.search(r"\\n(\d+) bytes \((\w+)", m[2]):

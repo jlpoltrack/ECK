@@ -92,6 +92,9 @@ static const uint8_t k_led_default[2] = {HHKB_LED_MODE_BLE, 0}; // stock: off ex
 static const uint8_t k_led_default[2] = {2, 3};
 #endif
 static uint8_t s_led_mode[2] = {k_led_default[0], k_led_default[1]};
+#ifdef BOARD_LED_SETTINGS
+static uint8_t s_led_colour = BOARD_LED_COLOUR_DEFAULT, s_led_level = BOARD_LED_LEVEL_DEFAULT;
+#endif
 static uint8_t s_system = 0;
 
 static volatile bool s_settings_dirty = false;
@@ -182,7 +185,11 @@ void hhkb_calibration_save_to_eeprom(void) {
     cal.led_modes = (uint8_t)((s_led_mode[0] & 0x0F) | (s_led_mode[1] << 4));
     cal.rt = s_rt_cfg;
     cal.classic_release_pm = s_classic_release_pm;
+#ifdef BOARD_LED_SETTINGS /* the retired scan-rate byte holds the indicator style; bit 7 marks it */
+    cal.scan_rate = (uint8_t)(0x80U | (s_led_level << 3) | s_led_colour);
+#else
     cal.scan_rate = BOARD_SCAN_RATE; /* no longer a setting; the field stays for the record layout */
+#endif
     cal.tapping_term_10ms = s_tapping_term_10ms;
     cal.quick_tap_10ms = s_quick_tap_10ms;
     cal.flags = (s_permissive_hold ? 1 : 0) | /* bits 1 (tap preferred), 2 (oversampling): retired, 0 */
@@ -287,6 +294,13 @@ void hhkb_calibration_load(void) {
             s_led_mode[0] = (cal->flags >> 6) & 3; // v1 kept LED 0 modes 0..3 only
         }
 
+#ifdef BOARD_LED_SETTINGS
+        if (cal->scan_rate & 0x80U) { /* older records hold the scan rate: keep the defaults */
+            uint8_t colour = cal->scan_rate & 7U, level = (cal->scan_rate >> 3) & 7U;
+            if (colour) s_led_colour = colour;
+            if (level >= 1 && level <= 5) s_led_level = level;
+        }
+#endif
         load_rt_cfg(&cal->rt);
         if (cal->classic_release_pm >= 25 && cal->classic_release_pm <= 1000) s_classic_release_pm = cal->classic_release_pm;
 
@@ -465,6 +479,17 @@ uint16_t hold_tap_config_value(uint8_t id) {
     default: return 0;
     }
 }
+
+#ifdef BOARD_LED_SETTINGS
+uint8_t hhkb_get_led_style(uint8_t which) { return which ? s_led_level : s_led_colour; }
+bool hhkb_set_led_style(uint8_t which, uint8_t value) {
+    if (value < 1 || value > (which ? 5 : 7)) return false;
+    if (which) s_led_level = value;
+    else s_led_colour = value;
+    hhkb_settings_mark_dirty();
+    return true;
+}
+#endif
 
 uint8_t hhkb_get_led_mode(uint8_t index) { return index < 2 ? s_led_mode[index] : 0; }
 void hhkb_set_led_mode(uint8_t index, uint8_t mode) {

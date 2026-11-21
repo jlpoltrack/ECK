@@ -63,7 +63,13 @@ def menus(hhkb_menus):
             led = next(i for i in section["content"] if i["content"][0] == "id_hhkb_led_1")
             led["label"] = "Simple Mode LED"
             led["options"] = [o for o in led["options"] if "Bluetooth" not in o[0]]
-            section["content"] = [led]
+            colours = ["Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White"]  # bit 0 red, 1 green, 2 blue
+            section["content"] = [
+                {"label": "Indicator colour", "type": "dropdown", "options": [[c, i + 1] for i, c in enumerate(colours)],
+                 "content": ["id_r3s_led_colour", 0, 34]},
+                {"label": "Indicator brightness", "type": "dropdown",
+                 "options": [[f"{5 * i} %", i] for i in range(1, 6)], "content": ["id_r3s_led_brightness", 0, 35]},
+                led]
     return m
 
 

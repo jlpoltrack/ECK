@@ -63,7 +63,7 @@ Flash: two 64 KB banks, 128-byte pages. Data EEPROM: 6 KB at `0x08080000` in two
 | `0x20000000` | SRAM, 20 KB | same |
 | `0x1FF00000` | System memory: ST's USB DFU loader (`0483:DF11`, "STM32 BOOTLOADER") | `hybrid/rom_dfu.h` |
 
-Data EEPROM. `0x08080000-0x080805FF` and `0x08081000-0x080813FF` are PFU's (keep them to return to stock); ECK owns `0x08080600-0x08080FFF` and `0x08081400-0x080817FF`, 756 B of which are free:
+Data EEPROM. `0x08080000-0x080805FF` and `0x08081000-0x080813FF` are PFU's (keep them to return to stock); ECK owns `0x08080600-0x08080FFF` and `0x08081400-0x080817FF`, 444 B of which are free (plus 544 B of padding inside the keymap slots):
 
 | Address | Use | Source |
 | --- | --- | --- |
@@ -76,7 +76,8 @@ Data EEPROM. `0x08080000-0x080805FF` and `0x08081000-0x080813FF` are PFU's (keep
 | `0x08081350` | Set by stock E0, cleared by PFU's Bank 1; meaning unknown | stock code |
 | `0x08081400-0x080814FF` | Free (stock keymap save 0) | |
 | `0x08081500` | ECK settings record (264 B: calibration, Rapid Trigger, hold-tap, LED modes) | `ec/ec_settings.c` |
-| `0x08081608-0x080817F7` | Free | |
+| `0x08081608-0x0808173F` | Vial entries record (312 B, tag `VIAL`) | `via/vial.c` |
+| `0x08081740-0x080817F7` | Free | |
 | `0x080817F8` | Bluetooth settings (slot, transport; bits 16-18, the retired Bluetooth scan rate, written 0) | `hybrid/hybrid_ble.c` |
 
 Boot: ECK's stub starts the ROM DFU loader if PC5 is held while PC13 shows USB power, or if Bank 2 fails its check (sane vectors, `0x360` = 1, CRC at `0x370` matches); otherwise it jumps to Bank 2 (tested). Option bytes: RDP 0, no write protection, BFB2 off.
@@ -91,7 +92,7 @@ As ECK configures them; "stock" items come from PFU's firmware.
 | PA3-PA7 | DIP SW1-SW5 | Input, pull-up, low = ON; analog after start-up on batteries | `boards/hhkb/dip_switch.c`, `hybrid_power.c` |
 | PA8 | Blue LED | Output, high = on | `hybrid_power.c` |
 | PA9 | Orange LED | Output, high = on; wins over blue | `hybrid_power.c` |
-| PA10 | Stock input, purpose unknown | Unused | stock code |
+| PA10 | Stock: digital input without pull, never read (A048, emulated and disassembled 2026-11-21) | Unused | stock code |
 | PA15 | Link CS to nRF52 P0.22 | Output, high idle (GPIO) | `hybrid_ble.c` |
 | PB0, PB1, PB2, PB10 | Row strobes 0-3 | Output, low = selected | `classic_matrix.c` |
 | PB3 / PB4 / PB5 | SPI1 SCK (board pull-up, tested) / MISO / MOSI to P0.25 / P0.24 / P0.23 | AF0 | `hybrid_ble.c` |
@@ -104,7 +105,7 @@ As ECK configures them; "stock" items come from PFU's firmware.
 | PC5 | Power switch, low = pressed | Input, pull-up; EXTI5 falling wakes STOP | `hybrid_power.c` |
 | PC7 | Op-amp enable, high = on (during scans) | Output | `classic_matrix.c` |
 | PC8 | Discharge switch (C57), high pulse | Output | same |
-| PC9 | Stock output, purpose unknown | Unused | stock code |
+| PC9 | Stock: output driven low from start-up, never changed (A048, 2026-11-21) | Unused | stock code |
 | PC13 | USB power, low = present (VBUS wiring inferred) | Input, no pull; EXTI13 falling wakes STOP | `hybrid_power.c` |
 | PC14 | Sensor supply, high = on | Output | `classic_matrix.c` |
 | PD2 | nRF52 reset, high = held (to P0.21 through an inverter, inferred from PSELRESET; tested with `nrf_reset_probe.py`) | Output, low in operation; stock pulses it at boot | `hybrid.c` |
@@ -231,7 +232,7 @@ Bank 1 relays the nRF52 part over SPI in 57-byte chunks as they arrive.
 - Why SWD fails on battery power (idea: power USB-C from a charger, check probe GND against the USB-C shell).
 - Power path: the regulator from USB 5 V, how USB and boost combine, whether the boost runs on USB.
 - Stock pulls on PC5, PC13 and PB7-PB9; stock idle levels of the matrix pins in OFF.
-- What nRF52 P0.11/P0.12 and STM32 PA10/PC9 connect to (the four series resistors left of MD1 are not the link).
+- What STM32 PA10/PC9 connect to (the four series resistors left of MD1 are not the link). nRF52 P0.11/P0.12 don't matter: PFU's A048 nRF52 app sets them as inputs with pull-ups (`PIN_CNF` `0xC`, no sense, at `0x28a62`) and never reads them or gives them a GPIOTE channel (only P0.18 has one); ECK leaves them at reset (2026-11-21).
 - Whether the nRF52 shares the STM32's rail.
 - Mux enable polarity on PC6/PB15 (code drives PC6 high and PB15 low for columns 0-7, and the reverse for 8-14).
 - Meaning of EEPROM `0x08081350`.

@@ -65,4 +65,4 @@ Not copied from stock, or guessed: the 10 s hold on wake (blue off, orange 3 s);
 
 ## Open
 
-Open Hybrid items are in [Deferred](deferred.md#hybrid-open-items).
+Open items: [deferred.md](deferred.md).

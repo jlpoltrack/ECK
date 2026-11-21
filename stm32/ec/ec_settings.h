@@ -27,7 +27,7 @@ typedef struct __attribute__((aligned(4))) {
     uint16_t baseline[MATRIX_COLS][MATRIX_ROWS]; // HHKB: 120 bytes
     uint16_t peak[MATRIX_COLS][MATRIX_ROWS];     // HHKB: 120 bytes
     rt_cfg_t rt;                                 // 10 bytes
-    uint8_t  scan_rate;                          // retired: written as the fixed USB rate
+    uint8_t  scan_rate;                          // retired: the fixed USB rate; BOARD_LED_SETTINGS: 0x80 | level << 3 | colour
     uint8_t  tapping_term_10ms;                  // 5..50
     uint8_t  quick_tap_10ms;                     // 0..50
     uint8_t  flags;                              // bit 0: permissive_hold, bits 1-2: retired (0), bit 3: custom_cal, bit 4: debug, bit 5: system, bit 6..7: v1 led0
@@ -38,6 +38,11 @@ _Static_assert(sizeof(hhkb_eeprom_cal_t) == EEPROM_SETTINGS_SIZE, "settings reco
 // Calibration & Settings API
 void hhkb_settings_init(void);
 void hhkb_calibration_load(void);
+#ifdef BOARD_LED_SETTINGS
+/* Indicator style (VIA IDs 34, 35): which 0 colour 1-7, 1 brightness level 1-5. */
+uint8_t hhkb_get_led_style(uint8_t which);
+bool hhkb_set_led_style(uint8_t which, uint8_t value);
+#endif
 void hhkb_calibration_save_to_eeprom(void);
 void hhkb_calibration_start(void);
 void hhkb_calibration_finish(void);

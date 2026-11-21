@@ -110,7 +110,7 @@
 <circle cx="510" cy="360" r="3" fill="#2f6fd6"/>
 <text x="20" y="462" font-size="14" font-weight="bold" fill="#222" text-anchor="start">Multiplexing (ECK): one LED at a time, so each has its own colour</text>
 <text x="20" y="482" font-size="12" fill="#444" text-anchor="start">TIM21 runs at 1 kHz. Each 1 ms slot lights the next LED (Num, Caps, Scroll, Simple Mode) in its colour;</text>
-<text x="20" y="498" font-size="12" fill="#444" text-anchor="start">a compare ends it early for brightness (20 %: lit 0.8 ms of every 4 ms). Example: Caps red, Simple Mode blue.</text>
+<text x="20" y="498" font-size="12" fill="#444" text-anchor="start">a compare ends it early for brightness (set in VIA, 5-25 %; 20 % shown: lit 0.8 ms of every 4 ms). Example: Caps red, Simple Mode blue.</text>
 <text x="120" y="535" font-size="12" fill="#222" text-anchor="end">Num Lock</text>
 <rect x="130" y="529" width="544" height="4" rx="2" fill="#dde1e6"/>
 <text x="120" y="561" font-size="12" fill="#222" text-anchor="end">Caps Lock</text>

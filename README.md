@@ -11,7 +11,7 @@ Open firmware for electrostatic-capacitive (Topre) keyboards built on the STM32L
 | HHKB Professional Hybrid Type-S (`PD-KB800BS`) | **Tested**, USB and Bluetooth | [Web flasher](#web-flasher) or release `.hfb` |
 | HHKB Professional Classic | Builds; untested on hardware | Web flasher or release `.hfb` |
 | HHKB Professional Classic Type-S | Builds; untested on hardware | Web flasher or release `.hfb` |
-| Topre Realforce R3S US TKL (`R3SD13`, wired) | **New, in bring-up:** typing, indicators and VIA checked on the owner's keyboard | [Web flasher](#web-flasher) or release `.rfb` (from v0.6.1), or [build from source](#realforce-r3s) |
+| Topre Realforce R3S US TKL (`R3SD13`) | **Tested**, USB | Web flasher or release `.rfb` |
 
 Model numbers, what isn't supported (JIS, HHKB Pro 2, Studio) and why: [docs/models.md](docs/models.md).
 
@@ -39,7 +39,7 @@ Command-line alternatives: [Hybrid updates](docs/hybrid-update.md), [Classic ins
 
 ### Realforce R3S
 
-Use the web flasher's Realforce R3S tab (once a release carries the `.rfb`), or build it (see [Build](#build-test-flash)) and flash over USB; either works from Topre's stock firmware, from ECK, or from ST's DFU loader:
+Use the web flasher's Realforce R3S tab or a release `.rfb`, or build it (see [Build](#build-test-flash)) and flash over USB; either works from Topre's stock firmware, from ECK, or from ST's DFU loader:
 
 ```bash
 ./build.sh r3s
@@ -48,7 +48,7 @@ uv run -q --with hidapi python3 tools/r3s/r3s_backup.py flash build/r3s/hhkb_ec_
 
 Chords (hold Fn + Ctrl): **W** switches Mac mode (Alt and Win swap on both sides, until unplugged; Simple Mode blinks blue twice for Mac, once for Win), **V** VIA mode (twice into VIA, once back to Vial). Num, Caps and Scroll Lock light as the computer reports them (macOS reports only Caps Lock). During a firmware update Simple Mode stays magenta.
 
-The R3S has no recovery switch: if no USB host answers within 15 s of power-up, it starts ST's DFU loader, and the web flasher (Recover firmware) or `r3s_backup.py` can flash or restore from there (including Topre's stock `.rfb`). Hardware notes and measurements: [docs/r3s-hardware.md](docs/r3s-hardware.md).
+The R3S has no recovery switch: hold Esc and Caps Lock while plugging it in and it starts ST's DFU loader (Simple Mode lit magenta), and the web flasher (Recover firmware) or `r3s_backup.py` can flash or restore from there (including Topre's stock `.rfb`). Hardware notes and measurements: [docs/r3s-hardware.md](docs/r3s-hardware.md).
 
 ## Hybrid battery life
 

@@ -30,6 +30,7 @@ A keyboard with no saved settings uses PFU's factory thresholds with custom cali
 - **Tapping term:** 50–500 ms (default 220). **Quick tap:** 0–500 ms (default 150; 0 disables).
 - **Actuation, hysteresis, Rapid Trigger press/release sensitivity:** 0.1–4.0 mm. **RT top dead zone:** 0.0–0.6 mm. Defaults: actuation 3.0 mm, hysteresis 0.4 mm. Millimetres map the calibrated signal range onto a nominal 4 mm travel; they are a scale, not a measurement (the sensor response is non-linear).
 - **LEDs PA8 and PA9:** Off, Debug heartbeat, Caps Lock, Fn layer, System 2, or Bluetooth status (Hybrid). Defaults: Caps Lock and Fn layer (Classic); Bluetooth status and Off (Hybrid).
+- **R3S indicators:** colour (red, green, yellow, blue, magenta, cyan, white) and brightness (5-25 %) for all four, default red at 20 %; the Simple Mode LED takes the LED modes above.
 
 Scan rates are fixed, not settings: 1000 Hz over USB, 250 Hz over Bluetooth, 50 Hz while the computer sleeps.
 

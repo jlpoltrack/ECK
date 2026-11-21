@@ -31,17 +31,12 @@ jobs:
           else
             echo "$REF has no release: nothing to deploy"
           fi
-  deploy:
+  build:
     needs: gate
     if: needs.gate.outputs.release == 'true'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
       - name: Bundle the latest release
@@ -61,5 +56,16 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: web
+  # A separate job: deploy-pages in the uploading job found no artifact (2026-11-20, three runs).
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
       - id: deploy
         uses: actions/deploy-pages@v5

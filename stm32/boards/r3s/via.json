@@ -947,6 +947,76 @@
           "label": "LED",
           "content": [
             {
+              "label": "Indicator colour",
+              "type": "dropdown",
+              "options": [
+                [
+                  "Red",
+                  1
+                ],
+                [
+                  "Green",
+                  2
+                ],
+                [
+                  "Yellow",
+                  3
+                ],
+                [
+                  "Blue",
+                  4
+                ],
+                [
+                  "Magenta",
+                  5
+                ],
+                [
+                  "Cyan",
+                  6
+                ],
+                [
+                  "White",
+                  7
+                ]
+              ],
+              "content": [
+                "id_r3s_led_colour",
+                0,
+                34
+              ]
+            },
+            {
+              "label": "Indicator brightness",
+              "type": "dropdown",
+              "options": [
+                [
+                  "5 %",
+                  1
+                ],
+                [
+                  "10 %",
+                  2
+                ],
+                [
+                  "15 %",
+                  3
+                ],
+                [
+                  "20 %",
+                  4
+                ],
+                [
+                  "25 %",
+                  5
+                ]
+              ],
+              "content": [
+                "id_r3s_led_brightness",
+                0,
+                35
+              ]
+            },
+            {
               "label": "Simple Mode LED",
               "type": "dropdown",
               "options": [

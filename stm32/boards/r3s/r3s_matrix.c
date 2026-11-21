@@ -34,6 +34,9 @@ static uint32_t s_col_addr[MATRIX_COLS]; /* mux address BSRR value per column */
 #define BOOT_REST_SCANS 16U
 static uint32_t s_boot_sum[MATRIX_COLS][MATRIX_ROWS];
 static uint8_t s_boot_scans;
+static bool s_recovery; /* the recovery key was held at start-up */
+
+bool board_recovery_requested(void) { return s_recovery; }
 #ifdef HHKB_ADC_DIAGNOSTICS
 static volatile uint16_t s_masked_max_us; /* longest column read with interrupts off */
 #endif
@@ -210,6 +213,10 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
         for (uint8_t c = 0; c < MATRIX_COLS; c++)
             for (uint8_t r = 0; r < MATRIX_ROWS; r++)
                 if (s_col_rows[c] & (1U << r)) ec_boot_rest(c, r, (uint16_t)(s_boot_sum[c][r] / BOOT_REST_SCANS));
+        static const uint8_t keys[][2] = BOARD_RECOVERY_KEYS;
+        s_recovery = true;
+        for (unsigned k = 0; k < sizeof(keys) / sizeof(keys[0]); k++)
+            s_recovery = s_recovery && s_boot_sum[keys[k][0]][keys[k][1]] / BOOT_REST_SCANS >= BOARD_RECOVERY_MIN;
     }
     return changed;
 }

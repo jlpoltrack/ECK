@@ -13,5 +13,7 @@ void board_leds_write(bool lit0, bool lit1, uint8_t host_leds);
 void board_leds_notify(bool on);
 /* Before ST's DFU loader: Simple Mode stays lit magenta through the update. */
 void board_leds_dfu(void);
+/* The recovery keys were held at start-up (BOARD_RECOVERY_KEYS): start ST's DFU loader. */
+bool board_recovery_requested(void);
 
 #endif

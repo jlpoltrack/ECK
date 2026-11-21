@@ -68,7 +68,7 @@ y = BUS_Y + 50
 text(20, y, "Multiplexing (ECK): one LED at a time, so each has its own colour", size=14, ink="#222", bold=True)
 y += 20
 text(20, y, "TIM21 runs at 1 kHz. Each 1 ms slot lights the next LED (Num, Caps, Scroll, Simple Mode) in its colour;")
-text(20, y + 16, "a compare ends it early for brightness (20 %: lit 0.8 ms of every 4 ms). Example: Caps red, Simple Mode blue.")
+text(20, y + 16, "a compare ends it early for brightness (set in VIA, 5-25 %; 20 % shown: lit 0.8 ms of every 4 ms). Example: Caps red, Simple Mode blue.")
 y += 40
 TX, SLOT = 130, 34  # timeline x, px per ms
 example = {1: "#d93a3a", 3: "#2f6fd6"}

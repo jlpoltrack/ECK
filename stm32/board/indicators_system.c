@@ -7,7 +7,7 @@
 #include "tusb.h"
 #include "board.h"
 #include "board_config.h"
-#ifdef BOARD_USB_RECOVERY_DFU
+#ifdef BOARD_RECOVERY_KEYS
 #include "platform.h"
 #endif
 #ifdef HHKB_HYBRID
@@ -92,10 +92,8 @@ void keyboard_platform_tick(TickType_t now) {
     bool mounted = tud_mounted();
 #endif
     bool suspended = tud_suspended();
-#ifdef BOARD_USB_RECOVERY_DFU /* boards without a recovery switch: no USB host in 15 s, ST's DFU loader */
-    static bool s_was_mounted; /* only since start-up: a later re-enumeration (VIA mode) never counts */
-    if (mounted) s_was_mounted = true;
-    if (!s_was_mounted && now >= pdMS_TO_TICKS(15000)) platform_bootloader_jump();
+#ifdef BOARD_RECOVERY_KEYS /* boards without a recovery switch: keys held at start-up, ST's DFU loader */
+    if (board_recovery_requested()) platform_bootloader_jump();
 #endif
     bool lit[2];
     for (uint8_t i = 0; i < 2; i++) {

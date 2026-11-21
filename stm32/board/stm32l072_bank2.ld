@@ -9,7 +9,7 @@ ENTRY(Reset_Handler)
 _estack = ORIGIN(RAM) + LENGTH(RAM);
 
 _Min_Heap_Size = 0;      /* no heap: FreeRTOS objects are static, nothing calls malloc */
-_Min_Stack_Size = 0x800; /* 2 KB */
+_Min_Stack_Size = 0x400; /* 1 KB: static worst case ~720 B (AGENTS.md), measured peak 424 B */
 
 MEMORY
 {

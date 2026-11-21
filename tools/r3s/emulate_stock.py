@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Run the stock R3S Bank 2 image in Unicorn with stand-in peripherals and log GPIO/ADC/timer writes.
-Used to read the R3S's scan wiring (pins, mux, ADC channel) from stock firmware; see docs/deferred.md.
-Usage: uv run -q --with unicorn python3 -I tools/r3s/emulate_stock.py STOCK.rfb OUT_DIR [instructions]"""
+Used to read the R3S's scan wiring (pins, mux, ADC channel) from stock firmware; see docs/r3s-hardware.md.
+Usage: uv run -q --with unicorn python3 -I tools/r3s/emulate_stock.py STOCK.rfb OUT_DIR [instructions] [EEPROM.bin]
+EEPROM reads go to OUT_DIR/eeprom_reads.log (PC, address, size, value)."""
 import struct
 import sys
 
@@ -22,6 +23,9 @@ mu.mem_map(0x1FF00000, 0x100000)
 mu.mem_map(0x20000000, 0x5000)
 mu.mem_map(0x40000000, 0x30000)
 mu.mem_map(0x50000000, 0x2000)
+for port, moder in ((0x50000000, 0xEBFFFCFF), (0x50000400, 0xFFFFFFFF), (0x50000800, 0xFFFFFFFF),
+                    (0x50000C00, 0xFFFFFFFF), (0x50001C00, 0xFFFFFFFF)):
+    mu.mem_write(port, struct.pack("<I", moder))  # GPIOx_MODER reset values (RM0367): analog, SWD on PA13/14
 mu.mem_map(0xE0000000, 0x100000)
 
 NAMES = {0x50000000: "GPIOA", 0x50000400: "GPIOB", 0x50000800: "GPIOC", 0x50000C00: "GPIOD", 0x50001C00: "GPIOH",
@@ -30,6 +34,7 @@ NAMES = {0x50000000: "GPIOA", 0x50000400: "GPIOB", 0x50000800: "GPIOC", 0x50000C
 REGS = {"GPIO": ["MODER", "OTYPER", "OSPEEDR", "PUPDR", "IDR", "ODR", "BSRR", "LCKR", "AFRL", "AFRH", "BRR"],
         "ADC": {0: "ISR", 4: "IER", 8: "CR", 0xC: "CFGR1", 0x10: "CFGR2", 0x14: "SMPR", 0x28: "CHSELR", 0x308: "CCR"}}
 log = open(f"{out}/r3s_emulated_writes.log", "w")
+eelog = open(f"{out}/eeprom_reads.log", "w")
 
 
 def name(addr):
@@ -73,7 +78,13 @@ def on_read(uc, access, addr, size, value, _):
     uc.mem_write(addr & ~3, struct.pack("<I", cur))
 
 
+def on_eeprom_read(uc, access, addr, size, value, _):
+    v = int.from_bytes(uc.mem_read(addr, size), "little")
+    eelog.write(f"{uc.reg_read(UC_ARM_REG_PC):08x} {addr:#010x} {size} {v:#x}\n")
+
+
 mu.hook_add(UC_HOOK_MEM_WRITE, on_write, begin=0x40000000, end=0x5FFFFFFF)
+mu.hook_add(UC_HOOK_MEM_READ, on_eeprom_read, begin=0x08080000, end=0x080817FF)
 mu.hook_add(UC_HOOK_MEM_READ, on_read, begin=0x40000000, end=0x5FFFFFFF)
 mu.reg_write(UC_ARM_REG_SP, struct.unpack_from("<I", img, 0)[0])
 reset = struct.unpack_from("<I", img, 4)[0]
@@ -84,3 +95,4 @@ except UcError as e:
 print(f"pc {mu.reg_read(UC_ARM_REG_PC):#010x}")
 open(f"{out}/r3s_emulated_ram.bin", "wb").write(mu.mem_read(0x20000000, 0x5000))
 log.close()
+eelog.close()

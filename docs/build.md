@@ -8,7 +8,7 @@ Run from the repository root. Output goes to `build/<variant>/`: `hhkb_ec_<varia
 ./build.sh hybrid    # build/hybrid/hhkb_ec_hybrid.{bin,hfb}
 ./build.sh classic   # build/classic/hhkb_ec_classic.{bin,hfb}
 ./build.sh type_s    # build/type_s/hhkb_ec_type_s.{bin,hfb}
-./build.sh r3s       # build/r3s/hhkb_ec_r3s.{bin,rfb} (Realforce R3S bring-up; flash with tools/r3s/r3s_backup.py flash)
+./build.sh r3s       # build/r3s/hhkb_ec_r3s.{bin,rfb} (Realforce R3S; flash with tools/r3s/r3s_backup.py flash)
 ```
 
 - `-c` cleans first (including `nrf52/_build`).
@@ -45,15 +45,15 @@ Both CRCs: reflected polynomial `0x8408`, initial `0xFFFF`, no final XOR.
 
 ## Flash and RAM usage
 
-Bank 2 holds 65,536 bytes; the STM32L072 has 20,480 bytes of RAM. At 2026-11-18 (with Vial, which adds ~6.3 KB and 1,544 bytes to each: [Vial](vial.md#size)):
+Bank 2 holds 65,536 bytes; the STM32L072 has 20,480 bytes of RAM. At 2026-11-21 (with Vial, which adds ~6.3 KB and 1,544 bytes to each: [Vial](vial.md#size)):
 
 | Variant | Bank 2 image | RAM at link time |
 | --- | --- | --- |
-| Hybrid | 49,720 bytes (75.9 %) | 16,848 bytes (82.3 %) |
-| Classic, Type-S | 41,192 bytes (62.9 %) | 15,856 bytes (77.4 %) |
-| Realforce R3S | 41,644 bytes (63.5 %) | 18,560 bytes (90.6 %) |
+| Hybrid | 49,756 bytes (75.9 %) | 15,672 bytes (76.5 %) |
+| Classic, Type-S | 41,304 bytes (63.0 %) | 14,704 bytes (71.8 %) |
+| Realforce R3S | 42,260 bytes (64.5 %) | 17,464 bytes (85.3 %) |
 
-RAM is the static layout (RAM code, `.data`, `.bss` with all task stacks; FreeRTOS has no heap) plus the 2 KB reserved for the interrupt stack. That stack grows down from the top of RAM into everything unused (5 KB+ more); task stacks are fixed arrays in `.bss`, sized from `tools/stack_depth.py` worst cases.
+RAM is the static layout (RAM code, `.data`, `.bss` with all task stacks; FreeRTOS has no heap) plus the 1 KB reserved for the interrupt stack (static worst case ~720 B, AGENTS.md). That stack grows down from the top of RAM into everything unused (3 KB+ more); task stacks are fixed arrays in `.bss`, sized from `tools/stack_depth.py` worst cases.
 
 ## CI and releases
 

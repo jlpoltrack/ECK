@@ -79,6 +79,14 @@ bool hhkb_via_command(uint8_t const *request, uint8_t *response) {
         else if (request[3] && s_reset_armed) s_reset_armed = !hhkb_settings_reset_request();
         return true;
     }
+#ifdef BOARD_LED_SETTINGS
+#define HHKB_ID_LED_COLOUR 34 /* indicator colour 1-7 and brightness 1-5 (boards with RGB indicators) */
+    if (id == HHKB_ID_LED_COLOUR || id == HHKB_ID_LED_COLOUR + 1) {
+        if (request[0] == 0x08) response[3] = hhkb_get_led_style(id - HHKB_ID_LED_COLOUR);
+        else if (request[0] != 0x07 || !hhkb_set_led_style(id - HHKB_ID_LED_COLOUR, request[3])) return false;
+        return true;
+    }
+#endif
     if (id < 1 || id > 28) return false;
     if (id == 13 || id == 16 || id == 18) return false; /* retired: scan rate, tap preferred, oversampling */
     if (request[0] == 0x08) {

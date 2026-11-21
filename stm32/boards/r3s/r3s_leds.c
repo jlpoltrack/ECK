@@ -2,6 +2,8 @@
  * Mode; PB7 blue, PB8 green, PB9 red are the shared colour lines; all active high
  * (docs/r3s-hardware.md). TIM21 lights one LED at a time (1 ms slots), so each has its own colour. */
 #include "board.h"
+#include "board_config.h"
+#include "ec_settings.h"
 #include "stm32l0xx.h"
 
 #define BLUE (1U << 7)
@@ -10,16 +12,9 @@
 #define COLOUR_ALL (BLUE | GREEN | RED)
 #define SELECT_ALL ((1U << 6) | (1U << 5) | (1U << 4) | (1U << 3))
 #define SIMPLE 3U /* slot of the Simple Mode LED */
-#ifndef R3S_LED_COLOUR
-#define R3S_LED_COLOUR RED /* lock and Simple Mode indicators (owner's choice) */
-#endif
 #define NOTIFY_COLOUR BLUE /* confirmation blinks, as the Hybrid's blue LED */
-#ifndef R3S_LED_BRIGHTNESS
-#define R3S_LED_BRIGHTNESS 20 /* percent of the time each LED is lit (owner: dimmer); 25 at most */
-#endif
-#if R3S_LED_BRIGHTNESS > 25
-#error "R3S_LED_BRIGHTNESS: each LED has a quarter of the time"
-#endif
+#define LEVEL_TICKS 200U   /* 5 % of the 4 ms cycle per brightness level (VIA); level 5 = the whole slot */
+#define CCR1_OF(level) ((level) * LEVEL_TICKS - 1U) /* at most ARR: a larger CCR1 fires with the update (RM0367 22.4.5) */
 
 static const uint32_t k_select[4] = {1U << 6, 1U << 5, 1U << 4, 1U << 3}; /* Num, Caps, Scroll, Simple */
 static volatile uint32_t s_colour[4]; /* colour lines per LED; 0 = off */
@@ -29,12 +24,13 @@ void TIM21_IRQHandler(void) {
     static uint8_t slot;
     uint32_t sr = TIM21->SR;
     TIM21->SR = ~sr;
+    /* Slot end before slot start: the scan masks interrupts, so both can be pending together. */
+    if (sr & TIM_SR_CC1IF) GPIOB->BRR = SELECT_ALL | COLOUR_ALL;
     if (sr & TIM_SR_UIF) {
         slot = (uint8_t)((slot + 1U) & 3U);
         uint32_t on = s_colour[slot] ? k_select[slot] | s_colour[slot] : 0;
         GPIOB->BSRR = on | (((SELECT_ALL | COLOUR_ALL) & ~on) << 16);
     }
-    if (sr & TIM_SR_CC1IF) GPIOB->BRR = SELECT_ALL | COLOUR_ALL;
 }
 
 void board_leds_init(void) {
@@ -48,7 +44,7 @@ void board_leds_init(void) {
     RCC->APB2ENR |= RCC_APB2ENR_TIM21EN;
     TIM21->PSC = SystemCoreClock / 1000000U - 1U; /* 1 MHz */
     TIM21->ARR = 999U;                            /* 1 kHz */
-    TIM21->CCR1 = R3S_LED_BRIGHTNESS * 40U;       /* x4: each LED gets every fourth slot */
+    TIM21->CCR1 = CCR1_OF(BOARD_LED_LEVEL_DEFAULT);
     TIM21->DIER = TIM_DIER_UIE | TIM_DIER_CC1IE;
     TIM21->EGR = TIM_EGR_UG;
     TIM21->SR = 0;
@@ -64,8 +60,11 @@ void board_leds_off(void) {
 
 void board_leds_write(bool lit0, bool lit1, uint8_t host_leds) {
     (void)lit0;
-    for (unsigned i = 0; i < 3; i++) s_colour[i] = ((host_leds >> i) & 1U) ? R3S_LED_COLOUR : 0;
-    s_colour[SIMPLE] = lit1 ? R3S_LED_COLOUR : 0;
+    uint8_t c = hhkb_get_led_style(0); /* VIA: bit 0 red, 1 green, 2 blue */
+    uint32_t colour = (c & 1U ? RED : 0) | (c & 2U ? GREEN : 0) | (c & 4U ? BLUE : 0);
+    TIM21->CCR1 = CCR1_OF(hhkb_get_led_style(1));
+    for (unsigned i = 0; i < 3; i++) s_colour[i] = ((host_leds >> i) & 1U) ? colour : 0;
+    s_colour[SIMPLE] = lit1 ? colour : 0;
 }
 
 void board_leds_notify(bool on) {

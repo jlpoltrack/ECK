@@ -1,6 +1,6 @@
 # ECK overview
 
-Open firmware for the HHKB Professional Hybrid, Classic and Classic Type-S, and the Topre Realforce R3S TKL. It runs on the keyboard's own STM32L072 (and the Hybrid's nRF52832 Bluetooth module) and installs over USB: no soldering or disassembly. Tested on the Hybrid Type-S (PD-KB800BS); the Classics build but are untested; the R3S is in bring-up and not yet released ([models](models.md)).
+Open firmware for the HHKB Professional Hybrid, Classic and Classic Type-S, and the Topre Realforce R3S TKL. It runs on the keyboard's own STM32L072 (and the Hybrid's nRF52832 Bluetooth module) and installs over USB: no soldering or disassembly. Tested on the Hybrid Type-S (PD-KB800BS); the Classics build but are untested; the R3S is tested ([models](models.md)).
 
 **Users:** [Hybrid updates](hybrid-update.md) • [Classic install](install.md) • [VIA](via.md) • [Configuration](config.md) • [Backup & restore](backup-restore.md) • [Debug](debug.md)
 **Developers:** [Build](build.md) • [Hybrid port](hybrid-port.md) • [Hybrid hardware](hybrid-hardware.md) • [Hybrid stock behaviour](hybrid-stock-behaviour.md) • [R3S hardware](r3s-hardware.md) • [Deferred](deferred.md)

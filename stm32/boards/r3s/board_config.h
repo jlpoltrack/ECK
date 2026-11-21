@@ -41,7 +41,13 @@
 #define BOARD_NOTIFY_LED 1        /* the Simple Mode LED (LED 1): confirmation blinks */
 #define BOARD_NOTIFY_SOLO 1       /* ...alone and in their own colour (board_leds_notify) */
 #define ROM_DFU_KEEP_IOP (1U << 1) /* GPIOB (IOPRSTR/IOPENR bit 1): the update LED stays lit */
-#define BOARD_USB_RECOVERY_DFU 1  /* no USB host 15 s after start: ST's DFU loader (the R3S has no recovery switch) */
+/* No recovery switch: Esc and Caps Lock held while plugging in start ST's DFU loader (r3s_matrix.c);
+ * two keys, as a BIOS boot menu is entered by holding Esc alone. {col, row} each. */
+#define BOARD_RECOVERY_KEYS {{4, 0}, {4, 3}}
+#define BOARD_RECOVERY_MIN 2000   /* start-up reading of a held key: rest 691-1146, a full press 2585+ */
+#define BOARD_LED_SETTINGS 1      /* indicator colour and brightness in VIA (IDs 34, 35) */
+#define BOARD_LED_COLOUR_DEFAULT 1 /* red (bit 0 red, 1 green, 2 blue; owner's choice) */
+#define BOARD_LED_LEVEL_DEFAULT 4  /* 20 %: each LED lit 5 % per level of the time, 25 % at most */
 
 /* --- EEPROM map (data EEPROM 0x08080000-0x080817FF) ---
  * Topre's data stays untouched: 0x000-0x05F (model ID), 0x500-0xBFF, 0x17C0-0x17FF (Bank 2 tag at
