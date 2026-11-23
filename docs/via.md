@@ -45,6 +45,8 @@ Scan rates are fixed, not settings: 1000 Hz over USB, 250 Hz over Bluetooth, 50 
 3. Fully press every key you want calibrated. To see which are done, open VIA's **Key Tester** with **Test Matrix** on; calibration keeps running across tabs.
 4. Click **Finish and save** (only keys with a valid range are updated).
 
+From **Start calibration** until **Finish and save** (or a restart) the keyboard types nothing: presses show only in the Key Tester. Outside calibration a key's range never changes, so recalibrate after changing domes, rings or travel.
+
 The status counter doesn't update by itself: click **Refresh status**. For live progress, turn on **Calibration Monitor (HID Console)** in the same section and watch the [HID Console](debug.md).
 
 ## Storage

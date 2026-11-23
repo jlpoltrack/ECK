@@ -1,7 +1,12 @@
 name: CI
 on:
   push:
+    paths-ignore: ['**.md', 'docs/**', '**.png', '**.jpg', '**.svg', '**.pdf'] # not evaluated for tag pushes
   pull_request:
+    paths-ignore: ['**.md', 'docs/**', '**.png', '**.jpg', '**.svg', '**.pdf']
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   test-and-build:

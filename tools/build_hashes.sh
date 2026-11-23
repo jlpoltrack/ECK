@@ -1,9 +1,9 @@
 #!/bin/zsh
-# Build every HHKB variant from a source tree with a fixed version string and print SHA-256 of each output.
-# Usage: build_hashes.sh <source_root> <out_dir>
+# Build every HHKB variant from a source tree with a fixed version string; print "sha256  path" per image, sorted.
+# Usage: tools/build_hashes.sh [source_root] [out_dir]   (defaults: this repo, a temp dir). Diff two trees' output.
 set -eu
-src=${1:A}; out=${2:A}
-mkdir -p "$out"
+src=${1:-${0:A:h:h}}; src=${src:A}
+out=${2:-$(mktemp -d)}; mkdir -p "$out"; out=${out:A}
 # name -> "variant [extra-defines]"
 typeset -A variants
 variants=(
@@ -18,9 +18,7 @@ for name in ${(ko)variants}; do
   rm -rf "$b"
   HHKB_FW_VERSION=verify cmake -G "Unix Makefiles" -S "$src/stm32" -B "$b" -DCMAKE_BUILD_TYPE=MinSizeRel \
     "-DHHKB_VARIANT=${spec[1]}" "-DHHKB_EXTRA_DEFINES=${spec[2]:-}" > "$b.log" 2>&1
-  cmake --build "$b" -j"$(sysctl -n hw.ncpu)" >> "$b.log" 2>&1 || { echo "$name: BUILD FAILED (see $b.log)"; exit 1; }
-  for f in $(find "$b" -maxdepth 1 \( -name "*.bin" -o -name "*.hfb" \) | sort); do
-    echo "$name/${f:t} $(shasum -a 256 "$f" | cut -c1-16)"
-  done
+  cmake --build "$b" -j"$(sysctl -n hw.ncpu)" >> "$b.log" 2>&1 || { echo "$name: BUILD FAILED (see $b.log)" >&2; exit 1; }
 done
-echo "done"
+(cd "$out" && shasum -a 256 */*.bin(N) */*.hfb(N) | sort -k2)
+if [[ -z ${2:-} ]]; then rm -rf "$out"; fi

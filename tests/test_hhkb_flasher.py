@@ -30,12 +30,13 @@ class FlasherValidationTest(unittest.TestCase):
         for model in ('PD-KB401W', 'PD-KB401B', 'PD-KB401WN', 'PD-KB401BN'):
             self.assertEqual(flasher.device_model(model), 'AHHX01')
         # Type-S models (AHHS01)
-        for model in ('PD-KB401WSC', 'PD-KB401BSC', 'PD-KB401YSC'):
+        for model in ('PD-KB401WSC', 'PD-KB401BSC', 'PD-KB401YSC', 'PD-KB401BNSC', 'PD-KB401WSC1'):
             self.assertEqual(flasher.device_model(model), 'AHHS01')
-        # JIS models (PD-KB421)
-        for model in ('PD-KB421BSC', 'PD-KB421WSC', 'PD-KB421YSC'):
+        # JIS models (PD-KB421 Classic Type-S, PD-KB820 Hybrid)
+        for model in ('PD-KB421BSC', 'PD-KB421WSC', 'PD-KB421YSC', 'PD-KB820B', 'PD-KB820YSC1'):
             self.assertEqual(flasher.device_model(model), 'JIS_UNSUPPORTED')
-        self.assertIsNone(flasher.device_model('unknown'))
+        for model in ('unknown', '', 'PD-KB401Y', 'PD-KB401WS', 'PD-KB400W', 'PD-ID100B'):
+            self.assertIsNone(flasher.device_model(model))
         self.assertEqual(flasher.validate_container(self.good, 'AHHX01'), 'AHHX01')
         with self.assertRaises(ValueError): flasher.validate_container(self.good, 'AHHS01')
         with self.assertRaises(ValueError): flasher.validate_container(self.good, None)

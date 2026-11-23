@@ -18,6 +18,8 @@ __pycache__/
 *.npz
 /.vscode/
 /web/firmware/
-/.claude/worktrees/
+.claude/
+.venv/
+out/
 /tools/r3s/_build/
 /tools/web_bench/node_modules/

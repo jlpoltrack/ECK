@@ -6,7 +6,7 @@ Elsewhere: Bluetooth behaviour in [hybrid-port.md](../docs/hybrid-port.md#blueto
 
 ## Build
 
-Needs `arm-none-eabi-gcc` and the nRF5 SDK 17.1.1 at `../nRF5_SDK_17.1.1`. From this directory:
+Needs `arm-none-eabi-gcc` and the nRF5 SDK 17.1.1 (default `../nRF5_SDK_17.1.1`; `../build.sh` also finds it through `$NRF5_SDK_ROOT` or `../../SDKs/`). From this directory:
 
 ```
 make                           # or: make SDK_ROOT=/path/to/nRF5_SDK_17.1.1

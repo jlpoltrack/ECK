@@ -651,10 +651,6 @@ rt_cfg_t hhkb_get_scan_cfg(void) {
     return cfg;
 }
 
-void hhkb_update_dynamic_peak(uint8_t col, uint8_t row, uint16_t val) {
-    s_cal_peak[col][row] = val;
-    rt_key_set_range(&s_rt_keys[col][row], s_cal_baseline[col][row], s_cal_peak[col][row], s_rt_cfg.reset_pm);
-}
 void hhkb_cal_accumulate_baseline(uint8_t col, uint8_t row, uint16_t val) {
     s_cal_baseline_accum[col][row] += val;
 }

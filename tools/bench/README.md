@@ -21,7 +21,7 @@ Shared helpers: `tools/via_hid.py` (find the keyboard, VIA requests; also used b
 
 | Tool | Purpose |
 | --- | --- |
-| `battery_sweep.py` | Steps a PPK2 supply on the battery terminals down and detects the low-battery warning in the current trace (uses `../Tools-PPK2`). |
+| `battery_sweep.py` | Steps a PPK2 supply on the battery terminals down and detects the low-battery warning in the current trace (uses `../Tools-Bench/ppk2`). |
 | `swd_flash.py` | Flashes an ECK Bank 2 image over SWD (STM32CubeProgrammer, NRST wired). |
 | `hybrid_state.py` | Bluetooth bridge state on both chips over SWD, without halting. |
 | `hybrid_cmd.py` | Sends a bridge command (pair, select, delete, ...) through the STM32 over SWD; needs `./build.sh hybrid -d HHKB_HYBRID_TEST_CMD`. |

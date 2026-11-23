@@ -27,7 +27,10 @@ assert.deepEqual([r.model, r.version, r.hybrid, r.stm32.length], ['R3SD####', 'A
 rfb[100] ^= 1;
 assert.throws(() => parseHfb(new Uint8Array(rfb)), /CRC/);
 assert.equal(deviceModel('R3SD13'), 'R3SD####');
-assert.equal(deviceModel('PD-KB800BS'), 'AHUX01');
+for (const t of ['PD-KB800BS', 'PD-KB800B', 'PD-KB800WN', 'PD-KB800YNS', 'PD-KB800WSC1']) assert.equal(deviceModel(t), 'AHUX01');
+for (const t of ['PD-KB401W', 'PD-KB401BN']) assert.equal(deviceModel(t), 'AHHX01');
+for (const t of ['PD-KB401YSC', 'PD-KB401BNSC']) assert.equal(deviceModel(t), 'AHHS01');
+for (const t of ['PD-KB800', 'PD-KB800BSS', 'PD-KB800YSC1X', 'PD-KB820WS', 'PD-KB421BSC', 'PD-KB401Y']) assert.equal(deviceModel(t), null);
 const bank1 = new Uint8Array(0x10000).fill(0xff);
 assert.ok(!isTopreBank1(bank1));
 bank1.set(new TextEncoder().encode('Topre Corporation'), 31804);

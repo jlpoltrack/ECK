@@ -1,11 +1,11 @@
 # Open items
 
-Everything not done yet, by what it waits on. Delete an item when it's done. Reviewed for every release (up to v0.7.0). HHKB JIS work lives on branch `jis` until a JIS keyboard has run it (owner, 2026-11-21; [JIS](models.md#jis) there).
+Everything not done yet, by what it waits on. Delete an item when it's done. Reviewed for every release (up to v0.7.1). HHKB JIS work lives on branch `jis` until a JIS keyboard has run it (owner, 2026-11-21; [JIS](models.md#jis) there).
 
 ## Planned work
 
 - **R3S recovery check before the scheduler starts** (review, 2026-11-21): reading Esc and Caps Lock in `hhkb_matrix_hardware_init` would cover a build that faults after start-up; today the check needs the scheduler, 24 scans and a keyboard-task tick (as the 15 s timeout before it needed the scheduler).
-- **Branch `jis`, before its release** (review, 2026-11-21): `hybrid_update.py stm32` can't check the layout from ST's DFU loader; `hhkb_flasher.py` accepts any `PD-KB820…`/`PD-KB421…` model, looser than the ANSI Hybrid's single tested model.
+- **Branch `jis`, before its release** (review, 2026-11-21): `hybrid_update.py stm32` can't check the layout from ST's DFU loader; `hhkb_flasher.py` accepts any `PD-KB820…`/`PD-KB421…` model, looser than main's ANSI patterns (`MODEL_PATTERNS`).
 
 ## Checks that need hands, a browser or other hardware
 

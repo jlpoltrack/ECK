@@ -23,6 +23,7 @@ Protocol Notes (from tmk research & reverse engineering):
 
 import argparse
 import os
+import re
 import sys
 import time
 import hashlib
@@ -58,24 +59,22 @@ CMD_FIRMUP_END = 0xE3
 REQ_HEADER = bytes([0xAA, 0xAA])
 RESP_HEADER = bytes([0x55, 0x55])
 
+# Whole families by PFU part number: colour B/W/Y, N = blank keycaps, S = Type-S, SC/SC1 = editions.
+# Each family shares one PFU firmware file, so one board (docs/models.md).
+MODEL_PATTERNS = {
+    "AHHX01": r"PD-KB401[BW]N?",
+    "AHHS01": r"PD-KB401[BWY]N?SC[0-9]*",
+    "AHUX01": r"PD-KB800[BWY]N?(?:S(?:C[0-9]*)?)?",
+    "JIS_UNSUPPORTED": r"PD-KB(?:421|820).*",
+}
+
+
 def device_model(type_number: str):
     """Map recognised physical model numbers to the container model ID."""
     name = type_number.upper().strip()
-    # Type-S models (container model AHHS01):
-    # PD-KB401WSC (White), PD-KB401BSC (Charcoal), PD-KB401YSC (Snow)
-    if name in ("PD-KB401WSC", "PD-KB401BSC", "PD-KB401YSC") or "TYPE-S" in name:
-        return "AHHS01"
-    # Classic models (container model AHHX01):
-    # PD-KB401W (White Printed), PD-KB401B (Charcoal Printed),
-    # PD-KB401WN (White Blank), PD-KB401BN (Charcoal Blank)
-    if name in ("PD-KB401W", "PD-KB401B", "PD-KB401WN", "PD-KB401BN"):
-        return "AHHX01"
-    # Hybrid Type-S: model ID of the PFU file published for it (A0.48); other Hybrids unverified.
-    if name == "PD-KB800BS":
-        return "AHUX01"
-    # JIS models (69-key matrix multiplexing, pending tester verification):
-    if name in ("PD-KB421BSC", "PD-KB421WSC", "PD-KB421YSC") or name.startswith("PD-KB421"):
-        return "JIS_UNSUPPORTED"
+    for model, pattern in MODEL_PATTERNS.items():
+        if re.fullmatch(pattern, name):
+            return model
     return None
 
 def hybrid_md5_ok(data: bytes) -> bool:
@@ -104,7 +103,7 @@ def validate_container(data: bytes, expected_model=None, *, check_crc=True, chec
     model = data[-16:-10].decode("ascii", errors="replace")
     if check_model:
         if expected_model == "JIS_UNSUPPORTED":
-            raise ValueError("JIS models (PD-KB421 series) are not yet supported: 69-key matrix routing differs from 60-key ANSI. Use --skip-model-check only for experimental testing.")
+            raise ValueError("JIS models (PD-KB421, PD-KB820) are not yet supported: 69-key matrix routing differs from 60-key ANSI. Use --skip-model-check only for experimental testing.")
         if expected_model is None:
             raise ValueError("Cannot determine keyboard model; use --skip-model-check only if intentional")
         if model != expected_model:

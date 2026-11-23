@@ -47,9 +47,11 @@ static inline void scan_wait_since(uint16_t start, uint16_t us) {
 static inline uint16_t adc_read_sample(void) {
     uint32_t timeout = 5000;
     while ((ADC1->CR & ADC_CR_ADSTP) && --timeout);
+    ADC1->ISR = ADC_ISR_EOC; /* a timed-out conversion may finish later: don't take it as this one */
     ADC1->CR |= ADC_CR_ADSTART;
     timeout = 5000;
     while (!(ADC1->ISR & ADC_ISR_EOC) && --timeout);
+    if (!timeout) return ADC_TIMED_OUT;
     return (uint16_t)(ADC1->DR & 0x0FFF);
 }
 
@@ -182,7 +184,6 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
 #endif
 
     for (uint8_t col = 0; col < MATRIX_COLS; col++) {
-        const uint16_t *col_peak = s_cal_peak[col];
         rt_key_t *col_keys = s_rt_keys[col];
 
         if (col == 8) {
@@ -220,14 +221,9 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
 
             uint16_t val = adc_read_sample();
             GPIOB->BSRR = row_pins[row];
-            s_raw[col][row] = val;
-
             settle_start = (uint16_t)TIM2->CNT;
-
-            if (!is_calibrating && val > col_peak[row] && val < 4000) {
-                // Dynamic peak expansion
-                hhkb_update_dynamic_peak(col, row, val);
-            }
+            if (val == ADC_TIMED_OUT) continue; /* key keeps its state and last reading */
+            s_raw[col][row] = val;
 
             bool is_pressed;
             rt_key_t *key = &col_keys[row];

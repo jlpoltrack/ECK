@@ -147,7 +147,8 @@ void matrix_task(void *pvParameters) {
 
         bool first_event = true;
         for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
-            matrix_row_t state = s_matrix_state[row];
+            /* Calibration presses reach VIA's key tester (s_matrix_state) but are not typed. */
+            matrix_row_t state = hhkb_is_calibrating() ? 0 : s_matrix_state[row];
             if (state == published_state[row]) continue;
 #ifdef BOARD_SCAN_ONLY /* bring-up build: scan and report readings over VIA, but send no keys */
             continue;

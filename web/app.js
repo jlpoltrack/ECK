@@ -12,7 +12,7 @@ let kb = null; // the connected keyboard: {kind: 'stock' | 'eck' | 'silent' | 'u
 let inDfu = false; // the running action has put the keyboard in ST's update mode
 
 const MODELS = {
-    AHUX01: { file: 'hybrid', name: 'HHKB Professional Hybrid Type-S', hybrid: true },
+    AHUX01: { file: 'hybrid', name: 'HHKB Professional Hybrid', hybrid: true },
     AHHX01: { file: 'classic', name: 'HHKB Professional Classic', hybrid: false },
     AHHS01: { file: 'type_s', name: 'HHKB Professional Classic Type-S', hybrid: false },
 };
@@ -228,7 +228,7 @@ function render() {
         $('kb-msg').innerHTML =
             kb.kind === 'silent'
                 ? 'The keyboard is in PFU\'s updater but does not answer. On a Hybrid that already has ECK\'s Bluetooth firmware, PFU\'s updater cannot install anything: see <a href="https://github.com/jlpoltrack/ECK/blob/main/docs/hybrid-update.md">Hybrid updates</a>.'
-                : 'ECK supports the HHKB Professional Hybrid Type-S (PD-KB800BS), Classic and Classic Type-S (US layout).';
+                : 'ECK supports the HHKB Professional Hybrid and Hybrid Type-S (PD-KB800), Classic and Classic Type-S (PD-KB401), US layout only.';
         show('kb-msg', true);
     }
 }

@@ -109,9 +109,10 @@ export const isTopreBank1 = (bank1) => new TextDecoder('latin1').decode(bank1).i
 /** Keyboard type number (PFU info) to container model. */
 export function deviceModel(type) {
     const n = type.toUpperCase().trim();
-    if (['PD-KB401WSC', 'PD-KB401BSC', 'PD-KB401YSC'].includes(n)) return 'AHHS01';
-    if (['PD-KB401W', 'PD-KB401B', 'PD-KB401WN', 'PD-KB401BN'].includes(n)) return 'AHHX01';
-    if (n === 'PD-KB800BS') return 'AHUX01';
+    // Whole families, as tools/hhkb_flasher.py MODEL_PATTERNS (JIS not yet)
+    if (/^PD-KB401[BWY]N?SC[0-9]*$/.test(n)) return 'AHHS01';
+    if (/^PD-KB401[BW]N?$/.test(n)) return 'AHHX01';
+    if (/^PD-KB800[BWY]N?(?:S(?:C[0-9]*)?)?$/.test(n)) return 'AHUX01';
     if (n === 'R3SD13') return 'R3SD####'; // Realforce R3S US TKL, under Topre's updater
     return null;
 }

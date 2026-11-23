@@ -2,9 +2,9 @@
 """Find the HHKB Hybrid's battery-level steps: a PPK2 (source mode, on the battery terminals)
 steps the supply down while macOS reports the battery level the keyboard sends over Bluetooth.
 
-Uses the PPK2 library from the Tools-PPK2 repo next to ECK. The keyboard must be on (hold the
+Uses the PPK2 library from the Tools-Bench repo next to ECK (ppk2/). The keyboard must be on (hold the
 switch once the supply is up) and connected to the Mac. Prints one line per step.
-Run: ../Tools-PPK2/.venv/bin/python tools/bench/battery_sweep.py --start 3200 --stop 1900 --step 100
+Run (with ../Tools-Bench/.venv activated): python tools/bench/battery_sweep.py --start 3200 --stop 1900 --step 100
 """
 import argparse
 import os
@@ -13,7 +13,7 @@ import subprocess
 import sys
 import time
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../Tools-PPK2/tools"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../Tools-Bench/ppk2/tools"))
 import ppk2lib as P  # noqa: E402
 
 

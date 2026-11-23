@@ -34,8 +34,12 @@ def fake_hybrid(stm32=b'\x11' * 100, nrf_fill=b'\x22', model=b'AHUX01'):
 
 class HybridContainerTest(unittest.TestCase):
     def test_model_mapping(self):
-        self.assertEqual(flasher.device_model('PD-KB800BS'), 'AHUX01')
-        self.assertIsNone(flasher.device_model('PD-KB800B'))
+        for model in ('PD-KB800BS', 'PD-KB800B', 'PD-KB800WN', 'PD-KB800YNS', 'PD-KB800WSC1', 'pd-kb800bsc12 '):
+            self.assertEqual(flasher.device_model(model), 'AHUX01')
+        for model in ('PD-KB800', 'PD-KB800ZS', 'PD-KB800BSS', 'PD-KB800YSC1X', 'PD-KB800YSC-1',
+                      'PD-KB800W/PD-KB820W'):
+            self.assertIsNone(flasher.device_model(model))
+        self.assertEqual(flasher.device_model('PD-KB820WSC1'), 'JIS_UNSUPPORTED')
 
     def test_validate_reads_trailer_model(self):
         self.assertEqual(flasher.validate_container(fake_hybrid(), 'AHUX01'), 'AHUX01')

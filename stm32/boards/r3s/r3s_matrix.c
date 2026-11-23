@@ -55,9 +55,11 @@ static inline void scan_wait_since(uint16_t start, uint16_t us) {
 static inline uint16_t adc_read_sample(void) {
     uint32_t timeout = 5000;
     while ((ADC1->CR & ADC_CR_ADSTP) && --timeout);
+    ADC1->ISR = ADC_ISR_EOC; /* a timed-out conversion may finish later: don't take it as this one */
     ADC1->CR |= ADC_CR_ADSTART;
     timeout = 5000;
     while (!(ADC1->ISR & ADC_ISR_EOC) && --timeout);
+    if (!timeout) return ADC_TIMED_OUT;
     return (uint16_t)(ADC1->DR & 0x0FFF);
 }
 
@@ -115,9 +117,8 @@ void hhkb_matrix_hardware_init(void) {
 
 /* Previous key's result, done inside the next key's settle wait (as the HHKB's scan). */
 static inline __attribute__((always_inline)) void key_result(matrix_row_t m[], uint8_t col, uint8_t row,
-        uint16_t val, const rt_cfg_t *cfg, bool is_calibrating, bool *changed) {
+        uint16_t val, const rt_cfg_t *cfg, bool *changed) {
     rt_key_t *key = &s_rt_keys[col][row];
-    if (!is_calibrating && val > s_cal_peak[col][row] && val < 4000) hhkb_update_dynamic_peak(col, row, val);
     bool is_pressed;
     if (val <= key->reset_raw) { /* reset zone of rt_update: same result, shorter path */
         key->ext = 0;
@@ -182,8 +183,7 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
         uint16_t prev_val = 0;
         for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
             if (!(rows & (1U << row))) continue;
-            if (prev_row >= 0) key_result(current_matrix, col, (uint8_t)prev_row, prev_val, &scan_cfg,
-                                          is_calibrating, &changed);
+            if (prev_row >= 0) key_result(current_matrix, col, (uint8_t)prev_row, prev_val, &scan_cfg, &changed);
             scan_wait_since(start, R3S_SETTLE_US);
             GPIOC->BRR = PIN_DISCHARGE;
             GPIOC->BRR = s_row_pin[row];
@@ -193,11 +193,15 @@ bool hhkb_matrix_scan_raw(matrix_row_t current_matrix[]) {
             uint16_t val = adc_read_sample();
             GPIOC->BSRR = ROW_PINS_ALL | PIN_DISCHARGE | PIN_CTRL; /* the next key's discharge starts */
             start = (uint16_t)TIM2->CNT;
+            if (val == ADC_TIMED_OUT) { /* key keeps its state and last reading */
+                prev_row = -1;
+                continue;
+            }
             s_raw[col][row] = val;
             prev_row = (int8_t)row;
             prev_val = val;
         }
-        key_result(current_matrix, col, (uint8_t)prev_row, prev_val, &scan_cfg, is_calibrating, &changed);
+        if (prev_row >= 0) key_result(current_matrix, col, (uint8_t)prev_row, prev_val, &scan_cfg, &changed);
 #ifdef HHKB_ADC_DIAGNOSTICS
         uint16_t us = (uint16_t)((uint16_t)TIM2->CNT - masked_start) / HHKB_SCAN_TIMER_TICKS_PER_US;
         if (us > s_masked_max_us) s_masked_max_us = us;

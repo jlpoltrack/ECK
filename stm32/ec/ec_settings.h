@@ -107,7 +107,6 @@ extern rt_key_t s_rt_keys[MATRIX_COLS][MATRIX_ROWS];
 
 // Matrix accessors for scan module
 rt_cfg_t hhkb_get_scan_cfg(void);
-void hhkb_update_dynamic_peak(uint8_t col, uint8_t row, uint16_t val);
 void hhkb_cal_accumulate_baseline(uint8_t col, uint8_t row, uint16_t val);
 void hhkb_cal_record_peak(uint8_t col, uint8_t row, uint16_t val);
 bool hhkb_cal_is_capturing_baseline(void);

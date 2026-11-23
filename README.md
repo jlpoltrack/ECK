@@ -8,7 +8,7 @@ Open firmware for electrostatic-capacitive (Topre) keyboards built on the STM32L
 
 | Keyboard | Status | Install |
 | --- | --- | --- |
-| HHKB Professional Hybrid Type-S (`PD-KB800BS`) | **Tested**, USB and Bluetooth | [Web flasher](#web-flasher) or release `.hfb` |
+| HHKB Professional Hybrid and Hybrid Type-S (`PD-KB800…`) | **Tested** on `PD-KB800BS`, USB and Bluetooth | [Web flasher](#web-flasher) or release `.hfb` |
 | HHKB Professional Classic | Builds; untested on hardware | Web flasher or release `.hfb` |
 | HHKB Professional Classic Type-S | Builds; untested on hardware | Web flasher or release `.hfb` |
 | Topre Realforce R3S US TKL (`R3SD13`) | **Tested**, USB | Web flasher or release `.rfb` |
@@ -65,7 +65,7 @@ A day of 2 h typing, 6 h idle and 16 h asleep comes to roughly 2-3 months on two
 
 ## Build, test, flash
 
-Needs the Arm GNU Toolchain 15.3.Rel2 (`arm-none-eabi-gcc`; CI uses the same), CMake, `uv`, and for the Hybrid `.hfb` the nRF5 SDK 17.1.1 at `../nRF5_SDK_17.1.1`.
+Needs the Arm GNU Toolchain 15.3.Rel2 (`arm-none-eabi-gcc`; CI uses the same), CMake, `uv`, and for the Hybrid `.hfb` the nRF5 SDK 17.1.1, found through `$NRF5_SDK_ROOT`, `../../SDKs/nRF5_SDK_17.1.1` or `../nRF5_SDK_17.1.1`.
 
 ```bash
 ./build.sh hybrid    # build/hybrid/hhkb_ec_hybrid.bin and .hfb; also classic, type_s, r3s

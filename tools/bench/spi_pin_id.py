@@ -19,7 +19,7 @@ import zipfile
 
 import numpy as np
 
-DSLCAP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "Tools-DSLogic", "build", "dslcap")
+DSLCAP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "Tools-Bench", "dslogic", "build", "dslcap")
 PORT = {"A": 0x50000000, "B": 0x50000400, "C": 0x50000800}
 MODER, PUPDR, IDR, BSRR = 0x00, 0x0C, 0x10, 0x18
 OUTPUTS = [("PB3", 1), ("PB5", 2), ("PA15", 3), ("PB6", 4)]

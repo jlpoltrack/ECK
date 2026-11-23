@@ -10,6 +10,7 @@
 typedef uint16_t matrix_row_t;
 
 #define HHKB_SCAN_TIMER_TICKS_PER_US 4U
+#define ADC_TIMED_OUT 0xFFFFU /* scan drivers' ADC read gave up; readings are 12-bit */
 
 #ifdef __cplusplus
 extern "C" {
