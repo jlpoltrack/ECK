@@ -1029,6 +1029,15 @@
                 0,
                 28
               ]
+            },
+            {
+              "label": "Bluetooth connection (as granted by the host)",
+              "type": "label",
+              "content": [
+                "id_hhkb_ble_conn",
+                0,
+                36
+              ]
             }
           ]
         },

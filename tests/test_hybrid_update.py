@@ -1,4 +1,4 @@
-"""Bank 1 boot stub check in hybrid_update.py (the stm32 command refuses without the stub)."""
+"""Bank 1 boot stub and layout checks in hybrid_update.py (the stm32 command refuses on either)."""
 import importlib.util
 from pathlib import Path
 import unittest
@@ -25,6 +25,62 @@ class BootStubCheck(unittest.TestCase):
     def test_erased_or_short_refused(self):
         self.assertFalse(upd.has_boot_stub(b'\xff' * 0x2000))
         self.assertFalse(upd.has_boot_stub(vectors(0x20004000, 0x08000075).ljust(0x1000, b'\xff')))
+
+
+
+class FakeKeyboard:
+    def __init__(self, product):
+        self.product = product
+
+    def get_product_string(self):
+        return self.product
+
+    def close(self):
+        pass
+
+
+class LayoutCheck(unittest.TestCase):
+    def check(self, product, sec):
+        saved = upd.open_keyboard
+        upd.open_keyboard = lambda required=True: None if product is None else FakeKeyboard(product)
+        try:
+            upd.check_layout(b"Hybrid JIS" in sec)
+        finally:
+            upd.open_keyboard = saved
+
+    def test_matching_layouts_pass(self):
+        self.check("HHKB Professional Hybrid", b"..HHKB Professional Hybrid\0..")
+        self.check("HHKB Professional Hybrid JIS", b"..HHKB Professional Hybrid JIS\0..")
+        self.check(None, b"..HHKB Professional Hybrid JIS\0..")  # in DFU: nothing to compare
+
+    def test_mismatch_refused(self):
+        with self.assertRaisesRegex(SystemExit, "JIS layout"):
+            self.check("HHKB Professional Hybrid", b"..HHKB Professional Hybrid JIS\0..")
+        with self.assertRaisesRegex(SystemExit, "ANSI layout"):
+            self.check("HHKB Professional Hybrid JIS", b"..HHKB Professional Hybrid\0..")
+
+    def bank2_check(self, bank2, jis):
+        saved = upd.read, upd.leave
+        upd.read = lambda alt, addr, n: bank2
+        upd.leave = lambda: None
+        try:
+            upd.check_bank2_layout(jis)
+        finally:
+            upd.read, upd.leave = saved
+
+    def test_bank2_layout_in_dfu(self):
+        self.bank2_check(b"\xff" * 64, True)  # no ECK in Bank 2: nothing to compare
+        self.bank2_check(b"..HHKB Professional Hybrid\0..", False)
+        self.bank2_check(b"..HHKB Professional Hybrid JIS\0..", True)
+        with self.assertRaisesRegex(SystemExit, "ANSI layout but the image is for JIS"):
+            self.bank2_check(b"..HHKB Professional Hybrid\0..", True)
+        with self.assertRaisesRegex(SystemExit, "JIS layout but the image is for ANSI"):
+            self.bank2_check(b"..HHKB Professional Hybrid JIS\0..", False)
+
+    def test_hfb_model_names_layout(self):
+        trailer = lambda model: model + bytes([0x02, 0x00, 0x04, 0x09]) + b"\xff" * 6
+        self.assertTrue(upd.hfb_is_jis(b"\0" * 100 + trailer(b"AHJX01")))
+        self.assertFalse(upd.hfb_is_jis(b"\0" * 100 + trailer(b"AHUX01")))
 
 
 if __name__ == '__main__':

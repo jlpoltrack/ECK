@@ -19,6 +19,7 @@
 #include "layers.h"
 #include "queue.h"
 #include "eeprom.h"
+#include "fmt.h"
 #include "stm32l0xx.h"
 #include "task.h"
 #include "task_internal.h"
@@ -61,6 +62,7 @@ static TickType_t s_last_active; /* last report or status change */
 #define LINK_DOWN_REPLIES 20U
 static uint8_t s_nrf_slot; /* host slot the nRF52 reports */
 static uint8_t s_bonded = 0xFF; /* bit n-1: slot n has a host (link v3+); 0xFF until known */
+static uint16_t s_conn[3];      /* granted interval (1.25 ms), latency, timeout (10 ms); 0 unconnected */
 static uint8_t s_upd_state;     /* BLE_LINK_UPD_ST_* the nRF52 reports */
 static uint32_t s_upd_staged;
 static uint8_t s_upd_buf[BLE_LINK_DATA_MAX]; /* one update frame waiting for the link task */
@@ -158,6 +160,7 @@ static bool transact(const ble_link_frame_t *tx, ble_link_frame_t *rx) {
     }
     s_ready = true;
     if (rx->data[0] != s_flags) s_last_active = xTaskGetTickCount();
+    if (rx->data[0] & ~s_flags & BLE_LINK_ST_HOST_REJECTED) hybrid_power_host_rejected();
     s_flags = rx->data[0];
     s_nrf_slot = rx->data[4];
     if (rx->data[2] >= 3 && !first && !(s_flags & BLE_LINK_ST_RECOVERY)) s_bonded = rx->data[5];
@@ -165,6 +168,7 @@ static bool transact(const ble_link_frame_t *tx, ble_link_frame_t *rx) {
         s_upd_state = rx->data[6];
         memcpy(&s_upd_staged, &rx->data[7], sizeof(s_upd_staged));
     }
+    if (rx->len >= 17) memcpy(s_conn, &rx->data[11], sizeof(s_conn));
     if (rx->data[1] != s_host_leds) {
         s_host_leds = rx->data[1];
         if ((s_flags & BLE_LINK_ST_CONNECTED) && (s_prefer_ble || !tud_mounted())) events_hid_leds(s_host_leds);
@@ -264,8 +268,11 @@ static void link_watchdog(void) {
     hybrid_nrf_reset();
 }
 
-/* An nRF52 that a power-off left in System OFF answers nothing: wake it with a pin reset. */
+/* An nRF52 that a power-off left in System OFF answers nothing: wake it with a pin reset. The
+ * power-off marks it in RAM that survives the reset ending OFF, so that reset comes at once. */
 #define BOOT_ANSWER_MS 500U
+#define NRF_OFF_MAGIC 0x4E4F4646UL /* "NOFF" */
+static uint32_t s_nrf_off_mark __attribute__((section(".noinit")));
 #define OFF_READY_MS 2000U
 static void wait_ready(uint32_t ms) {
     TickType_t start = xTaskGetTickCount();
@@ -277,7 +284,9 @@ static void wait_ready(uint32_t ms) {
 }
 
 static void link_boot(void) {
-    wait_ready(BOOT_ANSWER_MS);
+    bool was_off = s_nrf_off_mark == NRF_OFF_MAGIC;
+    s_nrf_off_mark = 0;
+    if (!was_off) wait_ready(BOOT_ANSWER_MS);
     if (!s_ready) hybrid_nrf_reset();
     s_bad_replies = 0;
     s_last_good = xTaskGetTickCount();
@@ -385,6 +394,7 @@ static void link_task(void *arg) {
             }
             if (off) {
                 s_ready = false; /* keys and the watchdog leave the nRF52 alone from now on */
+                s_nrf_off_mark = NRF_OFF_MAGIC;
                 s_power_off_done = true;
                 for (;;) vTaskDelay(portMAX_DELAY);
             }
@@ -470,6 +480,24 @@ bool hybrid_ble_battery(uint8_t percent) {
 
 uint8_t hybrid_ble_flags(void) {
     return s_flags;
+}
+
+/* "7.5 ms, latency 30, 6 s" as the host granted it, or "not connected" (VIA, 28 bytes). */
+void hybrid_ble_conn_str(char *out, size_t max) {
+    uint16_t c[3];
+    taskENTER_CRITICAL();
+    memcpy(c, s_conn, sizeof(c));
+    taskEXIT_CRITICAL();
+    if (!(s_flags & BLE_LINK_ST_CONNECTED) || !c[0]) {
+        fmt_snprintf(out, max, "not connected");
+        return;
+    }
+    uint32_t us = c[0] * 1250U, frac = us % 1000U / 10U; /* 1.25 ms units: 0, 25, 50 or 75 */
+    char ms[12];
+    if (frac) fmt_snprintf(ms, sizeof(ms), "%lu.%lu", (unsigned long)(us / 1000U), (unsigned long)(frac % 10U ? frac : frac / 10U));
+    else fmt_snprintf(ms, sizeof(ms), "%lu", (unsigned long)(us / 1000U));
+    fmt_snprintf(out, max, "%s ms, latency %u, %u.%u s", ms, (unsigned)c[1], (unsigned)(c[2] / 100U),
+                 (unsigned)(c[2] % 100U / 10U));
 }
 
 uint8_t hybrid_ble_slot(void) {

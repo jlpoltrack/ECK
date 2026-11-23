@@ -13,7 +13,7 @@
 
 #define BLE_LINK_FRAME_LEN 32U
 #define BLE_LINK_DATA_MAX  27U
-#define BLE_LINK_VERSION   6U
+#define BLE_LINK_VERSION   7U
 
 #define BLE_LINK_MAGIC_TO_NRF 0xA5U
 #define BLE_LINK_MAGIC_TO_STM 0x5AU
@@ -70,6 +70,8 @@ enum {
     BLE_LINK_ST_PAIRING = 1U << 3,    /* pairing window: advertising to any host */
     BLE_LINK_ST_PASSKEY = 1U << 4,    /* the host shows a passkey: type it, then Return */
     BLE_LINK_ST_RECOVERY = 1U << 5,   /* v6: recovery mode (PB6 high at start): no Bluetooth */
+    BLE_LINK_ST_HOST_REJECTED = 1U << 6, /* v7: the slot's host failed our keys (forgot us); cleared by
+                                          * a secured link, pairing or a slot change */
 };
 
 /* Status payload: data[0] flags, data[1] host LED report, data[2] version, data[3] free queue slots,

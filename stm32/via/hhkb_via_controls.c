@@ -72,6 +72,16 @@ bool hhkb_via_command(uint8_t const *request, uint8_t *response) {
         return true;
     }
 #endif
+#define HHKB_ID_BLE_CONN 36 /* Bluetooth connection timing the host granted (text, read-only) */
+    if (id == HHKB_ID_BLE_CONN) {
+        if (request[0] != 0x08) return false;
+#ifdef HHKB_HYBRID
+        hybrid_ble_conn_str((char *)&response[3], 28);
+#else
+        strcpy((char *)&response[3], "no Bluetooth");
+#endif
+        return true;
+    }
     if (id == HHKB_ID_RESET_ARM || id == HHKB_ID_RESET) {
         if (request[0] == 0x08) response[3] = id == HHKB_ID_RESET_ARM && s_reset_armed;
         else if (request[0] != 0x07 || request[3] > 1) return false;

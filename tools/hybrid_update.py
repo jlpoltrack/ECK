@@ -8,9 +8,11 @@ nRF52: through ECK (VIA command 30), which hands the image to ECK's nRF52 app; P
 bootloader installs it at the next nRF52 reset. Commands:
   nrf FILE.hfb      install the nRF52 part of a .hfb (ECK's, or PFU's to go back to stock);
                     --recovery stages it through the nRF52's recovery mode (for an app whose
-                    Bluetooth side is broken; needs an app with link v6)
+                    Bluetooth side is broken; needs an app with link v6); refuses an image of the
+                    other layout (ANSI or JIS; --force overrides)
   stm32 FILE        write ECK (.hfb or .bin) to Bank 2 and its boot tag; refuses unless Bank 1
-                    holds the boot stub (--force overrides)
+                    holds the boot stub and the image's layout (ANSI or JIS) matches the
+                    keyboard's (--force overrides)
   boot              write ECK's boot stub to Bank 1 (replaces PFU's updater; enables recovery);
                     the first time, saves Bank 1 and the data EEPROM to files for going back to stock
   restore-stm32     write stock Bank 2 (from a PFU .hfb) and Bank 1 (from a backup), last
@@ -106,8 +108,10 @@ def nrf_image(path):
     return image, md5
 
 
-def nrf_update(path, recovery=False):
+def nrf_update(path, recovery=False, force=False):
     image, md5 = nrf_image(path)
+    if not force:  # the JIS nRF52 app reports the JIS IDs
+        check_layout(hfb_is_jis(open(path, "rb").read()))
     h = open_keyboard()
     try:  # every exit below restarts the nRF52 normally (and drops PB6)
         if recovery:
@@ -258,6 +262,36 @@ def stm32_section(path):
     return sec
 
 
+def hfb_is_jis(data):
+    """The Hybrid .hfb trailer (last 16 bytes) starts with the model: AHJX01 is the Hybrid JIS."""
+    return data[-16:-10] == b"AHJX01"
+
+
+def check_layout(jis):
+    """Refuse an ANSI image for a JIS keyboard or the reverse; the product string names the layout."""
+    h = open_keyboard(required=False)
+    if h is None:
+        return  # already in DFU: nothing running to compare with
+    try:
+        product = h.get_product_string() or ""
+    finally:
+        h.close()
+    if ("JIS" in product) != jis:
+        sys.exit(f"the keyboard is {product!r} but the image is for the {'JIS' if jis else 'ANSI'} "
+                 "layout: pass --force to write it anyway")
+
+
+def check_bank2_layout(jis):
+    """In the DFU loader: refuse when Bank 2 holds ECK for the other layout (as web/eck.js bank2Layout)."""
+    bank2 = read(0, BANK2, SECTION)
+    if b"HHKB Professional Hybrid" not in bank2:
+        return  # no ECK image to compare with
+    if (b"HHKB Professional Hybrid JIS" in bank2) != jis:
+        leave()
+        sys.exit(f"Bank 2 holds ECK for the {'ANSI' if jis else 'JIS'} layout but the image is for "
+                 f"{'JIS' if jis else 'ANSI'}: pass --force to write it anyway")
+
+
 def write_bank2(sec):
     write_verified(2, TAG_CRC, bytes(4), "boot tag cleared")  # a half-written Bank 2 never boots
     write_verified(0, BANK2, sec, "Bank 2")
@@ -289,9 +323,10 @@ def main():
     p = sub.add_parser("nrf")
     p.add_argument("file")
     p.add_argument("--recovery", action="store_true", help="stage through the nRF52's recovery mode (no Bluetooth)")
+    p.add_argument("--force", action="store_true", help="write even if the layout differs")
     p = sub.add_parser("stm32")
     p.add_argument("file")
-    p.add_argument("--force", action="store_true", help="write even if Bank 1 lacks the boot stub")
+    p.add_argument("--force", action="store_true", help="write even if Bank 1 lacks the boot stub or the layout differs")
     sub.add_parser("boot").add_argument("--stub", default=STUB)
     p = sub.add_parser("restore-stm32")
     p.add_argument("--hfb", required=True, help="PFU firmware file, e.g. HHKB800_FW_A048.hfb")
@@ -302,12 +337,15 @@ def main():
     a = ap.parse_args()
 
     if a.cmd == "nrf":
-        nrf_update(a.file, a.recovery)
+        nrf_update(a.file, a.recovery, a.force)
     elif a.cmd == "stm32":
         sec = stm32_section(a.file)
+        if not a.force:
+            check_layout(b"Hybrid JIS" in sec)
         enter_dfu()
         if not a.force:
             require_boot_stub()
+            check_bank2_layout(b"Hybrid JIS" in sec)
         write_bank2(sec)
         leave()
     elif a.cmd == "boot":

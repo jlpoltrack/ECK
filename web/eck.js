@@ -109,10 +109,12 @@ export const isTopreBank1 = (bank1) => new TextDecoder('latin1').decode(bank1).i
 /** Keyboard type number (PFU info) to container model. */
 export function deviceModel(type) {
     const n = type.toUpperCase().trim();
-    // Whole families, as tools/hhkb_flasher.py MODEL_PATTERNS (JIS not yet)
+    // Whole families, as tools/hhkb_flasher.py MODEL_PATTERNS
     if (/^PD-KB401[BWY]N?SC[0-9]*$/.test(n)) return 'AHHS01';
     if (/^PD-KB401[BW]N?$/.test(n)) return 'AHHX01';
     if (/^PD-KB800[BWY]N?(?:S(?:C[0-9]*)?)?$/.test(n)) return 'AHUX01';
+    if (/^PD-KB421[BWY]N?SC[0-9]*$/.test(n)) return 'AHKS01'; // JIS, experimental
+    if (/^PD-KB820[BWY]N?(?:S(?:C[0-9]*)?)?$/.test(n)) return 'AHJX01'; // JIS, experimental
     if (n === 'R3SD13') return 'R3SD####'; // Realforce R3S US TKL, under Topre's updater
     return null;
 }
@@ -207,10 +209,12 @@ export async function pfuInstall(pfu, data, { reconnect, log, progress }) {
 
 // ---------- ECK firmware over VIA raw HID ----------
 
-// ECK on every model (stm32/usb/usb_descriptors.c); the product name must also contain "HHKB".
-export const ECK_FILTER = { vendorId: 0xcafe, productId: 0x4010, usagePage: 0xff60, usage: 0x61 };
+// ECK on the HHKB (stm32/usb/usb_descriptors.c): 0x4010 ANSI, 0x4012 JIS; the product name must also contain "HHKB".
+const ECK_PID = 0x4010, ECK_JIS_PID = 0x4012;
+export const ECK_FILTER = { vendorId: 0xcafe, productId: ECK_PID, usagePage: 0xff60, usage: 0x61 };
+export const ECK_JIS_FILTER = { ...ECK_FILTER, productId: ECK_JIS_PID };
 export const isEck = (d) =>
-    d.vendorId === 0xcafe && d.productId === 0x4010 && (d.productName || '').includes('HHKB') &&
+    d.vendorId === 0xcafe && [ECK_PID, ECK_JIS_PID].includes(d.productId) && (d.productName || '').includes('HHKB') &&
     d.collections.some((c) => c.usagePage === 0xff60);
 // ECK on the Realforce R3S (stm32/boards/r3s): its own product ID
 export const R3S_FILTER = { vendorId: 0xcafe, productId: 0x4011, usagePage: 0xff60, usage: 0x61 };
@@ -227,7 +231,7 @@ export class Via {
         dev.addEventListener('inputreport', (e) => this.queue.push(new Uint8Array(e.data.buffer)));
     }
     static async request() {
-        const dev = (await navigator.hid.requestDevice({ filters: [ECK_FILTER] })).find(isEck);
+        const dev = (await navigator.hid.requestDevice({ filters: [ECK_FILTER, ECK_JIS_FILTER] })).find(isEck);
         if (!dev) throw new Error('no HHKB running ECK selected');
         return Via.open(dev);
     }
@@ -238,6 +242,9 @@ export class Via {
     }
     get hybrid() {
         return (this.dev.productName || '').includes('Hybrid');
+    }
+    get jis() {
+        return this.dev.productId === ECK_JIS_PID;
     }
     /** Installed ECK version (VIA setting 28), or null from firmware too old to report it. */
     async version() {
@@ -524,6 +531,13 @@ async function writeBank2(dfu, sec, log, progress = () => {}) {
     await dfu.writeVerified(ALT.EEPROM, TAG_CRC, le32(crc16mcrf4xx(sec)), 'boot tag', log);
 }
 
+/** Layout of the ECK Hybrid in Bank 2 from its product string: true JIS, false US, null none found. */
+export function bank2Layout(bank2) {
+    const s = new TextDecoder('latin1').decode(bank2);
+    if (s.includes('HHKB Professional Hybrid JIS')) return true;
+    return s.includes('HHKB Professional Hybrid') ? false : null;
+}
+
 /** Checks a boot stub image before anything is written. */
 export function checkBootStub(stub) {
     if (stub.length > 0x1000) throw new Error('boot stub larger than 4 KB');
@@ -533,8 +547,12 @@ export function checkBootStub(stub) {
 /** STM32 update from a Hybrid .hfb. Without ECK's boot stub in Bank 1 (no USB recovery) it refuses,
  * unless a stub is given: then the stub goes in first (see writeBootStub). */
 export async function stm32Update(dfu, data, { log, progress, stub = null, save, confirm }) {
-    const { stm32, hybrid } = parseHfb(data);
+    const { stm32, hybrid, model } = parseHfb(data);
     if (!hybrid) throw new Error('this updater handles the Hybrid; install Classic firmware through PFU’s updater');
+    const installed = bank2Layout(await dfu.read(ALT.FLASH, BANK2, SECTION));
+    const jis = model === 'AHJX01';
+    if (installed !== null && installed !== jis)
+        throw new Error(`the keyboard runs ECK for the ${installed ? 'JIS' : 'US'} layout, the file is for ${jis ? 'JIS' : 'US'}`);
     const bank1 = await dfu.read(ALT.FLASH, BANK1, SECTION);
     if (!hasBootStub(bank1)) {
         if (!stub) throw new Error("ECK's boot stub is not installed: finish setup first");

@@ -2,6 +2,7 @@
 #define HHKB_HYBRID_BLE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "FreeRTOS.h"
@@ -28,5 +29,7 @@ void hybrid_ble_update_status(uint8_t *state, uint32_t *staged, bool *pending, b
 void hybrid_ble_nrf_restart(uint32_t quiet_ms, bool recovery);
 /* Last BLE_LINK_ST_* flags reported by the nRF52. */
 uint8_t hybrid_ble_flags(void);
+/* The connection timing the host granted, as text for VIA, or "not connected". */
+void hybrid_ble_conn_str(char *out, size_t max);
 
 #endif

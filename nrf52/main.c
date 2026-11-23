@@ -56,10 +56,10 @@
 #define ADV_SLOW_INTERVAL 0x0640 /* 1 s */
 #define ADV_SLOW_DURATION 0      /* until connected */
 
-/* Apple Accessory Design Guidelines R32 section 57.6: min >= 15 ms in 15 ms steps, max >= min + 15,
- * latency <= 30, timeout 6-18 s and > 3 * max * (latency + 1). */
-#define MIN_CONN_INTERVAL MSEC_TO_UNITS(15, UNIT_1_25_MS)
-#define MAX_CONN_INTERVAL MSEC_TO_UNITS(30, UNIT_1_25_MS)
+/* 7.5-15 ms as ZMK asks: lower input lag on hosts that grant it. Apple's guidelines (R32 57.6)
+ * want min >= 15 ms, so a Mac picks its own (VIA shows the granted values); latency <= 30, 6 s. */
+#define MIN_CONN_INTERVAL 6 /* 7.5 ms in 1.25 ms units */
+#define MAX_CONN_INTERVAL MSEC_TO_UNITS(15, UNIT_1_25_MS)
 #define SLAVE_LATENCY 30
 #define CONN_SUP_TIMEOUT MSEC_TO_UNITS(6000, UNIT_10_MS)
 
@@ -105,6 +105,9 @@ APP_TIMER_DEF(m_pair_timer);
 APP_TIMER_DEF(m_sec_timer);
 #define PAIR_WINDOW_MS 600000 /* stock: 10 min in pairing mode */
 #define SECURE_TIMEOUT_MS 30000
+APP_TIMER_DEF(m_reject_timer);
+#define REJECT_HOLD_MS 30000 /* no advertising for this long after a host rejected our keys */
+static bool m_host_rejected;        /* the slot's host failed security (it forgot us): STM32 blinks orange */
 APP_TIMER_DEF(m_off_timer);
 #define OFF_CHECK_MS 100
 #define OFF_CONN_WAITS 30 /* give up waiting for the disconnect after 3 s */
@@ -228,6 +231,7 @@ static uint32_t whitelist_refresh(void) {
 }
 
 static void advertising_init(bool discoverable);
+static void disconnect_now(void);
 
 /* The single place advertising starts: stop it, set this slot's address and whitelist, then
  * advertise to the slot's host, or to anyone during a pairing window. An empty slot stays quiet. */
@@ -260,6 +264,17 @@ static void security_timeout(void *p_context) {
     if (m_conn_handle != BLE_CONN_HANDLE_INVALID && !m_secured) {
         (void)sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
     }
+}
+
+static void reject_hold_end(void *p_context) {
+    (void)p_context;
+    advertising_restart();
+}
+
+/* Our keys failed with the slot's host (it forgot us, or lost its keys), outside a pairing window. */
+static void host_rejected(void) {
+    m_host_rejected = true;
+    disconnect_now(); /* advertising waits REJECT_HOLD_MS (disconnect event) */
 }
 
 static void on_adv_evt(ble_adv_evt_t evt) {
@@ -308,6 +323,7 @@ static void pm_evt_handler(pm_evt_t const *p_evt) {
         m_peer_id = p_evt->peer_id;
         m_secured = true;
         m_passkey_wait = false;
+        m_host_rejected = false;
         /* A new bond ends the pairing window (and its LED), whatever the flash write reports. */
         if (p_evt->params.conn_sec_succeeded.procedure == PM_CONN_SEC_PROCEDURE_BONDING) {
             m_slot_tag = 0xD3C000U | current_slot();
@@ -316,6 +332,12 @@ static void pm_evt_handler(pm_evt_t const *p_evt) {
         }
         queue_drain();
         break;
+    case PM_EVT_CONN_SEC_FAILED: {
+        /* Key or pairing failures mean the host no longer has our bond; a dropped link is not one. */
+        pm_sec_error_code_t err = p_evt->params.conn_sec_failed.error;
+        if (!m_pairing && err != PM_CONN_SEC_ERROR_DISCONNECT && err != PM_CONN_SEC_ERROR_SMP_TIMEOUT) host_rejected();
+        break;
+    }
     case PM_EVT_CONN_SEC_CONFIG_REQ: {
         /* A host that forgot us may pair again only while the user asked for pairing (Fn+Ctrl+Q). */
         pm_conn_sec_config_t cfg = {.allow_repairing = m_pairing};
@@ -375,7 +397,8 @@ static void status_prepare(bool refused) {
     m_tx.len = 17;
     m_tx.data[0] = (m_secured ? BLE_LINK_ST_CONNECTED : 0) | (m_advertising_on ? BLE_LINK_ST_ADVERTISING : 0) |
                    (refused ? BLE_LINK_ST_QUEUE_FULL : 0) | (m_pairing ? BLE_LINK_ST_PAIRING : 0) |
-                   (m_passkey_wait ? BLE_LINK_ST_PASSKEY : 0) | (m_recovery ? BLE_LINK_ST_RECOVERY : 0);
+                   (m_passkey_wait ? BLE_LINK_ST_PASSKEY : 0) | (m_recovery ? BLE_LINK_ST_RECOVERY : 0) |
+                   (m_host_rejected ? BLE_LINK_ST_HOST_REJECTED : 0);
     m_tx.data[1] = m_host_leds;
     m_tx.data[2] = BLE_LINK_VERSION;
     m_tx.data[3] = (uint8_t)(QUEUE_LEN - m_q_count);
@@ -451,6 +474,8 @@ static void slot_delete(uint8_t slot) {
 static void pair_slot(uint8_t slot) {
     m_slot = slot;
     m_pairing = true;
+    m_host_rejected = false;
+    (void)app_timer_stop(m_reject_timer);
     (void)app_timer_stop(m_pair_timer);
     APP_ERROR_CHECK(app_timer_start(m_pair_timer, APP_TIMER_TICKS(PAIR_WINDOW_MS), NULL));
     slot_delete(slot);
@@ -466,6 +491,8 @@ static void select_slot(uint8_t slot) {
     bool first = m_slot == 0;
     m_slot = slot;
     pairing_end();
+    m_host_rejected = false;
+    (void)app_timer_stop(m_reject_timer);
     if (m_conn_handle == BLE_CONN_HANDLE_INVALID) {
         advertising_restart();
     } else if (!(first && slot == 1)) {
@@ -646,7 +673,12 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context) {
         m_disc_pending = false;
         (void)app_timer_stop(m_disc_timer);
         (void)app_timer_stop(m_sec_timer);
-        advertising_restart();
+        if (m_host_rejected) {
+            (void)app_timer_stop(m_reject_timer);
+            APP_ERROR_CHECK(app_timer_start(m_reject_timer, APP_TIMER_TICKS(REJECT_HOLD_MS), NULL));
+        } else {
+            advertising_restart();
+        }
         break;
     case BLE_GAP_EVT_AUTH_KEY_REQUEST: /* the host shows a passkey: the STM32 collects the typed digits */
         if (p_ble_evt->evt.gap_evt.params.auth_key_request.key_type == BLE_GAP_AUTH_KEY_TYPE_PASSKEY) {
@@ -714,9 +746,15 @@ static void gap_init(void) {
     APP_ERROR_CHECK(nrf_ble_gatt_init(&m_gatt, NULL));
 }
 
+#ifdef ECK_JIS
+#define HID_PRODUCT_ID 0x4012 /* the JIS keyboard's USB IDs and country code (Japan), as PFU's JIS image */
+#else
+#define HID_PRODUCT_ID 0x4010
+#endif
+
 static void dis_init(void) {
     ble_dis_init_t init;
-    ble_dis_pnp_id_t pnp = {.vendor_id_source = 0x02, .vendor_id = 0xCAFE, .product_id = 0x4010,
+    ble_dis_pnp_id_t pnp = {.vendor_id_source = 0x02, .vendor_id = 0xCAFE, .product_id = HID_PRODUCT_ID,
                             .product_version = 0x0001}; /* same IDs as ECK's USB device */
     memset(&init, 0, sizeof(init));
     ble_srv_ascii_to_utf8(&init.manufact_name_str, MANUFACTURER_NAME);
@@ -786,6 +824,9 @@ static void hids_init(void) {
     init.rep_map.data_len = sizeof(report_map);
     init.rep_map.p_data = (uint8_t *)report_map;
     init.hid_information.bcd_hid = 0x0111;
+#ifdef ECK_JIS
+    init.hid_information.b_country_code = 15;
+#endif
     init.hid_information.flags = HID_INFO_FLAG_REMOTE_WAKE_MSK | HID_INFO_FLAG_NORMALLY_CONNECTABLE_MSK;
     /* Encrypted access (SEC_JUST_WORKS: no MITM needed per attribute); unset fields are SEC_NO_ACCESS. */
     init.rep_map.rd_sec = SEC_JUST_WORKS;
@@ -811,9 +852,19 @@ static void services_init(void) {
 /* Re-run before each start: the advertising module never restores the discoverable flag itself. */
 static void advertising_init(bool discoverable) {
     static ble_uuid_t uuids[] = {{BLE_UUID_HUMAN_INTERFACE_DEVICE_SERVICE, BLE_UUID_TYPE_BLE}};
+    /* Windows Swift Pair (Microsoft beacon: vendor 0x0006, ID 3, scenario 0, RSSI byte 0x80), only
+     * while pairing; it fills the 31-byte advert, so the name moves to the scan response. */
+    static uint8_t swift_pair[] = {0x03, 0x00, 0x80};
+    static ble_advdata_manuf_data_t ms = {.company_identifier = 0x0006,
+                                          .data = {.size = sizeof(swift_pair), .p_data = swift_pair}};
     ble_advertising_init_t init;
     memset(&init, 0, sizeof(init));
-    init.advdata.name_type = BLE_ADVDATA_FULL_NAME;
+    if (discoverable) {
+        init.advdata.p_manuf_specific_data = &ms;
+        init.srdata.name_type = BLE_ADVDATA_FULL_NAME;
+    } else {
+        init.advdata.name_type = BLE_ADVDATA_FULL_NAME;
+    }
     init.advdata.include_appearance = true;
     init.advdata.flags = discoverable ? BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE : BLE_GAP_ADV_FLAG_BR_EDR_NOT_SUPPORTED;
     init.advdata.uuids_complete.uuid_cnt = 1;
@@ -913,6 +964,7 @@ int main(void) {
     APP_ERROR_CHECK(app_timer_create(&m_sec_timer, APP_TIMER_MODE_SINGLE_SHOT, security_timeout));
     APP_ERROR_CHECK(app_timer_create(&m_off_timer, APP_TIMER_MODE_REPEATED, off_timer_tick));
     APP_ERROR_CHECK(app_timer_create(&m_disc_timer, APP_TIMER_MODE_SINGLE_SHOT, disc_timeout));
+    APP_ERROR_CHECK(app_timer_create(&m_reject_timer, APP_TIMER_MODE_SINGLE_SHOT, reject_hold_end));
     bonded_slots_refresh(); /* the first status reply, prepared in link_init, reports the bonds */
     link_init();
     NRF_LOG_INFO("ECK BLE bridge started, link v%d", BLE_LINK_VERSION);

@@ -131,6 +131,15 @@ SECTIONS
         __bss_end__ = _ebss;
     } >RAM AT> RAM :bss
 
+    /* Not zeroed at start-up: keeps its value through a software reset (hybrid_ble.c) */
+    .noinit (NOLOAD) :
+    {
+        . = ALIGN(4);
+        *(.noinit)
+        *(.noinit*)
+        . = ALIGN(4);
+    } >RAM :bss
+
     ._user_heap_stack :
     {
         . = ALIGN(8);

@@ -83,9 +83,17 @@ clang -std=c11 -Wall -Wextra -Werror -DVIAL_ENABLE -I "${HHKB_MOCKS_DIR}" -I "$M
     -I "${STM32_DIR}/boards/hhkb" "${HHKB_TEST_DIR}/test_dip_modes.c" -o "${HHKB_TEST_DIR}/test_dip_modes"
 "${HHKB_TEST_DIR}/test_dip_modes" # Vial build: the Fn+Ctrl+V chord
 rm -f "${HHKB_TEST_DIR}/test_dip_modes"
+clang -std=c11 -Wall -Wextra -Werror -DHHKB_JIS -I "${HHKB_MOCKS_DIR}" -I "$MODULE_SRC_DIR" -I "${STM32_DIR}/board" \
+    -I "${STM32_DIR}/boards/hhkb" "${HHKB_TEST_DIR}/test_dip_modes_jis.c" -o "${HHKB_TEST_DIR}/test_dip_modes_jis"
+"${HHKB_TEST_DIR}/test_dip_modes_jis"
+rm -f "${HHKB_TEST_DIR}/test_dip_modes_jis"
 clang -std=c11 -Wall -Wextra -Werror -I "${STM32_DIR}/board" -I "${STM32_DIR}/boards/hhkb" -I "${STM32_DIR}/keys" -I "${STM32_DIR}/hybrid" \
     "${HHKB_TEST_DIR}/test_hybrid_chords.c" "${STM32_DIR}/hybrid/hybrid_chords.c" -o "${HHKB_TEST_DIR}/test_hybrid_chords"
 "${HHKB_TEST_DIR}/test_hybrid_chords"
+clang -std=c11 -Wall -Wextra -Werror -DHHKB_JIS -I "${STM32_DIR}/board" -I "${STM32_DIR}/boards/hhkb" -I "${STM32_DIR}/keys" \
+    -I "${STM32_DIR}/hybrid" "${HHKB_TEST_DIR}/test_hybrid_chords.c" "${STM32_DIR}/hybrid/hybrid_chords.c" \
+    -o "${HHKB_TEST_DIR}/test_hybrid_chords"
+"${HHKB_TEST_DIR}/test_hybrid_chords" # JIS positions
 rm -f "${HHKB_TEST_DIR}/test_hybrid_chords"
 for hhkb_test in test_keymap_storage test_indicators_system test_hybrid_power; do
     clang -std=c11 -Wall -Wextra -Werror -I "${HHKB_MOCKS_DIR}" -I "$MODULE_SRC_DIR" -I "${STM32_DIR}/hybrid" \

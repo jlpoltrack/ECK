@@ -49,6 +49,7 @@ jobs:
           git fetch -q --depth=1 origin "refs/tags/$tag:refs/tags/$tag"
           git show "$tag:stm32/via/via.json" > /tmp/release/via.json # the release's VIA definitions
           git show "$tag:stm32/boards/r3s/via.json" > /tmp/release/r3s_via.json || rm -f /tmp/release/r3s_via.json
+          git show "$tag:stm32/via/via_jis.json" > /tmp/release/via_jis.json || rm -f /tmp/release/via_jis.json
           tools/web_bundle.sh "$tag" /tmp/release
           cp LICENSE THIRD_PARTY_NOTICES.md web/
           rm web/eck.test.mjs

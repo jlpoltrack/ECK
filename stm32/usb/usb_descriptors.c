@@ -29,6 +29,15 @@ void debug_console_printf(const char *fmt, ...);
 #define KEYBOARD_NAME "ECK Keyboard"
 #endif
 
+#ifndef USB_HID_COUNTRY_CODE
+#define USB_HID_COUNTRY_CODE 0 /* not localized */
+#endif
+/* TinyUSB's TUD_HID_DESCRIPTOR with the HID country code (bCountryCode) set. */
+#define KEYBOARD_HID_DESCRIPTOR(_itfnum, _stridx, _boot_protocol, _report_desc_len, _epin, _epsize, _ep_interval) \
+  9, TUSB_DESC_INTERFACE, _itfnum, 0, 1, TUSB_CLASS_HID, (uint8_t)((_boot_protocol != HID_ITF_PROTOCOL_NONE) ? (uint8_t)HID_SUBCLASS_BOOT : 0u), _boot_protocol, _stridx,\
+  9, HID_DESC_TYPE_HID, U16_TO_U8S_LE(0x0111), USB_HID_COUNTRY_CODE, 1, HID_DESC_TYPE_REPORT, U16_TO_U8S_LE(_report_desc_len),\
+  7, TUSB_DESC_ENDPOINT, _epin, TUSB_XFER_INTERRUPT, U16_TO_U8S_LE(_epsize), _ep_interval
+
 // HID Report Descriptor: Composite Keyboard (ID 1), Consumer (ID 2)
 uint8_t const desc_hid_report[] = {
     TUD_HID_REPORT_DESC_KEYBOARD(HID_REPORT_ID(1)),
@@ -126,7 +135,7 @@ uint8_t const desc_configuration[] = {
 #endif
 
     // Interface 0: Composite Keyboard/Consumer HID Descriptor
-    TUD_HID_DESCRIPTOR(0,                       // Interface number
+    KEYBOARD_HID_DESCRIPTOR(0,                  // Interface number
                        0,                       // String index
                        HID_ITF_PROTOCOL_NONE,   // Protocol code (composite with Report IDs)
                        sizeof(desc_hid_report), // HID report descriptor length

@@ -1,6 +1,11 @@
 PROJECT_NAME     := hhkb_hybrid_ble
 TARGETS          := nrf52832_xxaa
 OUTPUT_DIRECTORY := _build
+# JIS=1: the Hybrid JIS app (HID country code 15, product ID 0x4012), built in its own folder.
+ifeq ($(JIS),1)
+OUTPUT_DIRECTORY := _build_jis
+CFLAGS += -DECK_JIS
+endif
 
 # nRF5 SDK 17.1.1 (S132 v7.2.0), unpacked next to this repo. Layout follows the SDK's
 # ble_app_hids_keyboard example; sources and include folders cut to what the app uses.

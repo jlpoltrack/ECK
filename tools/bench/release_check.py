@@ -29,8 +29,8 @@ BIN = os.path.join(ROOT, "build/hybrid/hhkb_ec_hybrid.bin")  # the STM32 alone: 
 DIAG_DEFS = "HHKB_ADC_DIAGNOSTICS,HHKB_SCAN_DIAGNOSTICS"
 VERSION_ID, NRF_ID = 28, 30   # VIA custom values (stm32/via/hhkb_via_controls.c)
 UPD_RESTART, UPD_RECOVERY = 4, 5
-# Baselines from AGENTS.md (Bench): interrupts-off scan half 408 us, rest noise median p-p 12-13
-SCAN_HALF_WARN_US, SCAN_WHOLE_LIMIT_US, NOISE_WARN = 450, 1000, 16
+# Baselines (docs/bench.md, v0.7.2): interrupts-off scan half 389 us, rest noise median p-p 14-15.5
+SCAN_HALF_WARN_US, SCAN_WHOLE_LIMIT_US, NOISE_WARN = 450, 1000, 18
 
 results = []  # (name, "PASS" | "WARN" | "FAIL", detail)
 LOG = []      # every command's full output, saved next to the backup
@@ -99,8 +99,8 @@ def perf():
     else:
         half, whole, miss = max(halves), max(wholes), max(missed, default=0)  # missed: running total
         status = "FAIL" if whole >= SCAN_WHOLE_LIMIT_US else "WARN" if half > SCAN_HALF_WARN_US or miss else "PASS"
-        report("scan time", status, f"interrupts-off half {half} us (baseline 408), whole scan {whole} us "
-               f"(baseline ~910), missed 1 kHz slots {miss} (baseline 0)")
+        report("scan time", status, f"interrupts-off half {half} us (baseline 389), whole scan {whole} us "
+               f"(baseline ~870), missed 1 kHz slots {miss} (baseline 0)")
     code, out = run(py("tools/bench/key_depth.py", "noise", "8"), 60)
     m = re.search(r"median peak-to-peak ([\d.]+)", out)
     if code or not m:
@@ -109,7 +109,7 @@ def perf():
         pp = float(m.group(1))
         pressed = "pressed during the run" in out
         report("rest noise", "WARN" if pp > NOISE_WARN or pressed else "PASS",
-               f"median peak-to-peak {pp:g} counts (baseline 12-13)" + ("; keys were pressed" if pressed else ""))
+               f"median peak-to-peak {pp:g} counts (baseline 14-15.5)" + ("; keys were pressed" if pressed else ""))
 
 
 def nrf_round_trip():

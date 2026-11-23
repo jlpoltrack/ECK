@@ -62,6 +62,18 @@ jobs:
         run: ./build.sh classic -c
       - name: Classic Type-S
         run: ./build.sh type_s -c
+      # JIS (69 keys): untested on hardware; released and in the web flasher, labelled experimental.
+      - name: Hybrid JIS (its own nRF52 app, make JIS=1)
+        run: ./build.sh hybrid_jis && test -f build/hybrid_jis/hhkb_ec_hybrid_jis.hfb
+      - name: Classic Type-S JIS
+        run: ./build.sh type_s_jis -c
+      - uses: actions/upload-artifact@v7
+        with:
+          name: jis
+          path: |
+            build/hybrid_jis/hhkb_ec_hybrid_jis.hfb
+            build/type_s_jis/hhkb_ec_type_s_jis.hfb
+            stm32/via/via_jis.json
       - name: Realforce R3S
         run: ./build.sh r3s -c && test -f build/r3s/hhkb_ec_r3s.rfb
       - name: Hybrid boot stub
@@ -78,5 +90,8 @@ jobs:
           # A re-pushed tag (history squash) keeps its existing release
           gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1 && exit 0
           gh release create "$GITHUB_REF_NAME" --title "ECK $GITHUB_REF_NAME" --generate-notes \
-            web/firmware/*.hfb web/firmware/hhkb_ec_r3s.rfb web/firmware/hybrid_boot.bin "eck-web-flasher-$GITHUB_REF_NAME.zip" \
-            stm32/via/via.json web/firmware/r3s_via.json LICENSE THIRD_PARTY_NOTICES.md
+            web/firmware/hhkb_ec_hybrid.hfb web/firmware/hhkb_ec_classic.hfb web/firmware/hhkb_ec_type_s.hfb web/firmware/hhkb_ec_r3s.rfb web/firmware/hybrid_boot.bin "eck-web-flasher-$GITHUB_REF_NAME.zip" \
+            stm32/via/via.json web/firmware/r3s_via.json LICENSE THIRD_PARTY_NOTICES.md \
+            "build/hybrid_jis/hhkb_ec_hybrid_jis.hfb#EXPERIMENTAL, untested: Hybrid JIS (hhkb_ec_hybrid_jis.hfb)" \
+            "build/type_s_jis/hhkb_ec_type_s_jis.hfb#EXPERIMENTAL, untested: Classic Type-S JIS (hhkb_ec_type_s_jis.hfb)" \
+            "stm32/via/via_jis.json#EXPERIMENTAL: JIS VIA definition (via_jis.json)"

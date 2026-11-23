@@ -101,7 +101,7 @@ summary { cursor: pointer; font-weight: 600; }
   <section class="card" id="via" hidden>
     <h2>Keymap and settings (VIA)</h2>
     <p>Change the keymap, macros and ECK's settings in VIA with this keyboard definition.</p>
-    <div class="row"><a id="vialink" class="button" download="via.json">Download via.json</a></div>
+    <div class="row"><a id="vialink" class="button" download="via.json">Download via.json</a> <a id="vialink-jis" class="button" download="via_jis.json" hidden>JIS: via_jis.json</a></div>
     <p class="muted">In <a href="https://usevia.app">usevia.app</a> (Chrome or Edge): Settings, enable <b>Show Design tab</b>; then Design, <b>Load Draft Definition</b>, and choose via.json.</p>
   </section>
 
@@ -109,7 +109,7 @@ summary { cursor: pointer; font-weight: 600; }
     <h2>Keyboard doesn't start (Hybrid)</h2>
     <p><b>Keyboard doesn't type:</b> take the batteries out, then hold the power switch while plugging in USB (hold 2 s).</p>
     <p class="muted">Then click Recover keyboard firmware. This needs ECK's boot stub, which Install sets up.</p>
-    <div class="row"><button id="b-recover">Recover keyboard firmware</button></div>
+    <div class="row"><label>Layout <select id="recover-layout"><option value="us">US (ANSI)</option><option value="jis">JIS (experimental)</option></select></label> <button id="b-recover">Recover keyboard firmware</button></div>
     <p><b>Bluetooth broken</b> (the keyboard works over USB): click Recover Bluetooth firmware, then pick the keyboard.</p>
     <div class="row"><button id="b-nrf-recover">Recover Bluetooth firmware</button></div>
   </section>

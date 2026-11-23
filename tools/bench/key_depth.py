@@ -24,7 +24,8 @@ import time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from via_hid import PRODUCT, open_keyboard, send  # noqa: E402
 
-ROWS, COLS = (6, 16) if "R3S" in PRODUCT else (4, 15)  # ECK_PRODUCT=R3S: the Realforce R3S
+# ECK_PRODUCT=R3S: the Realforce R3S; ECK_PRODUCT=JIS: a JIS HHKB
+ROWS, COLS = (6, 16) if "R3S" in PRODUCT else (5, 15) if "JIS" in PRODUCT else (4, 15)
 N = ROWS * COLS
 DIAG_ID = 31
 NAMES = {**{0x04 + i: chr(65 + i) for i in range(26)}, **{0x1E + i: str((i + 1) % 10) for i in range(10)},

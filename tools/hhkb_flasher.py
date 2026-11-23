@@ -3,7 +3,7 @@
 HHKB Flasher CLI (Open-Source Firmware Updater for Happy Hacking Keyboard)
 ========================================================================
 
-Communicates directly with PFU's updater on the HHKB Classic / Classic Type-S (and the Hybrid,
+Communicates directly with PFU's updater on the HHKB Classic / Classic Type-S, ANSI or JIS (and the Hybrid,
 whose updater needs PFU's nRF52 app) via USB Raw HID (Vendor ID: 0x04FE, UsagePage: 0xFF00,
 Usage: 0x01) to read device info and flash firmware into STM32L072 Bank 2 (0x08010000).
 
@@ -43,6 +43,7 @@ PFU_USAGE = 0x01
 
 REPORT_SIZE = 64
 HYBRID_HFB_SIZE = 282672
+HYBRID_MODELS = {"AHUX01", "AHJX01"}  # ANSI and JIS
 HYBRID_MD5 = slice(0x10010, 0x10020)  # MD5 of the nRF52 section, 0x10020 up to the 16-byte trailer
 # Bank 1 relays the nRF image; do not unplug meanwhile. The nRF52 bootloader finishes about 4 s
 # after the final command (measured); 15 s leaves margin.
@@ -65,7 +66,9 @@ MODEL_PATTERNS = {
     "AHHX01": r"PD-KB401[BW]N?",
     "AHHS01": r"PD-KB401[BWY]N?SC[0-9]*",
     "AHUX01": r"PD-KB800[BWY]N?(?:S(?:C[0-9]*)?)?",
-    "JIS_UNSUPPORTED": r"PD-KB(?:421|820).*",
+    # JIS (69 keys), container IDs of PFU's JIS images: Type-S HHKB421 (A9.04), Hybrid HHKB820 (A2.49)
+    "AHKS01": r"PD-KB421[BWY]N?SC[0-9]*",
+    "AHJX01": r"PD-KB820[BWY]N?(?:S(?:C[0-9]*)?)?",
 }
 
 
@@ -83,7 +86,7 @@ def hybrid_md5_ok(data: bytes) -> bool:
 
 def validate_container(data: bytes, expected_model=None, *, check_crc=True, check_model=True):
     """Validate the complete HFB before sending any update command."""
-    hybrid = "AHUX01" in (expected_model, data[-16:-10].decode("ascii", errors="replace"))
+    hybrid = bool(HYBRID_MODELS & {expected_model, data[-16:-10].decode("ascii", errors="replace")})
     if hybrid and len(data) != HYBRID_HFB_SIZE:
         raise ValueError(f"Hybrid container must be exactly {HYBRID_HFB_SIZE:,} bytes")
     if not hybrid and len(data) != CLASSIC_HFB_SIZE:
@@ -102,8 +105,6 @@ def validate_container(data: bytes, expected_model=None, *, check_crc=True, chec
     # The trailer ends with model (6), version (4) and 6 x 0xFF in every container size.
     model = data[-16:-10].decode("ascii", errors="replace")
     if check_model:
-        if expected_model == "JIS_UNSUPPORTED":
-            raise ValueError("JIS models (PD-KB421, PD-KB820) are not yet supported: 69-key matrix routing differs from 60-key ANSI. Use --skip-model-check only for experimental testing.")
         if expected_model is None:
             raise ValueError("Cannot determine keyboard model; use --skip-model-check only if intentional")
         if model != expected_model:
@@ -331,7 +332,7 @@ def main():
     parser.add_argument("--skip-end", action="store_true", help="Research: transfer everything but never send the final command (E3)")
     parser.add_argument("--skip-crc", action="store_true", help="Skip both HFB CRC checks")
     parser.add_argument("--skip-model-check", action="store_true", help="Skip HFB/device model check")
-    parser.add_argument("--model", choices=("AHHX01", "AHHS01"), help="Model ID to use when wrapping a raw .bin (Classic only)")
+    parser.add_argument("--model", choices=("AHHX01", "AHHS01", "AHKS01"), help="Model ID to use when wrapping a raw .bin (Classic only)")
     args = parser.parse_args()
 
     print("=== HHKB Open Flasher CLI ===")
@@ -369,14 +370,15 @@ def main():
         if len(data) >= CLASSIC_HFB_SIZE:
             hfb_container = data
             raw_payload = data[4:4+65536]
-        elif expected_model == "AHUX01":
+        elif expected_model in HYBRID_MODELS:
             raise ValueError("Hybrid needs a full container: build one with make_hfb.py --nrf-app <app.bin> --softdevice <s132 .hex>")
         elif 8 <= len(data) <= 65536:
             print("Wrapping raw binary into .hfb container...")
             model = args.model or expected_model
             if model is None:
                 raise ValueError("Unknown keyboard model: specify --model for a raw binary")
-            version = bytes([0x0A, 0x08, 0x05, 0x00]) if model == "AHHS01" else bytes([0x0A, 0x04, 0x05, 0x00])
+            version = {"AHHS01": bytes([0x0A, 0x08, 0x05, 0x00]), "AHKS01": bytes([0x0A, 0x09, 0x05, 0x00])}.get(
+                model, bytes([0x0A, 0x04, 0x05, 0x00]))
             hfb_container = wrap_binary_to_hfb(data, model=model, version_bytes=version)
             raw_payload = hfb_container[4:4+65536]
         else:

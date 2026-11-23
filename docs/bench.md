@@ -22,7 +22,7 @@ How the owner's bench keyboards are flashed and checked over USB, and the refere
 | Command | Checks | Baseline |
 | --- | --- | --- |
 | `tools/bench/key_depth.py scantime 5` | longest interrupts-off half; longest whole scan and missed 1 kHz slots also need `HHKB_SCAN_DIAGNOSTICS` | 389 µs half, ~873 µs whole scan (1 kHz, USB; v0.7.1, was 408/910) |
-| `key_depth.py noise 8` | rest noise | median p-p ~12-13 counts (15 at v0.7.1's release check: watch it) |
+| `key_depth.py noise 8` | rest noise | median p-p 14-15.5 counts (2026-11-23: v0.7.0 14.0, v0.7.2 15.0-15.5 same day; was 12-13). A key's range is ~2300 counts, so 1 count is ~0.002 mm on the 4 mm scale (0.1 mm setting step ~57 counts) |
 | `key_depth.py cal` | per-key rest readings (average several runs) | |
 | `tools/bench/eeprom_save_test.py` | settings, Vial and keymap writers persist across resets | |
 | `tools/bench/via_keymap_check.py` | VIA keycode round trips and keymap reset; restores the keymap | |

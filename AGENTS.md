@@ -5,7 +5,7 @@ Rules and lessons for AI agents (and people) working in this repo. Layout and bu
 ## Scope and ownership
 
 - **Keep Classic and Hybrid code paths as alike as possible;** differ only where hardware forces it (Classic has no power switch, so SW6 is its recovery). Reason: owner (2026-11-17); the Classic can't be tested, so shared paths keep it working.
-- **Hybrid is tested; Classic and Type-S are compile-only.** Keep them warning-free and don't change their behaviour-only paths (e.g. SW6 Bank 2 erase in `stm32/boards/hhkb/dip_switch.c`). Shared code may change for all three.
+- **Hybrid is tested; Classic, Type-S and JIS (`hybrid_jis`, `type_s_jis`, under `HHKB_JIS`) are compile-only.** Keep them warning-free and don't change their behaviour-only paths (e.g. SW6 Bank 2 erase in `stm32/boards/hhkb/dip_switch.c`). Shared code may change for all. JIS ships as experimental until a JIS keyboard runs it (owner, 2026-11-23).
 - **Keep `THIRD_PARTY_NOTICES.md` current** when firmware links new third-party code. Reason: Nordic, ST and SEGGER licences require it; CI ships it with releases.
 - **Commit as `41841496+jlpoltrack@users.noreply.github.com`** (`git config core.hooksPath tools/git_hooks`: `pre-push` refuses other emails). Reason: public-facing; real email scrubbed from history 2026-11-16.
 - **Vial and VIA:** releases build with Vial on every board (`ECK_VIAL` default ON; `VIAL_ENABLE` kept so VIA-only builds work). Reports VIA protocol 9 for Vial; Fn+Ctrl+V (VIA mode until restart) reports 12 for usevia.app's HHKB Settings. Reason: owner (2026-11-18); Vial accepts only 9. Fresh defaults: factory thresholds, Rapid Trigger off.
@@ -60,10 +60,11 @@ Reason: renaming orphans data in keyboards' EEPROM or breaks tool matching.
 - `hybrid_update.py stm32` refuses unless Bank 1 holds the boot stub (`--force`). Reason: otherwise a failed write has no USB recovery.
 - **The `.hfb` never rewrites the nRF52 MBR** (`0x0-0xFFF`); app stays at `0x26000`. Reason: PFU's bootloader copies only `0x1000-0x35FFF` and jumps there.
 - **Power-switch recovery needs the batteries out:** the stub reads the switch only at reset, and plugging USB doesn't reset a battery-powered keyboard (2026-11-17).
+- **JIS positions reach 68:** per-position bits in a `uint64_t` (`dip_modes.c`) need two words under `HHKB_JIS`. JIS facts come from PFU's JIS images and manuals ([JIS](docs/models.md#jis)). Reason: JIS port (2026-11-19).
 
 ## Docs
 
-- **Rerun `tools/gen_layer_svg.py` after changing the HHKB default keymap, a chord, DIP switch behaviour or an LED pattern; `tools/gen_r3s_led_svg.py` after R3S LED driver changes.** Reason: the `docs/*.svg` are the user-facing pictures (2026-11-19).
+- **Rerun `tools/gen_layer_svg.py` after changing the HHKB default keymap, a chord, DIP switch behaviour or an LED pattern; `tools/gen_r3s_led_svg.py` after R3S LED driver changes; `tools/make_jis_via_json.py` after changing `stm32/via/via.json`.** Reason: the `docs/*.svg` (and `-jis` versions) are the user-facing pictures, `via_jis.json` is generated (2026-11-19).
 - Open items live only in [docs/deferred.md](docs/deferred.md); **review the whole file every release** (drop done items, move shipped facts to their reference doc, bump "up to vX.Y.Z"). Reason: stale across v0.5.0-v0.6.1 (2026-11-20).
 - **One home per fact:** guides link to reference docs (`build.md`, `hybrid-hardware.md`, `bench.md`). Reason: docs had grown to 19k words of repeats (cut to 11k, 2026-11-16).
 

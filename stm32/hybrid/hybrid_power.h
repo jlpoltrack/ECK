@@ -15,6 +15,8 @@ TickType_t hybrid_power_timeout(TickType_t now);
 void hybrid_power_leds(bool *blue, bool *orange);
 /* Orange: 3 blinks to confirm forgotten pairings (PFU's firmware turns off instead). */
 void hybrid_power_confirm_forget(void);
+/* Orange: 5 quick blinks when the slot's host rejects our keys (it forgot the keyboard): re-pair. */
+void hybrid_power_host_rejected(void);
 /* Blue: N blinks for Bluetooth slot N, or 1 s on USB (power switch light press, slot chords). */
 void hybrid_power_show_slot(void);
 

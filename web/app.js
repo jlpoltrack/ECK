@@ -15,7 +15,10 @@ const MODELS = {
     AHUX01: { file: 'hybrid', name: 'HHKB Professional Hybrid', hybrid: true },
     AHHX01: { file: 'classic', name: 'HHKB Professional Classic', hybrid: false },
     AHHS01: { file: 'type_s', name: 'HHKB Professional Classic Type-S', hybrid: false },
+    AHJX01: { file: 'hybrid_jis', name: 'HHKB Professional Hybrid JIS (experimental)', hybrid: true, jis: true },
+    AHKS01: { file: 'type_s_jis', name: 'HHKB Professional Classic Type-S JIS (experimental)', hybrid: false, jis: true },
 };
+const hybridModel = (jis) => (jis ? 'AHJX01' : 'AHUX01');
 
 function log(msg) {
     logEl.textContent += msg + '\n';
@@ -123,7 +126,8 @@ async function firmware(model) {
     const f = $('hfbfile').files[0];
     let data;
     if (f) data = new Uint8Array(await f.arrayBuffer());
-    else if (manifest) data = await fetchBytes(`firmware/${manifest.files[MODELS[model].file]}`);
+    else if (manifest?.files[MODELS[model].file]) data = await fetchBytes(`firmware/${manifest.files[MODELS[model].file]}`);
+    else if (manifest) throw new Error(`the bundled release has no ${MODELS[model].name} firmware: choose a local .hfb under Advanced`);
     else throw new Error('no bundled release here: choose a local .hfb under Advanced');
     const hfb = eck.parseHfb(data);
     if (hfb.model !== model) throw new Error(`the .hfb is for ${hfb.model}, the keyboard is ${model}`);
@@ -161,6 +165,17 @@ async function openVia() {
     if (granted) return eck.Via.open(granted);
     say('Select the keyboard (HHKB) in the next dialog.');
     return withGesture('Select keyboard', () => eck.Via.request());
+}
+
+/** The Hybrid running ECK and the firmware for its layout (US or JIS). */
+async function viaAndFirmware() {
+    const via = await openVia();
+    try {
+        return { via, data: await firmware(hybridModel(via.jis)) };
+    } catch (e) {
+        await via.close();
+        throw e;
+    }
 }
 
 async function enterDfu(via) {
@@ -219,7 +234,8 @@ function render() {
             : "Installs ECK through PFU's updater. Takes about a minute; keep the keyboard plugged in.";
         show('act-stock', true);
     } else if (kb.kind === 'eck') {
-        $('kb-title').textContent = kb.hybrid ? 'HHKB Professional Hybrid' : 'HHKB Professional Classic or Classic Type-S';
+        const name = kb.hybrid ? 'HHKB Professional Hybrid' : 'HHKB Professional Classic or Classic Type-S';
+        $('kb-title').textContent = kb.jis ? `${name} JIS (experimental)` : name;
         $('kb-sub').textContent = `Running ECK ${kb.version || '(version unknown)'}. ${latest}`;
         show(kb.hybrid ? 'act-hybrid' : 'act-classic', true);
     } else {
@@ -228,7 +244,7 @@ function render() {
         $('kb-msg').innerHTML =
             kb.kind === 'silent'
                 ? 'The keyboard is in PFU\'s updater but does not answer. On a Hybrid that already has ECK\'s Bluetooth firmware, PFU\'s updater cannot install anything: see <a href="https://github.com/jlpoltrack/ECK/blob/main/docs/hybrid-update.md">Hybrid updates</a>.'
-                : 'ECK supports the HHKB Professional Hybrid and Hybrid Type-S (PD-KB800), Classic and Classic Type-S (PD-KB401), US layout only.';
+                : 'ECK supports the HHKB Professional Hybrid and Hybrid Type-S (PD-KB800), Classic and Classic Type-S (PD-KB401), and experimentally the JIS Hybrid (PD-KB820) and Classic Type-S (PD-KB421).';
         show('kb-msg', true);
     }
 }
@@ -244,7 +260,7 @@ async function detect(dev) {
         }
     } else if (eck.isEck(dev)) {
         const via = await eck.Via.open(dev);
-        kb = { kind: 'eck', via, hybrid: via.hybrid, version: await via.version() };
+        kb = { kind: 'eck', via, hybrid: via.hybrid, jis: via.jis, version: await via.version() };
     } else {
         throw new Error(`${dev.productName || 'this device'} is not an HHKB`);
     }
@@ -293,7 +309,7 @@ const connect = () =>
         for (const k of [kb?.via, kb?.pfu]) if (k) await k.close();
         kb = null;
         render();
-        const dev = pick(await navigator.hid.requestDevice({ filters: [eck.PFU_FILTER, eck.ECK_FILTER] }));
+        const dev = pick(await navigator.hid.requestDevice({ filters: [eck.PFU_FILTER, eck.ECK_FILTER, eck.ECK_JIS_FILTER] }));
         if (!dev) throw new Error('no HHKB selected');
         await detect(dev);
     });
@@ -322,9 +338,9 @@ $('b-install').onclick = async () => {
 
 $('b-stm32').onclick = async () => {
     await run('Update keyboard firmware', async () => {
-        const data = await firmware('AHUX01');
         const stub = await bootStub();
-        const dfu = await enterDfu(await openVia());
+        const { via, data } = await viaAndFirmware();
+        const dfu = await enterDfu(via);
         await eck.stm32Update(dfu, data, { log, progress, stub, save, confirm: confirmStub });
         inDfu = false;
     });
@@ -333,8 +349,7 @@ $('b-stm32').onclick = async () => {
 
 $('b-nrf').onclick = async () => {
     await run('Update Bluetooth firmware', async () => {
-        const data = await firmware('AHUX01');
-        const via = await openVia();
+        const { via, data } = await viaAndFirmware();
         try {
             await eck.nrfUpdate(via, data, { log, progress });
         } finally {
@@ -383,7 +398,7 @@ $('l-recover').onclick = (e) => {
 
 $('b-recover').onclick = async () => {
     await run('Recover keyboard firmware', async () => {
-        const data = await firmware('AHUX01');
+        const data = await firmware(hybridModel($('recover-layout').value === 'jis')); // eck.stm32Update refuses a mismatch it can see
         const stub = await bootStub();
         let dev = await eck.Dfu.find();
         if (!dev && (await navigator.hid.getDevices()).some(eck.isEck))
@@ -402,10 +417,9 @@ $('b-recover').onclick = async () => {
 
 $('b-nrf-recover').onclick = async () => {
     await run('Recover Bluetooth firmware', async () => {
-        const data = await firmware('AHUX01');
-        const via = await openVia();
-        if (!via.hybrid) throw new Error('Bluetooth recovery is for the Hybrid');
+        const { via, data } = await viaAndFirmware();
         try {
+            if (!via.hybrid) throw new Error('Bluetooth recovery is for the Hybrid');
             await eck.nrfUpdate(via, data, { recovery: true, log, progress });
         } finally {
             await via.close();
@@ -641,6 +655,10 @@ fetch('firmware/manifest.json')
         if (m.files.via) {
             $('vialink').href = `firmware/${m.files.via}`;
             $('via').hidden = false;
+        }
+        if (m.files.via_jis) {
+            $('vialink-jis').href = `firmware/${m.files.via_jis}`;
+            $('vialink-jis').hidden = false;
         }
         if (m.files.r3s_via) {
             $('r-vialink').href = `firmware/${m.files.r3s_via}`;

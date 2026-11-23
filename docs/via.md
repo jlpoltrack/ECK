@@ -7,7 +7,7 @@ ECK speaks the [VIA](https://www.usevia.app/) protocol (v3: keymap, macros, cust
 ## Load the definition
 
 1. Open the [VIA web app](https://www.usevia.app/), go to **Settings** and enable **Show Design tab**.
-2. In **Design**, choose **Load Draft Definition** and select `stm32/via/via.json` (the same file for all three HHKBs; the Realforce R3S uses `stm32/boards/r3s/via.json`, generated from it by `tools/r3s/make_via_json.py`).
+2. In **Design**, choose **Load Draft Definition** and select `stm32/via/via.json` (the same file for all three ANSI HHKBs; the JIS HHKBs use `stm32/via/via_jis.json` and the Realforce R3S `stm32/boards/r3s/via.json`, generated from it by `tools/make_jis_via_json.py` and `tools/r3s/make_via_json.py`).
 3. Press Fn + Ctrl + V (VIA mode: two blinks; one blink means it went back to Vial), connect the keyboard and open **HHKB Settings** (on the R3S: **Settings**).
 
 If Layer 0 shows blank keys, click Layer 1 and back (a VIA rendering race).
@@ -33,6 +33,8 @@ A keyboard with no saved settings uses PFU's factory thresholds with custom cali
 - **R3S indicators:** colour (red, green, yellow, blue, magenta, cyan, white) and brightness (5-25 %) for all four, default red at 20 %; the Simple Mode LED takes the LED modes above.
 
 Scan rates are fixed, not settings: 1000 Hz over USB, 250 Hz over Bluetooth, 50 Hz while the computer sleeps.
+
+**Firmware** shows the version and, on the Hybrid, the Bluetooth connection timing the host granted (interval, latency, timeout; ECK asks for 7.5-15 ms, a Mac picks 15 ms).
 
 **Reset:** turn on **Allow settings reset**, then click **Reset all settings**: every setting above returns to its default, and custom calibration and System 2 are cleared; the keymap, macros, Vial entries, Bluetooth pairings and USB/Bluetooth choice stay. The keyboard restarts. The toggle is off again after any restart. It does nothing if the settings area holds data that isn't ECK's.
 
