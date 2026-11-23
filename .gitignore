@@ -20,6 +20,6 @@ __pycache__/
 /web/firmware/
 .claude/
 .venv/
-out/
+/out/
 /tools/r3s/_build/
 /tools/web_bench/node_modules/

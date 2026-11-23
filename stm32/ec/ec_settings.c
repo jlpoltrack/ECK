@@ -6,6 +6,7 @@
 #include "stm32l0xx.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "tusb.h"
 #include <string.h>
 #include "fmt.h"
 #ifdef HHKB_HYBRID
@@ -25,7 +26,7 @@
 #ifndef BOARD_SCAN_RATE
 #define BOARD_SCAN_RATE 4 /* USB scan rate, fixed: 1000 Hz */
 #endif
-#define BLE_SCAN_RATE 2U /* Bluetooth, fixed: 250 Hz, above the 15-30 ms connection interval and kind to batteries */
+#define BLE_SCAN_RATE 2U /* Bluetooth, fixed: 250 Hz, above the 7.5-15 ms connection interval and kind to batteries */
 #define CAL_BASELINE_SAMPLES 16U
 #define HHKB_SETTINGS_SAVE_DELAY_MS 500U
 
@@ -364,7 +365,29 @@ void hhkb_settings_task(void) {
     }
 }
 
+/* Calibration mutes typing (matrix.c), so it must not outlive its VIA session: cancelled when
+ * USB goes away or after CAL_MAX_MS, keeping the previous calibration. */
+#ifndef CAL_MAX_MS
+#define CAL_MAX_MS 600000U /* bench builds may shorten it (-d CAL_MAX_MS=5000) */
+#endif
+static TickType_t s_cal_started;
+
+void hhkb_calibration_cancel(void) {
+    if (!s_calibration_mode) return;
+    s_calibration_mode = false;
+    s_capture_baseline = false;
+    for (uint8_t c = 0; c < MATRIX_COLS; c++)
+        for (uint8_t r = 0; r < MATRIX_ROWS; r++) rt_key_reset(&s_rt_keys[c][r]);
+    if (hhkb_get_debug_flag(DEBUG_FLAG_CAL)) debug_console_printf("[CAL] Calibration cancelled.\r\n");
+}
+
+void hhkb_calibration_watch(void) {
+    if (s_calibration_mode && (!tud_mounted() || xTaskGetTickCount() - s_cal_started >= pdMS_TO_TICKS(CAL_MAX_MS)))
+        hhkb_calibration_cancel();
+}
+
 void hhkb_calibration_start(void) {
+    s_cal_started = xTaskGetTickCount();
     memset(s_cal_baseline_accum, 0, sizeof(s_cal_baseline_accum));
     s_cal_baseline_samples = CAL_BASELINE_SAMPLES;
 #if KEY_MASK_WORDS == 2

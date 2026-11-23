@@ -46,6 +46,8 @@ bool hhkb_set_led_style(uint8_t which, uint8_t value);
 void hhkb_calibration_save_to_eeprom(void);
 void hhkb_calibration_start(void);
 void hhkb_calibration_finish(void);
+void hhkb_calibration_cancel(void); /* discard a running calibration; the saved one stays */
+void hhkb_calibration_watch(void);  /* matrix task: cancel it once USB is gone or after 10 min */
 bool hhkb_calibration_enabled(void);
 void hhkb_calibration_set_enabled(bool enabled);
 bool hhkb_is_calibrating(void);

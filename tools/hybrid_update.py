@@ -284,11 +284,17 @@ def check_layout(jis):
 def check_bank2_layout(jis):
     """In the DFU loader: refuse when Bank 2 holds ECK for the other layout (as web/eck.js bank2Layout)."""
     bank2 = read(0, BANK2, SECTION)
-    if b"HHKB Professional Hybrid" not in bank2:
-        return  # no ECK image to compare with
-    if (b"HHKB Professional Hybrid JIS" in bank2) != jis:
+    if b"HHKB Professional Hybrid" in bank2:
+        installed, where = b"HHKB Professional Hybrid JIS" in bank2, "Bank 2 holds ECK"
+    else:  # no ECK image: ECK's Vial record sits at 0x1608 (ANSI) or 0x1644 (JIS) in the EEPROM
+        rec = lambda off: read(2, 0x08080000 + off, 8) == b"CMITVIAL"
+        ansi, jis_rec = rec(0x1608), rec(0x1644)
+        if ansi == jis_rec:
+            return  # nothing tells the layout
+        installed, where = jis_rec, "the EEPROM holds ECK settings"
+    if installed != jis:
         leave()
-        sys.exit(f"Bank 2 holds ECK for the {'ANSI' if jis else 'JIS'} layout but the image is for "
+        sys.exit(f"{where} for the {'JIS' if installed else 'ANSI'} layout but the image is for "
                  f"{'JIS' if jis else 'ANSI'}: pass --force to write it anyway")
 
 

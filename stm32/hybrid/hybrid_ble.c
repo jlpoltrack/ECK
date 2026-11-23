@@ -168,7 +168,11 @@ static bool transact(const ble_link_frame_t *tx, ble_link_frame_t *rx) {
         s_upd_state = rx->data[6];
         memcpy(&s_upd_staged, &rx->data[7], sizeof(s_upd_staged));
     }
-    if (rx->len >= 17) memcpy(s_conn, &rx->data[11], sizeof(s_conn));
+    if (rx->len >= 17) {
+        taskENTER_CRITICAL(); /* hybrid_ble_conn_str reads it from the USB task */
+        memcpy(s_conn, &rx->data[11], sizeof(s_conn));
+        taskEXIT_CRITICAL();
+    }
     if (rx->data[1] != s_host_leds) {
         s_host_leds = rx->data[1];
         if ((s_flags & BLE_LINK_ST_CONNECTED) && (s_prefer_ble || !tud_mounted())) events_hid_leds(s_host_leds);

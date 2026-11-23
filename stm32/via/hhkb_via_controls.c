@@ -57,7 +57,7 @@ static bool nrf_update_command(uint8_t const *request, uint8_t *response) {
 #define HHKB_ID_RESET 33     /* "Reset all settings": only while armed; restarts the keyboard */
 static bool s_reset_armed;
 
-/* Channel 0, the via.json "HHKB Settings" menu: IDs 1..28 on every model, 29..31 as above. */
+/* Channel 0, the via.json "HHKB Settings" menu: IDs 1..28 on every model, 30..36 as defined here. */
 bool hhkb_via_command(uint8_t const *request, uint8_t *response) {
     if (request[1] != 0) return false;
     uint8_t id = request[2];

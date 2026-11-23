@@ -94,6 +94,7 @@ void matrix_task(void *pvParameters) {
     bool stop = false;
 #endif
     for (;;) {
+        hhkb_calibration_watch();
         /* Idle stage, 50 Hz: while the USB host sleeps (any model), and on Hybrid batteries over
          * Bluetooth after a quiet spell, with STOP between scans (USB needs its clock running). */
         bool want_idle = hhkb_usb_sleep_idle_allowed();

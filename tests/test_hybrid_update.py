@@ -59,9 +59,9 @@ class LayoutCheck(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "ANSI layout"):
             self.check("HHKB Professional Hybrid JIS", b"..HHKB Professional Hybrid\0..")
 
-    def bank2_check(self, bank2, jis):
+    def bank2_check(self, bank2, jis, eeprom=b"\0" * 0x1800):
         saved = upd.read, upd.leave
-        upd.read = lambda alt, addr, n: bank2
+        upd.read = lambda alt, addr, n: bank2 if alt == 0 else eeprom[addr - 0x08080000:addr - 0x08080000 + n]
         upd.leave = lambda: None
         try:
             upd.check_bank2_layout(jis)
@@ -76,6 +76,19 @@ class LayoutCheck(unittest.TestCase):
             self.bank2_check(b"..HHKB Professional Hybrid\0..", True)
         with self.assertRaisesRegex(SystemExit, "JIS layout but the image is for ANSI"):
             self.bank2_check(b"..HHKB Professional Hybrid JIS\0..", False)
+
+    def test_eeprom_layout_when_bank2_blank(self):
+        def eeprom(off):
+            e = bytearray(0x1800)
+            e[off:off + 8] = b"CMITVIAL"
+            return bytes(e)
+        blank = b"\xff" * 64
+        self.bank2_check(blank, False, eeprom(0x1608))
+        self.bank2_check(blank, True, eeprom(0x1644))
+        with self.assertRaisesRegex(SystemExit, "EEPROM holds ECK settings for the JIS layout"):
+            self.bank2_check(blank, False, eeprom(0x1644))
+        with self.assertRaisesRegex(SystemExit, "EEPROM holds ECK settings for the ANSI layout"):
+            self.bank2_check(blank, True, eeprom(0x1608))
 
     def test_hfb_model_names_layout(self):
         trailer = lambda model: model + bytes([0x02, 0x00, 0x04, 0x09]) + b"\xff" * 6

@@ -32,7 +32,7 @@ A keyboard with no saved settings uses PFU's factory thresholds with custom cali
 - **LEDs PA8 and PA9:** Off, Debug heartbeat, Caps Lock, Fn layer, System 2, or Bluetooth status (Hybrid). Defaults: Caps Lock and Fn layer (Classic); Bluetooth status and Off (Hybrid).
 - **R3S indicators:** colour (red, green, yellow, blue, magenta, cyan, white) and brightness (5-25 %) for all four, default red at 20 %; the Simple Mode LED takes the LED modes above.
 
-Scan rates are fixed, not settings: 1000 Hz over USB, 250 Hz over Bluetooth, 50 Hz while the computer sleeps.
+Scan rates are fixed, not settings: 1000 Hz over USB (JIS 500 Hz: its scan takes over 1 ms), 250 Hz over Bluetooth, 50 Hz while the computer sleeps.
 
 **Firmware** shows the version and, on the Hybrid, the Bluetooth connection timing the host granted (interval, latency, timeout; ECK asks for 7.5-15 ms, a Mac picks 15 ms).
 
@@ -47,7 +47,7 @@ Scan rates are fixed, not settings: 1000 Hz over USB, 250 Hz over Bluetooth, 50 
 3. Fully press every key you want calibrated. To see which are done, open VIA's **Key Tester** with **Test Matrix** on; calibration keeps running across tabs.
 4. Click **Finish and save** (only keys with a valid range are updated).
 
-From **Start calibration** until **Finish and save** (or a restart) the keyboard types nothing: presses show only in the Key Tester. Outside calibration a key's range never changes, so recalibrate after changing domes, rings or travel.
+From **Start calibration** until **Finish and save** the keyboard types nothing: presses show only in the Key Tester. Calibration is cancelled, keeping the previous one, if USB disconnects, after 10 minutes, or at a restart. Outside calibration a key's range never changes, so recalibrate after changing domes, rings or travel.
 
 The status counter doesn't update by itself: click **Refresh status**. For live progress, turn on **Calibration Monitor (HID Console)** in the same section and watch the [HID Console](debug.md).
 

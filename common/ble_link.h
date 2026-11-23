@@ -76,7 +76,8 @@ enum {
 
 /* Status payload: data[0] flags, data[1] host LED report, data[2] version, data[3] free queue slots,
  * data[4] current host slot (0 until the STM32 selects one), data[5] bit n-1 = slot n has a host,
- * data[6] BLE_LINK_UPD_ST_*, data[7..10] staged bytes (u32 LE) */
+ * data[6] BLE_LINK_UPD_ST_*, data[7..10] staged bytes (u32 LE), data[11..16] granted interval,
+ * latency, timeout (v4, see above) */
 
 typedef struct {
     uint8_t magic;

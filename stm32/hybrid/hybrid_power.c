@@ -83,8 +83,10 @@ void hybrid_power_confirm_forget(void) {
     pwr_blink_start(&s_orange, 3, SLOT_BLINK_HALF);
 }
 
+static volatile bool s_host_rejected; /* set by the link task, shown by step() (it owns s_orange) */
+
 void hybrid_power_host_rejected(void) {
-    pwr_blink_start(&s_orange, 5, 2U); /* 0.2 s phases: unlike the battery and forget patterns */
+    s_host_rejected = true;
 }
 
 /* ---- OFF state: STOP mode until the switch is held 1 s or USB power appears, then reset ---- */
@@ -282,6 +284,10 @@ static void step(TickType_t now, bool usb) {
         } else {
             s_state = ST_ON;
         }
+    }
+    if (s_host_rejected) {
+        s_host_rejected = false;
+        pwr_blink_start(&s_orange, 5, 2U); /* 0.2 s phases: unlike the battery and forget patterns */
     }
     s_warn_on = pwr_warn_step(&s_warn, level, s_state == ST_ON && !usb && hybrid_ble_transport_active());
     s_blue_on = pwr_blink_step(&s_blue);

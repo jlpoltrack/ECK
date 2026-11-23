@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
-import { crc16mcrf4xx, md5, parseHfb, hasBootStub, deviceModel, isTopreBank1, bank2Layout, isEck, RFB_SIZE } from './eck.js';
+import { crc16mcrf4xx, md5, parseHfb, hasBootStub, deviceModel, isTopreBank1, bank2Layout, eepromLayout, stm32Update, isEck, RFB_SIZE } from './eck.js';
 
 const repo = fileURLToPath(new URL('..', import.meta.url));
 const py = (code) => execFileSync('python3', ['-c', code], { cwd: repo }).toString().trim();
@@ -38,6 +38,36 @@ assert.equal(bank2Layout(enc('HHKB Professional Hybrid JIS')), true);
 assert.equal(bank2Layout(enc('HHKB Professional Hybrid')), false);
 assert.equal(bank2Layout(new Uint8Array(0x10000).fill(0xff)), null);
 assert.ok(isEck({ vendorId: 0xcafe, productId: 0x4012, productName: 'HHKB Professional Hybrid JIS', collections: [{ usagePage: 0xff60 }] }));
+const eepromWith = (off) => { const e = new Uint8Array(0x1800); e.set(new TextEncoder().encode('CMITVIAL'), off); return e; };
+assert.equal(eepromLayout(eepromWith(0x1608)), false);
+assert.equal(eepromLayout(eepromWith(0x1644)), true);
+assert.equal(eepromLayout(new Uint8Array(0x1800)), null);
+
+// stm32Update's layout check on a fake DFU loader, with the built Hybrid images when present
+const built = (p) => { try { return new Uint8Array(readFileSync(new URL(`../${p}`, import.meta.url))); } catch { return null; } };
+const ansiHfb = built('build/hybrid/hhkb_ec_hybrid.hfb'), jisHfb = built('build/hybrid_jis/hhkb_ec_hybrid_jis.hfb');
+const fakeDfu = (bank2, eeprom) => ({
+    writes: 0,
+    async read(alt, addr, n) { return alt === 2 ? eeprom.subarray(0, n) : addr === 0x08010000 ? bank2 : stub.subarray(0, 0x2000).slice(); },
+    async writeVerified() { this.writes++; },
+    async leave() {},
+});
+if (ansiHfb && jisHfb) {
+    stub.fill(0xff); stub.set([0x00, 0x40, 0x00, 0x20, 0x75, 0x00, 0x00, 0x08]); // Bank 1 holds the boot stub
+    const opts = { log: () => {}, progress: () => {} };
+    const blank = new Uint8Array(0x10000).fill(0xff);
+    let d = fakeDfu(enc('HHKB Professional Hybrid'), new Uint8Array(0x1800));
+    await assert.rejects(stm32Update(d, jisHfb, opts), /set up for the US layout/);
+    assert.equal(d.writes, 0);
+    d = fakeDfu(blank, eepromWith(0x1644)); // Bank 2 erased: the EEPROM tells
+    await assert.rejects(stm32Update(d, ansiHfb, opts), /set up for the JIS layout/);
+    await stm32Update(d, ansiHfb, { ...opts, layoutChange: true }); // confirmed change
+    assert.ok(d.writes > 0);
+    d = fakeDfu(blank, new Uint8Array(0x1800)); // nothing tells: allowed
+    await stm32Update(d, jisHfb, opts);
+} else {
+    console.log('stm32Update layout check skipped: build hybrid and hybrid_jis first');
+}
 const bank1 = new Uint8Array(0x10000).fill(0xff);
 assert.ok(!isTopreBank1(bank1));
 bank1.set(new TextEncoder().encode('Topre Corporation'), 31804);

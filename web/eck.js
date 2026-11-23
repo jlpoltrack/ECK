@@ -538,6 +538,20 @@ export function bank2Layout(bank2) {
     return s.includes('HHKB Professional Hybrid') ? false : null;
 }
 
+/** Layout from the data EEPROM: ECK's Vial record ('CMIT', 'VIAL') sits at 0x1608 (US) or 0x1644 (JIS),
+ * after a settings record sized for the layout (board_config.h). null when neither or both. */
+export function eepromLayout(eeprom) {
+    const rec = (o) => eeprom.length >= o + 8 && u32(eeprom, o) === 0x54494d43 && u32(eeprom, o + 4) === 0x4c414956;
+    const us = rec(0x1608), jis = rec(0x1644);
+    return us === jis ? null : jis;
+}
+
+/** The installed layout, in ST's DFU loader: Bank 2's ECK image, else the EEPROM; null if neither tells. */
+export async function detectLayout(dfu) {
+    const fromBank2 = bank2Layout(await dfu.read(ALT.FLASH, BANK2, SECTION));
+    return fromBank2 !== null ? fromBank2 : eepromLayout(await dfu.read(ALT.EEPROM, EEPROM, EEPROM_SIZE));
+}
+
 /** Checks a boot stub image before anything is written. */
 export function checkBootStub(stub) {
     if (stub.length > 0x1000) throw new Error('boot stub larger than 4 KB');
@@ -546,13 +560,13 @@ export function checkBootStub(stub) {
 
 /** STM32 update from a Hybrid .hfb. Without ECK's boot stub in Bank 1 (no USB recovery) it refuses,
  * unless a stub is given: then the stub goes in first (see writeBootStub). */
-export async function stm32Update(dfu, data, { log, progress, stub = null, save, confirm }) {
+export async function stm32Update(dfu, data, { log, progress, stub = null, save, confirm, layoutChange = false }) {
     const { stm32, hybrid, model } = parseHfb(data);
     if (!hybrid) throw new Error('this updater handles the Hybrid; install Classic firmware through PFU’s updater');
-    const installed = bank2Layout(await dfu.read(ALT.FLASH, BANK2, SECTION));
+    const installed = await detectLayout(dfu);
     const jis = model === 'AHJX01';
-    if (installed !== null && installed !== jis)
-        throw new Error(`the keyboard runs ECK for the ${installed ? 'JIS' : 'US'} layout, the file is for ${jis ? 'JIS' : 'US'}`);
+    if (installed !== null && installed !== jis && !layoutChange)
+        throw new Error(`the keyboard is set up for the ${installed ? 'JIS' : 'US'} layout, the file is for ${jis ? 'JIS' : 'US'}`);
     const bank1 = await dfu.read(ALT.FLASH, BANK1, SECTION);
     if (!hasBootStub(bank1)) {
         if (!stub) throw new Error("ECK's boot stub is not installed: finish setup first");

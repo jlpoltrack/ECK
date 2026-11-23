@@ -398,7 +398,6 @@ $('l-recover').onclick = (e) => {
 
 $('b-recover').onclick = async () => {
     await run('Recover keyboard firmware', async () => {
-        const data = await firmware(hybridModel($('recover-layout').value === 'jis')); // eck.stm32Update refuses a mismatch it can see
         const stub = await bootStub();
         let dev = await eck.Dfu.find();
         if (!dev && (await navigator.hid.getDevices()).some(eck.isEck))
@@ -409,7 +408,19 @@ $('b-recover').onclick = async () => {
         }
         const dfu = await eck.Dfu.open(dev);
         inDfu = true;
-        await eck.stm32Update(dfu, data, { log, progress, stub, save, confirm: confirmStub });
+        // Layout: what the keyboard holds (Bank 2, else EEPROM), unless chosen; a change needs a confirm
+        const choice = $('recover-layout').value;
+        const found = await eck.detectLayout(dfu);
+        const name = (j) => (j ? 'JIS' : 'US');
+        if (choice === 'detect' && found === null)
+            throw new Error('cannot tell the layout from the keyboard: choose US or JIS under Layout and click Recover again');
+        const jis = choice === 'detect' ? found : choice === 'jis';
+        const layoutChange = found !== null && found !== jis;
+        if (layoutChange && !confirm(`The keyboard is set up for the ${name(found)} layout. Install ${name(jis)} firmware anyway?`))
+            throw new Error('cancelled: nothing changed (the keyboard stays in update mode)');
+        log(`Layout: ${name(jis)}${choice === 'detect' ? ' (detected)' : ''}.`);
+        const data = await firmware(hybridModel(jis));
+        await eck.stm32Update(dfu, data, { log, progress, stub, save, confirm: confirmStub, layoutChange });
         inDfu = false;
     });
     await redetect();
