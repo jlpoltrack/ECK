@@ -30,6 +30,15 @@ uint8_t pwr_batt_percent(uint8_t level, bool usb_power) {
     return percent[level];
 }
 
+bool pwr_empty_off_step(uint16_t *steps, uint8_t level, bool usb_power) {
+    if (usb_power || level != PWR_BATT_EMPTY) {
+        *steps = 0;
+        return false;
+    }
+    if (*steps < PWR_EMPTY_OFF_STEPS) (*steps)++;
+    return *steps >= PWR_EMPTY_OFF_STEPS;
+}
+
 bool pwr_debounce_update(pwr_debounce_t *d, bool raw, uint8_t samples) {
     if (raw == d->state) {
         d->count = 0;

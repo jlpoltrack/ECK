@@ -146,7 +146,18 @@ static void test_auto_off(void) {
     assert(!pwr_auto_off_due(&a));
 }
 
+static void test_empty_off(void) {
+    uint16_t steps = 0;
+    for (uint16_t i = 1; i < PWR_EMPTY_OFF_STEPS; i++) assert(!pwr_empty_off_step(&steps, PWR_BATT_EMPTY, false));
+    assert(!pwr_empty_off_step(&steps, 2, false)); // level recovered: count restarts
+    for (uint16_t i = 1; i < PWR_EMPTY_OFF_STEPS; i++) assert(!pwr_empty_off_step(&steps, PWR_BATT_EMPTY, false));
+    assert(pwr_empty_off_step(&steps, PWR_BATT_EMPTY, false));
+    assert(!pwr_empty_off_step(&steps, PWR_BATT_EMPTY, true)); // never on USB power
+    assert(steps == 0);
+}
+
 int main(void) {
+    test_empty_off();
     test_battery();
     test_debounce();
     test_switch();

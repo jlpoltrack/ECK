@@ -214,7 +214,7 @@ void hhkb_calibration_save_to_eeprom(void) {
         uint32_t w; // memcpy, not a uint32_t* cast: strict aliasing let GCC drop the byte-field stores
         memcpy(&w, (const uint8_t *)&cal + 4 * i, sizeof(w));
         if (dst[i] != w) {
-            eeprom_write_word(&dst[i], w);
+            if (!eeprom_write_word(&dst[i], w)) (void)eeprom_write_word(&dst[i], w); /* one retry */
             vTaskDelay(pdMS_TO_TICKS(1));
         }
     }
@@ -239,6 +239,7 @@ _Static_assert(sizeof(hhkb_eeprom_hkcd_t) == sizeof(hhkb_eeprom_cal_t) &&
                offsetof(hhkb_eeprom_hkcd_t, classic_release_pm) == offsetof(hhkb_eeprom_cal_t, classic_release_pm),
                "HKCD layout");
 
+#ifndef HHKB_JIS
 /* Settings beyond calibration and rapid trigger, as the HKCD firmware read them. */
 static void load_hkcd_settings(const volatile hhkb_eeprom_hkcd_t *old) {
     uint8_t r0 = old->reserved[0], r1 = old->reserved[1], r2 = old->reserved[2];
@@ -253,6 +254,7 @@ static void load_hkcd_settings(const volatile hhkb_eeprom_hkcd_t *old) {
         s_led_mode[i] = old->led_mode[i] <= HHKB_LED_MODE_MAX ? old->led_mode[i] : k_led_default[i];
     s_system = old->system <= 1 ? old->system : 0;
 }
+#endif
 
 static void load_rt_cfg(const volatile rt_cfg_t *rt) {
     if (rt->act_pm >= 25 && rt->act_pm <= 1000) s_rt_cfg.act_pm = rt->act_pm;
@@ -306,6 +308,7 @@ void hhkb_calibration_load(void) {
         if (cal->classic_release_pm >= 25 && cal->classic_release_pm <= 1000) s_classic_release_pm = cal->classic_release_pm;
 
         stored = true;
+#ifndef HHKB_JIS /* older records predate JIS: read with JIS geometry they would be misplaced */
     } else if (cal->magic == USER_EEPROM_LEGACY_MAGIC || cal->magic == USER_EEPROM_C_MAGIC || cal->magic == USER_EEPROM_PREV_MAGIC || cal->magic == USER_EEPROM_OLD_MAGIC) {
         // Legacy fallback
         if (cal->magic != USER_EEPROM_OLD_MAGIC) {
@@ -314,6 +317,7 @@ void hhkb_calibration_load(void) {
         s_custom_calibration = true;
         if (cal->magic == USER_EEPROM_LEGACY_MAGIC) load_hkcd_settings((const volatile hhkb_eeprom_hkcd_t *)cal);
         stored = true;
+#endif
     }
 
     // Stored calibration only with custom calibration on (HKCD without it kept 800/1800 placeholders);
@@ -386,7 +390,10 @@ void hhkb_calibration_watch(void) {
         hhkb_calibration_cancel();
 }
 
+/* Start and finish run in the VIA task: the scheduler stays paused while they change state, so
+ * the higher-priority matrix task never scans (or cancels) a half-updated calibration. */
 void hhkb_calibration_start(void) {
+    vTaskSuspendAll();
     s_cal_started = xTaskGetTickCount();
     memset(s_cal_baseline_accum, 0, sizeof(s_cal_baseline_accum));
     s_cal_baseline_samples = CAL_BASELINE_SAMPLES;
@@ -401,13 +408,18 @@ void hhkb_calibration_start(void) {
 #endif
     s_capture_baseline = true;
     s_calibration_mode = true;
+    (void)xTaskResumeAll();
     if (hhkb_get_debug_flag(DEBUG_FLAG_CAL)) {
         debug_console_printf("\r\n[CAL] Calibration started: capturing baseline (16 samples)...\r\n");
     }
 }
 
 void hhkb_calibration_finish(void) {
-    if (!s_calibration_mode) return;
+    vTaskSuspendAll();
+    if (!s_calibration_mode) {
+        (void)xTaskResumeAll();
+        return;
+    }
     for (uint8_t c = 0; c < MATRIX_COLS; c++) {
         for (uint8_t r = 0; r < MATRIX_ROWS; r++) {
             uint8_t k_idx = KEY_INDEX(c, r);
@@ -420,12 +432,13 @@ void hhkb_calibration_finish(void) {
             rt_key_reset(&s_rt_keys[c][r]);
         }
     }
+    s_calibration_mode = false;
+    s_custom_calibration = true;
+    (void)xTaskResumeAll();
     if (hhkb_get_debug_flag(DEBUG_FLAG_CAL)) {
         uint8_t count = (uint8_t)MASK_COUNT(s_calibrated_mask);
         debug_console_printf("[CAL] Calibration complete and saved to EEPROM (%u/" STR(NUM_KEYS) " keys updated).\r\n", count);
     }
-    s_calibration_mode = false;
-    s_custom_calibration = true;
     hhkb_settings_mark_dirty();
 }
 

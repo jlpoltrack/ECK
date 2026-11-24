@@ -24,6 +24,12 @@ uint8_t pwr_batt_filter_update(pwr_batt_filter_t *f, uint8_t raw);
 /* 100 / 15 / 5 / 0 %, and 100 % while USB powers the keyboard. */
 uint8_t pwr_batt_percent(uint8_t level, bool usb_power);
 
+/* Running at empty on batteries: off after this long (the start-up check catches it only at
+ * power-on; DMK's tester saw the keyboard run on down to ~1.7 V, which risks leaking cells). */
+#define PWR_EMPTY_OFF_STEPS 600U /* 100 ms steps: 60 s */
+/* One 100 ms step; true once the latched level has been empty on batteries for the whole time. */
+bool pwr_empty_off_step(uint16_t *steps, uint8_t level, bool usb_power);
+
 /* ---- Debounce: the output follows the input once it is stable for `samples` reads ---- */
 typedef struct {
     bool state;

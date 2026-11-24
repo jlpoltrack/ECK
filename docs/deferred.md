@@ -1,6 +1,6 @@
 # Open items
 
-Everything not done yet, by what it waits on. Delete an item when it's done. Reviewed for every release (up to v0.7.3). HHKB JIS ships as experimental until a JIS keyboard has run it (owner, 2026-11-23; [JIS](models.md#jis)).
+Everything not done yet, by what it waits on. Delete an item when it's done. Reviewed for every release (up to v0.7.4). HHKB JIS ships as experimental until a JIS keyboard has run it (owner, 2026-11-23; [JIS](models.md#jis)).
 
 ## Planned work
 
@@ -13,6 +13,7 @@ Everything not done yet, by what it waits on. Delete an item when it's done. Rev
 - **usevia.app in VIA mode:** the HHKB Settings menu shows, including Reset all settings (`settings_reset_check.py` passes over USB, 2026-11-19), and the R3S's indicator colour and brightness. Without the browser, VIA's definition parser (`@the-via/reader`, npm) could check the `via.json` files; installing it needs the owner's permission.
 - **By hand on the Hybrid:** tap dance and combo timing; Rapid Trigger; DIP SW2, SW4 and SW6 (code review and host tests only); a key press waking the Mac with SW6 ON, and typing right after it wakes (the 50 Hz stage can't be watched over a suspended USB link; a USB power meter would show the drop).
 - **Bluetooth, v0.7.2, needs other hosts:** Windows Swift Pair's pop-up; whether Windows, Linux or Android grant the 7.5 ms interval, and whether an iPhone or iPad accepts the request or keeps its first timing (7.5 ms is below Apple's 15 ms guideline; owner kept it, 2026-11-23) (VIA shows it; a Mac keeps 15 ms, latency 22, 2 s, tested 2026-11-23); the 5 orange blinks when a host rejects the keys (needs a host that lost its bond, e.g. Windows after "Remove device" while the keyboard keeps its bond). Reconnect after OFF tested: 0.74 s from USB enumeration (`tools/bench/ble_reconnect.py`).
+- **Empty battery while on** (v0.7.4): the 60 s shutdown at level 3 is host-tested only; checking it needs a supply lowered below ~1.94 V at the battery terminals, without USB.
 - **Web flasher JIS** (v0.7.2): the JIS detection and layout check are host-tested (`web/eck.test.mjs`); a JIS keyboard has never run it.
 - **JIS first run** (needs a JIS keyboard): every key's position (`ECK_PRODUCT=JIS key_depth.py`, or typing), and rest and noise levels with the fifth row. Scan timing is measured (on the ANSI Hybrid, 2026-11-21).
 

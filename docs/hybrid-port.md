@@ -46,6 +46,7 @@ User steps: [Hybrid updates](hybrid-update.md). Round trip ECK → stock (both c
 | Battery level | PB7/PB8/PB9 every 100 ms, stock filter (worse at once, better after >10 samples), 100/15/5/0 %, 100 % on USB power. Sent to the nRF52 on change and after a link restart | stock |
 | Low battery | Orange: 1 blink every 33 s at level 1, 2 blinks every 16.5 s at levels 2-3, at once on a new level; on batteries with Bluetooth as transport only | manual p.3, stock timing |
 | Empty at power-on | 11 samples (1.1 s); level 3 on batteries: orange 2 s, then OFF | stock |
+| Empty while on | Level 3 on batteries for 60 s: orange 2 s, then OFF. Stock checks only at power-on, switch press and wake; ECK stops cells running down to ~1.7 V (aroum/dmk tester, 2026-11-22) | ECK |
 | Power switch PC5 | 2-sample debounce. Light press (100 ms-2 s): blue blinks the slot number, or 1 s on USB. 2 s hold: OFF. A press held through boot is ignored until released | manual p.4, p.12 |
 | OFF | Orange at least 1 s and until release; `BLE_LINK_CMD_POWER_OFF` (nRF52 disconnects, System OFF after bond writes); USB, ADC, sensor and matrix lines off; STOP with wake on PC5 and PC13 | manual p.4, stock |
 | Power-on | From STOP: switch held 1 s lights blue, release resets; USB power appearing resets. Inserting batteries goes quietly to OFF after the battery check, as stock (`RCC->CSR` tells this from ECK's own reset). The link task resets the nRF52 at once after OFF or deep sleep (a marker in RAM that survives the reset, `.noinit`), else if it doesn't answer within 500 ms | manual p.4, p.7 |

@@ -47,6 +47,7 @@ static bool s_power_saving; /* SW6 as read at start-up; on batteries the DIP pin
 static TickType_t s_usb_changed_at;
 static bool s_nrf_queued, s_was_pairing, s_was_standby;
 static uint8_t s_boot_samples;
+static uint16_t s_empty_steps;
 static uint8_t s_percent = 0xFF;
 static pwr_batt_filter_t s_batt;
 static pwr_debounce_t s_sw;
@@ -284,6 +285,8 @@ static void step(TickType_t now, bool usb) {
         } else {
             s_state = ST_ON;
         }
+    } else if (s_state == ST_ON && pwr_empty_off_step(&s_empty_steps, level, usb)) {
+        off_begin(now, EMPTY_ORANGE_MS); /* ran down to empty: same exit as the start-up check */
     }
     if (s_host_rejected) {
         s_host_rejected = false;
