@@ -22,7 +22,7 @@ Model numbers, what isn't supported (HHKB Pro 2, Studio) and why: [docs/models.m
 - **[Vial](docs/vial.md)** on every keyboard, no definition file needed: keymap, macros, tap dance, combos, key overrides, Caps Word, one-shot keys, QMK settings.
 - **[VIA](docs/via.md)** with the **HHKB Settings** menu (tap-hold, calibration, Rapid Trigger, LEDs): press Fn + Ctrl + V to switch to VIA mode until the next restart.
 - Mod-Tap and Layer-Tap, two base/Fn layer pairs, assignable LEDs, stock DIP switch behaviour on the HHKB.
-- **Hybrid:** Bluetooth LE with four host slots on Nordic's S132 SoftDevice ([`nrf52/`](nrf52/README.md)), the stock key combinations, and much lower battery drain ([below](#hybrid-battery-life)).
+- **Hybrid:** Bluetooth LE with four host slots on Nordic's S132 SoftDevice ([`nrf52/`](nrf52/README.md)), the stock key combinations, VIA and Vial over Bluetooth ([VIA](docs/via.md)), and much lower battery drain ([below](#hybrid-battery-life)).
 
 Full feature list and day-to-day use: [docs/overview.md](docs/overview.md). Open work: [docs/deferred.md](docs/deferred.md).
 

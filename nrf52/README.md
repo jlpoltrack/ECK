@@ -1,6 +1,6 @@
 # nrf52: Bluetooth app for the HHKB Hybrid
 
-Runs on the Hybrid's nRF52832 (module MD1): takes key reports from ECK on the STM32 over SPI and sends them as a BLE HID keyboard. It replaces PFU's nRF52 app and SoftDevice (S132 v6.0.0 → Nordic's v7.2.0, same `0x26000` app start); PFU's MBR and bootloader stay on the chip.
+Runs on the Hybrid's nRF52832 (module MD1): takes key reports from ECK on the STM32 over SPI and sends them as a BLE HID keyboard, and relays VIA requests between the host and the STM32 ([VIA over Bluetooth](../docs/hybrid-port.md#bluetooth)). It replaces PFU's nRF52 app and SoftDevice (S132 v6.0.0 → Nordic's v7.2.0, same `0x26000` app start); PFU's MBR and bootloader stay on the chip.
 
 Elsewhere: Bluetooth behaviour in [hybrid-port.md](../docs/hybrid-port.md#bluetooth); wiring, flash map and SWD in [hybrid-hardware.md](../docs/hybrid-hardware.md); PFU's staging format in [hybrid-stock-behaviour.md](../docs/hybrid-stock-behaviour.md).
 
@@ -36,7 +36,7 @@ Replaces an app whose Bluetooth side is broken (crashes in SoftDevice or BLE sta
 
 ## Link protocol
 
-`common/ble_link.h` defines the SPI link (32-byte frames, STM32 master, nRF52 slave); both builds include it. Bump `BLE_LINK_VERSION` (now 6) on any frame change. The nRF52 reports its version in every status reply; the STM32 doesn't check it.
+`common/ble_link.h` defines the SPI link (32-byte frames, STM32 master, nRF52 slave); both builds include it. Bump `BLE_LINK_VERSION` (now 8) on any frame change. The nRF52 reports its version in every status reply; the STM32 doesn't check it.
 
 ## Licence
 

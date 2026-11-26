@@ -55,8 +55,11 @@ void USB_HID_ResyncKeyboard(void);
 bool hid_alt_send_keyboard(const USB_HID_KeyboardReport_TypeDef *report); /* true: taken */
 bool hid_alt_send_consumer(uint16_t usage);
 bool hid_alt_preferred(void);
+/* Runs in each USB task pass, which serves VIA over USB too (Hybrid: VIA over Bluetooth). */
+void hid_alt_task(void);
 /* How long the USB task sleeps between polls (a board with USB off can poll rarely). */
 TickType_t usb_device_poll_ticks(void);
+void usb_notify_task(void); /* wake the USB task */
 
 #ifdef __cplusplus
 }

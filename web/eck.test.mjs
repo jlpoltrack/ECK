@@ -38,6 +38,7 @@ assert.equal(bank2Layout(enc('HHKB Professional Hybrid JIS')), true);
 assert.equal(bank2Layout(enc('HHKB Professional Hybrid')), false);
 assert.equal(bank2Layout(new Uint8Array(0x10000).fill(0xff)), null);
 assert.ok(isEck({ vendorId: 0xcafe, productId: 0x4012, productName: 'HHKB Professional Hybrid JIS', collections: [{ usagePage: 0xff60 }] }));
+assert.ok(!isEck({ vendorId: 0xcafe, productId: 0x4010, productName: 'HHKB-Hybrid_1', collections: [{ usagePage: 0xff60 }] }));
 const eepromWith = (off) => { const e = new Uint8Array(0x1800); e.set(new TextEncoder().encode('CMITVIAL'), off); return e; };
 assert.equal(eepromLayout(eepromWith(0x1608)), false);
 assert.equal(eepromLayout(eepromWith(0x1644)), true);

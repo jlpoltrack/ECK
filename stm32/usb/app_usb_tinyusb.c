@@ -123,6 +123,7 @@ static void usb_device_task(void *param) {
         tud_task_ext(0, false);
         usb_keyboard_flush();
         via_flush_pending_report();
+        hid_alt_task();
 #ifdef VIAL_ENABLE
         via_mode_task();
 #endif
@@ -164,6 +165,8 @@ __attribute__((weak)) bool hid_alt_send_consumer(uint16_t usage) {
     (void)usage;
     return false;
 }
+
+__attribute__((weak)) void hid_alt_task(void) {}
 
 /* Board hook: how long the USB task sleeps between polls (a board with USB off can poll rarely). */
 __attribute__((weak)) TickType_t usb_device_poll_ticks(void) {

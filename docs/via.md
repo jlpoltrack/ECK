@@ -4,6 +4,8 @@
 
 ECK speaks the [VIA](https://www.usevia.app/) protocol (v3: keymap, macros, custom menus) and [Vial](vial.md). The **HHKB Settings** menu works only in the VIA web app, and only in VIA mode: press **Fn + Ctrl + V** first, then connect ([why](vial.md#via-mode)).
 
+**Over Bluetooth (Hybrid):** VIA and Vial work over Bluetooth too: the keyboard shows up as a second device with the Bluetooth name (`HHKB-Hybrid_1`..`4`). Requests take tens of milliseconds, more for the first after a pause ([timings](bench.md#checks-without-keypresses)), so Vial's matrix tester lags a little. Tested on a Mac with vial.rocks and usevia.app (2026-11-26). Updates (`hybrid_update.py`, the web flasher) and the bootloader jump need USB: over Bluetooth they get VIA's "unhandled" reply. The Vial desktop app doesn't list it ([why](vial.md#differences-from-vial-qmk-and-side-effects)). How it works: [Hybrid port](hybrid-port.md#bluetooth).
+
 ## Load the definition
 
 1. Open the [VIA web app](https://www.usevia.app/), go to **Settings** and enable **Show Design tab**.

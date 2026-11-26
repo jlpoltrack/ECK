@@ -9,7 +9,7 @@ import struct
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from via_hid import PRODUCT, open_keyboard, send  # noqa: E402
+from via_hid import BLUETOOTH, PRODUCT, open_keyboard, send  # noqa: E402
 
 # ECK_PRODUCT=R3S: the Realforce R3S (product ID, matrix and key count)
 PID, ROWS, COLS, KEYS = (0x4011, 6, 16, 87) if "R3S" in PRODUCT else (0x4010, 4, 15, 60)
@@ -33,8 +33,12 @@ def entry(h, op, idx, data=b""):
 
 def main():
     import hid
-    serial = next((d["serial_number"] for d in hid.enumerate(0xCAFE, PID) if d["usage_page"] == 0xFF60), "")
-    check("USB serial has Vial's magic", serial.startswith("vial:f64c2b3c-"), serial)
+    if BLUETOOTH:
+        print("SKIP  USB serial (ECK_BLUETOOTH=1: Bluetooth carries none)")
+    else:
+        serial = next((d["serial_number"] for d in hid.enumerate(0xCAFE, PID)
+                       if d["usage_page"] == 0xFF60 and d.get("bus_type") != 2), "")
+        check("USB serial has Vial's magic", serial.startswith("vial:f64c2b3c-"), serial)
     h = open_keyboard()
     try:
         r = send(h, [0x01])

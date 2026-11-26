@@ -22,6 +22,11 @@
 /* No vendor-specific UUIDs: only standard services */
 #define NRF_SDH_BLE_VS_UUID_COUNT 0
 
+/* VIA raw HID: 32-byte reports need an ATT MTU of at least 35; a second HID service needs room.
+ * Never enable NRF_SDH_BLE_SERVICE_CHANGED: it stopped Bluetooth typing on the Mac (2026-11-26). */
+#define NRF_SDH_BLE_GATT_MAX_MTU_SIZE 65
+#define NRF_SDH_BLE_GATTS_ATTR_TAB_SIZE 1920
+
 /* LE Secure Connections through the peer manager: P-256 ECDH in Nordic's Oberon library,
  * random numbers straight from the RNG (no mbed TLS DRBG) */
 #define PM_LESC_ENABLED 1

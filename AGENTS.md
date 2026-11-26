@@ -58,6 +58,7 @@ Reason: renaming orphans data in keyboards' EEPROM or breaks tool matching.
 - **Never read a struct through a `uint32_t *` cast** (strict aliasing): `memcpy`. Reason: GCC dropped stores, corrupting a saved settings record (2026-11-16).
 - Unrecoverable errors call `platform_system_reset()`. Reason: a hung Hybrid on batteries needs them pulled.
 - `hybrid_update.py stm32` refuses unless Bank 1 holds the boot stub (`--force`). Reason: otherwise a failed write has no USB recovery.
+- **nRF52 GATT changes only append services; Service Changed stays off.** Reason: appending kept bonded hosts typing; enabling `NRF_SDH_BLE_SERVICE_CHANGED` shifted handles and stopped Bluetooth typing on the Mac, even after re-pairing (2026-11-26).
 - **The `.hfb` never rewrites the nRF52 MBR** (`0x0-0xFFF`); app stays at `0x26000`. Reason: PFU's bootloader copies only `0x1000-0x35FFF` and jumps there.
 - **Power-switch recovery needs the batteries out:** the stub reads the switch only at reset, and plugging USB doesn't reset a battery-powered keyboard (2026-11-17).
 - **JIS positions reach 68:** per-position bits in a `uint64_t` (`dip_modes.c`) need two words under `HHKB_JIS`. JIS facts come from PFU's JIS images and manuals ([JIS](docs/models.md#jis)). Reason: JIS port (2026-11-19).

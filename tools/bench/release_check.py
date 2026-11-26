@@ -67,7 +67,8 @@ def keyboard_info():
     try:
         ver = via(h, [0x08, 0, VERSION_ID])[3:].split(b"\0")[0].decode(errors="replace")
         nrf = via(h, [0x08, 0, NRF_ID], min_len=11)
-        serial = next((d["serial_number"] for d in hid.enumerate(0xCAFE, 0x4010) if d["usage_page"] == 0xFF60), "") or ""
+        serial = next((d["serial_number"] for d in hid.enumerate(0xCAFE, 0x4010)
+                       if d["usage_page"] == 0xFF60 and d.get("bus_type") != 2), "") or ""  # USB, not Bluetooth
         return ver, serial, nrf[9], nrf[10]
     finally:
         h.close()

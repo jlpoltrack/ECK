@@ -13,7 +13,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-extern void usb_notify_task(void);
 void debug_console_flush(void);
 void debug_console_printf(const char *fmt, ...);
 

@@ -13,7 +13,7 @@
 
 #define BLE_LINK_FRAME_LEN 32U
 #define BLE_LINK_DATA_MAX  27U
-#define BLE_LINK_VERSION   7U
+#define BLE_LINK_VERSION   8U
 
 #define BLE_LINK_MAGIC_TO_NRF 0xA5U
 #define BLE_LINK_MAGIC_TO_STM 0x5AU
@@ -26,7 +26,16 @@ enum {
     BLE_LINK_BATTERY = 3,  /* percent (u8) */
     BLE_LINK_COMMAND = 4,  /* one of BLE_LINK_CMD_* */
     BLE_LINK_UPDATE = 5,   /* data[0] = BLE_LINK_UPD_*: stage a new nRF52 image */
+    BLE_LINK_RAW = 6,      /* v8: VIA reply, data[0] = request id << 1 | half, data[1..16] = 16 bytes */
 };
+
+/* v8 VIA over Bluetooth. A host's 32-byte request rides in status data[17..25] while it waits:
+ * data[17] = BLE_LINK_RAW_VALID | id << 2 | part, data[18..25] = bytes part * 8 .. +7. The nRF52
+ * cycles the four parts until both reply halves for that id arrive; ids 1..31 wrap. */
+#define BLE_LINK_RAW_LEN 32U
+#define BLE_LINK_RAW_PART 8U
+#define BLE_LINK_RAW_HALF 16U
+#define BLE_LINK_RAW_VALID 0x80U
 
 /* nRF52 update. START: size (u32 LE), MD5[16]; stops the SoftDevice (reset to recover).
  * DATA: offset (u32 LE), up to BLE_LINK_UPD_CHUNK bytes. FINISH: verify, write the record. */
@@ -77,7 +86,7 @@ enum {
 /* Status payload: data[0] flags, data[1] host LED report, data[2] version, data[3] free queue slots,
  * data[4] current host slot (0 until the STM32 selects one), data[5] bit n-1 = slot n has a host,
  * data[6] BLE_LINK_UPD_ST_*, data[7..10] staged bytes (u32 LE), data[11..16] granted interval,
- * latency, timeout (v4, see above) */
+ * latency, timeout (v4, see above), data[17..25] a waiting VIA request part (v8, see above) */
 
 typedef struct {
     uint8_t magic;

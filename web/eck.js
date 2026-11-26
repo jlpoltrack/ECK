@@ -213,9 +213,11 @@ export async function pfuInstall(pfu, data, { reconnect, log, progress }) {
 const ECK_PID = 0x4010, ECK_JIS_PID = 0x4012;
 export const ECK_FILTER = { vendorId: 0xcafe, productId: ECK_PID, usagePage: 0xff60, usage: 0x61 };
 export const ECK_JIS_FILTER = { ...ECK_FILTER, productId: ECK_JIS_PID };
+// The Hybrid's Bluetooth VIA interface (nRF52 device name): it refuses updates, so never pick it.
+export const isBluetooth = (d) => /^HHKB-Hybrid_\d/.test(d.productName || '');
 export const isEck = (d) =>
     d.vendorId === 0xcafe && [ECK_PID, ECK_JIS_PID].includes(d.productId) && (d.productName || '').includes('HHKB') &&
-    d.collections.some((c) => c.usagePage === 0xff60);
+    !isBluetooth(d) && d.collections.some((c) => c.usagePage === 0xff60);
 // ECK on the Realforce R3S (stm32/boards/r3s): its own product ID
 export const R3S_FILTER = { vendorId: 0xcafe, productId: 0x4011, usagePage: 0xff60, usage: 0x61 };
 export const isR3s = (d) => d.vendorId === 0xcafe && d.productId === 0x4011 && d.collections.some((c) => c.usagePage === 0xff60);
@@ -231,7 +233,9 @@ export class Via {
         dev.addEventListener('inputreport', (e) => this.queue.push(new Uint8Array(e.data.buffer)));
     }
     static async request() {
-        const dev = (await navigator.hid.requestDevice({ filters: [ECK_FILTER, ECK_JIS_FILTER] })).find(isEck);
+        const devs = await navigator.hid.requestDevice({ filters: [ECK_FILTER, ECK_JIS_FILTER] });
+        const dev = devs.find(isEck);
+        if (!dev && devs.some(isBluetooth)) throw new Error('that is the Bluetooth connection: choose the HHKB connected by USB');
         if (!dev) throw new Error('no HHKB running ECK selected');
         return Via.open(dev);
     }

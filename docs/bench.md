@@ -28,6 +28,7 @@ How the owner's bench keyboards are flashed and checked over USB, and the refere
 | `tools/bench/via_keymap_check.py` | VIA keycode round trips and keymap reset; restores the keymap | |
 | `tools/bench/settings_reset_check.py BACKUP_DIR` | VIA Reset all settings, then restores that backup's EEPROM (back up just before) | |
 | `key_depth.py stacks [SEC]` | each task stack's and the interrupt stack's peak use since reset | below |
+| `tools/bench/ble_raw_check.py --cold 12` | VIA over Bluetooth (Hybrid, needs the Mac's Bluetooth link): round trips, then first requests after a pause | median 30 ms; first 85-387 ms on the Mac (latency 22 x 15 ms), Vial allows 500 (2026-11-26) |
 
 EEPROM before/after comparisons must skip the settings record's CRC and calibration arrays (offsets in `eeprom_save_test.py`): every save rewrites live calibration rest levels.
 
@@ -45,7 +46,7 @@ Post-read work overruns the 2 µs settle window, so scan code speed moves rest l
 
 ## nRF52 without pairing
 
-Restart it into recovery mode and back over VIA (`hybrid_update.py`'s `nrf_recovery`, then `UPD_RESTART`); the recovery flag proves the app reaches `main()` and gets SPI interrupts through the SoftDevice. It doesn't prove the BLE stack starts: that needs a pairing (slot 4 on the owner's Mac; pairing deletes that slot's bond). The bench Mac isn't paired with the keyboard, so an empty slot stays silent in scans. A `--recovery` run restarts the nRF52 twice, each blinking the orange LED (2/s) for up to 30 s.
+Restart it into recovery mode and back over VIA (`hybrid_update.py`'s `nrf_recovery`, then `UPD_RESTART`); the recovery flag proves the app reaches `main()` and gets SPI interrupts through the SoftDevice. It doesn't prove the BLE stack starts: that needs a pairing (slot 4 on the owner's Mac; pairing deletes that slot's bond). The bench Mac is paired on slot 1 (since 2026-11-26); with Bluetooth selected it types over Bluetooth even while USB is plugged in. A `--recovery` run restarts the nRF52 twice, each blinking the orange LED (2/s) for up to 30 s.
 
 S132 v7.2.0 under PFU's MBR 2.2.2 was tested on 2026-11-16 (boot, recovery mode, LESC pairing, an SDK 15 bond reconnecting).
 

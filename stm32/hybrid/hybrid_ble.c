@@ -24,11 +24,15 @@
 #include "task.h"
 #include "task_internal.h"
 #include "tusb.h"
+#include "via.h"
 
 #define CS_PIN 15U          /* PA15 */
 #define POLL_MS 100U        /* status refresh while active */
 #define POLL_IDLE_MS 1000U  /* ...and after IDLE_AFTER_MS without reports or link events */
 #define IDLE_AFTER_MS 10000U
+/* While a host is connected, so a VIA request waits at most this long: Vial gives up after
+ * 500 ms, and the Mac's slave latency alone can hold the request ~330 ms (~1-2 % battery). */
+#define POLL_BLE_MS 50U
 #define ACK_POLLS 20U       /* status polls per send attempt */
 #define SEND_ATTEMPTS 10U
 
@@ -47,7 +51,7 @@ static QueueHandle_t s_queue;
 static link_msg_t s_held[2];
 static volatile bool s_held_set[2];
 static StaticTask_t s_task_tcb;
-static StackType_t s_task_stack[128]; /* static worst case ~400 B (tools/stack_depth.py) */
+static StackType_t s_task_stack[128]; /* static worst case 312 B (tools/stack_depth.py, 2026-11-26) */
 
 static volatile uint8_t s_flags;
 static uint8_t s_host_leds;
@@ -76,6 +80,21 @@ static int16_t s_battery = -1;     /* last percent sent (-1: none), resent after
 static volatile bool s_battery_dirty;
 static volatile bool s_power_off_done; /* nRF52 told to power off: the link stays idle */
 static bool s_recovery;                /* PB6 held high: the nRF52 was restarted into recovery mode */
+
+/* VIA over Bluetooth (ble_link.h v8): the link task collects a request from the status parts,
+ * the USB task answers it (as it does VIA over USB), the link task sends the reply back. */
+#define RAW_HOT_MS 2000U /* poll every tick this long after VIA traffic */
+static uint8_t s_raw_part_buf[BLE_LINK_RAW_LEN];
+static uint8_t s_raw_part_id = 0xFF; /* request id being collected */
+static uint8_t s_raw_part_mask;
+static uint8_t s_raw_done_id = 0xFF; /* last request handed to the USB task: never twice */
+static bool s_raw_shown;             /* the last status showed a waiting request */
+static TickType_t s_raw_at;          /* last VIA traffic */
+static uint8_t s_raw_req[BLE_LINK_RAW_LEN];
+static uint8_t s_raw_reply[BLE_LINK_RAW_LEN];
+static uint8_t s_raw_id;
+static volatile bool s_raw_req_ready;   /* for the USB task */
+static volatile bool s_raw_reply_ready; /* for the link task */
 
 /* Host slot (1..4) and whether Bluetooth wins over a connected USB host (bit 8), kept in one
  * EEPROM word past ECK's settings (all zero in the stock Hybrid EEPROM). Bits 16-18 held the
@@ -122,6 +141,32 @@ static uint8_t spi_byte(uint8_t out) {
     return (uint8_t)SPI1->DR;
 }
 
+/* Gathers a waiting VIA request from the status parts; hands it to the USB task once whole. */
+static void raw_collect(const ble_link_frame_t *rx) {
+    s_raw_shown = rx->len >= 26 && (rx->data[17] & BLE_LINK_RAW_VALID);
+    if (!s_raw_shown) {
+        /* Nothing waiting: the next request is new even if its id repeats (nRF52 restart, wrap). */
+        s_raw_part_mask = 0;
+        s_raw_done_id = 0xFF;
+        return;
+    }
+    s_raw_at = xTaskGetTickCount();
+    uint8_t id = (rx->data[17] >> 2) & 0x1FU, part = rx->data[17] & 3U;
+    if (id == s_raw_done_id) return; /* answered or being answered */
+    if (id != s_raw_part_id) {
+        s_raw_part_id = id;
+        s_raw_part_mask = 0;
+    }
+    memcpy(&s_raw_part_buf[part * BLE_LINK_RAW_PART], &rx->data[18], BLE_LINK_RAW_PART);
+    s_raw_part_mask |= (uint8_t)(1U << part);
+    if (s_raw_part_mask != 0xFU || s_raw_req_ready || s_raw_reply_ready) return; /* else wait */
+    memcpy(s_raw_req, s_raw_part_buf, sizeof(s_raw_req));
+    s_raw_id = id;
+    s_raw_done_id = id;
+    s_raw_req_ready = true;
+    usb_notify_task();
+}
+
 /* One 32-byte exchange. Returns true and updates the cached status if the reply is valid. */
 static bool transact(const ble_link_frame_t *tx, ble_link_frame_t *rx) {
     const uint8_t *out = (const uint8_t *)tx;
@@ -134,6 +179,7 @@ static bool transact(const ble_link_frame_t *tx, ble_link_frame_t *rx) {
     if (rx->magic != BLE_LINK_MAGIC_TO_STM || rx->type != BLE_LINK_STATUS || rx->check != ble_link_check(rx)) {
         /* nRF52 busy (answers 0xFF) or absent: after a run of these, stop routing keys to it. */
         s_stat_bad++;
+        s_raw_shown = false; /* a silent nRF52 must not keep the 1 kHz VIA polling going */
         if (s_bad_replies < LINK_DOWN_REPLIES && ++s_bad_replies == LINK_DOWN_REPLIES) {
             s_ready = false;
             s_flags = 0;
@@ -173,6 +219,7 @@ static bool transact(const ble_link_frame_t *tx, ble_link_frame_t *rx) {
         memcpy(s_conn, &rx->data[11], sizeof(s_conn));
         taskEXIT_CRITICAL();
     }
+    raw_collect(rx);
     if (rx->data[1] != s_host_leds) {
         s_host_leds = rx->data[1];
         if ((s_flags & BLE_LINK_ST_CONNECTED) && (s_prefer_ble || !tud_mounted())) events_hid_leds(s_host_leds);
@@ -199,7 +246,7 @@ static void poll(ble_link_frame_t *rx) {
 /* Send one frame and wait until the nRF52 reports it accepted. A refused frame (queue full)
  * is resent without using up an attempt, for at most QUEUE_WAIT_MS. */
 #define QUEUE_WAIT_MS 500U
-/* Update frames come back to back: wait ~0.3 ms for the nRF52 to re-arm, not a whole tick. */
+/* Update and VIA frames come back to back: wait ~0.3 ms for the nRF52 to re-arm, not a whole tick. */
 static void link_gap(bool fast) {
     if (fast) {
         hybrid_delay_us(750); /* was a ~0.6-0.7 ms counted loop */
@@ -209,7 +256,7 @@ static void link_gap(bool fast) {
 }
 
 static bool send_frame(uint8_t type, const uint8_t *data, uint8_t len) {
-    bool fast = type == BLE_LINK_UPDATE;
+    bool fast = type == BLE_LINK_UPDATE || type == BLE_LINK_RAW;
     ble_link_frame_t f, rx;
     s_seq = (uint8_t)(s_seq + 1U) ? (uint8_t)(s_seq + 1U) : 1U;
     frame_fill(&f, s_seq, type, data, len);
@@ -244,6 +291,19 @@ static bool send_frame(uint8_t type, const uint8_t *data, uint8_t len) {
 
 static void send(const link_msg_t *m) {
     (void)send_frame(m->type, m->data, m->len);
+}
+
+/* The USB task's VIA reply, in two halves; a lost one makes the host ask again. */
+static void raw_reply_send(void) {
+    uint8_t buf[1 + BLE_LINK_RAW_HALF];
+    for (uint8_t half = 0; half < 2U; half++) {
+        buf[0] = (uint8_t)(s_raw_id << 1 | half);
+        memcpy(&buf[1], &s_raw_reply[half * BLE_LINK_RAW_HALF], BLE_LINK_RAW_HALF);
+        if (!send_frame(BLE_LINK_RAW, buf, sizeof(buf))) break;
+    }
+    s_raw_at = xTaskGetTickCount();
+    s_last_active = s_raw_at;
+    s_raw_reply_ready = false;
 }
 
 #define FIRST_USE_MS 3000U
@@ -361,6 +421,10 @@ static void link_task(void *arg) {
             link_msg_t b = {.type = BLE_LINK_BATTERY, .len = 1, .data = {(uint8_t)s_battery}};
             send(&b);
         }
+        if (s_raw_reply_ready) {
+            raw_reply_send();
+            continue;
+        }
         link_msg_t m;
         if ((s_held_set[0] || s_held_set[1]) && uxQueueMessagesWaiting(s_queue) == 0) {
             for (int i = 0; i < 2; i++) {
@@ -379,7 +443,10 @@ static void link_task(void *arg) {
         /* Poll slowly when idle: both chips then sleep between polls. */
         bool busy = (TickType_t)(xTaskGetTickCount() - s_last_active) < pdMS_TO_TICKS(IDLE_AFTER_MS) ||
                     (s_flags & (BLE_LINK_ST_PAIRING | BLE_LINK_ST_PASSKEY)) || !s_ready || s_upd_state;
-        if (xQueueReceive(s_queue, &m, pdMS_TO_TICKS(busy ? POLL_MS : POLL_IDLE_MS)) == pdTRUE) {
+        bool raw_hot = s_raw_shown || (s_raw_at && (TickType_t)(xTaskGetTickCount() - s_raw_at) < pdMS_TO_TICKS(RAW_HOT_MS));
+        uint32_t poll_ms = (s_flags & BLE_LINK_ST_CONNECTED) ? POLL_BLE_MS : busy ? POLL_MS : POLL_IDLE_MS;
+        TickType_t wait = raw_hot ? 1U : pdMS_TO_TICKS(poll_ms);
+        if (xQueueReceive(s_queue, &m, wait) == pdTRUE) {
             if (m.type == BLE_LINK_NOP) continue; /* only a wake-up (update frame waiting) */
             bool off = m.type == BLE_LINK_COMMAND && m.data[0] == BLE_LINK_CMD_POWER_OFF;
             if (off && (s_recovery || (s_flags & BLE_LINK_ST_RECOVERY))) {
@@ -406,6 +473,12 @@ static void link_task(void *arg) {
         } else {
             ble_link_frame_t rx;
             poll(&rx);
+            if (!raw_hot && (s_flags & BLE_LINK_ST_CONNECTED)) {
+                /* Each reply is the status prepared after the previous exchange: a second one
+                 * shows a VIA request that came in since then, a poll period sooner. */
+                vTaskDelay(1);
+                poll(&rx);
+            }
         }
     }
 }
@@ -471,6 +544,30 @@ bool hid_alt_send_keyboard(const USB_HID_KeyboardReport_TypeDef *report) {
 bool hid_alt_send_consumer(uint16_t usage) {
     uint8_t r[2] = {(uint8_t)usage, (uint8_t)(usage >> 8)};
     return enqueue(BLE_LINK_CONSUMER, r, sizeof(r));
+}
+
+#define VIA_CUSTOM_SET 0x07
+#define VIA_BOOTLOADER_JUMP_ID 0x0B
+#define VIA_ID_NRF_UPDATE 30 /* hhkb_via_controls.c */
+
+/* Over Bluetooth, VIA can't update the nRF52 (it stops the radio carrying the update) or jump
+ * to the bootloader (it needs USB): those get VIA's "unhandled" reply. */
+static bool raw_refused(const uint8_t *req) {
+    return req[0] == VIA_BOOTLOADER_JUMP_ID || (req[0] == VIA_CUSTOM_SET && req[1] == 0 && req[2] == VIA_ID_NRF_UPDATE);
+}
+
+/* USB task: answers a VIA request from Bluetooth, so it never runs alongside one from USB. */
+void hid_alt_task(void) {
+    if (!s_raw_req_ready) return;
+    if (raw_refused(s_raw_req)) {
+        memcpy(s_raw_reply, s_raw_req, sizeof(s_raw_reply));
+        s_raw_reply[0] = 0xFF;
+    } else {
+        via_process_packet(s_raw_req, s_raw_reply);
+    }
+    s_raw_reply_ready = true; /* before freeing the request: raw_collect waits for both */
+    s_raw_req_ready = false;
+    if (s_queue) xQueueSend(s_queue, &(link_msg_t){.type = BLE_LINK_NOP}, 0); /* wake the link task */
 }
 
 

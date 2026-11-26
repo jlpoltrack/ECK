@@ -32,6 +32,7 @@ Keyboard task stack: 2,048 B with Vial (1,024 B without); 808 B worst case with 
 ## Differences from vial-qmk and side effects
 
 - The USB serial is `vial:f64c2b3c-<chip ID>` (the Vial app finds keyboards by that prefix). Chrome ties WebHID permission to the serial, so after the first update from a VIA-only version (v0.4.4 or earlier) the web flasher and usevia.app ask for permission once more.
+- Over Bluetooth (Hybrid) the serial reads empty (macOS) or as the Bluetooth address (Windows), so the Vial desktop app doesn't list the keyboard there; vial.rocks and usevia.app find devices by usage page and should, but haven't been tried. A serial in the Bluetooth Device Information Service would move the keyboard's GATT handles, which costs every paired host a re-pair ([deferred](deferred.md)).
 - The switch-matrix reply uses protocol 9's layout (rows from byte 2, no row offset) as Vial's matrix tester reads it; VIA mode uses protocol 12's.
 - Vial's Reboot (0x7C01) and Debug (0x7C02) keys are ECK's Layer Up and Layer Down: saved keymaps already hold those values, so their meaning can't change.
 - Not done: auto shift, mouse keys, chordal hold, flow tap, QMK's built-in alt-repeat pairs, key overrides that start when a modifier goes down after the key, more than 8 entries per kind (the HHKB record's free region holds 12 of each; ECK's other free 256 B at `0x08081400` would add 7).

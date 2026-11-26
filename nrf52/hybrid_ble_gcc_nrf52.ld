@@ -1,5 +1,6 @@
 /* Linker script to configure memory regions (from nRF5 SDK 17.1.1 ble_app_hids_keyboard).
- * FLASH: 64 KB app slot of the update container; RAM: after S132 v7.2.0 for this config. */
+ * FLASH: 64 KB app slot of the update container. RAM: after S132 v7.2.0; MTU 65 and the VIA HID
+ * service need more than the old 0x20002250, and 0x20003000 leaves ~2.5 KB margin (no RTT to read the exact need). */
 
 SEARCH_DIR(.)
 GROUP(-lgcc -lc -lnosys)
@@ -7,7 +8,7 @@ GROUP(-lgcc -lc -lnosys)
 MEMORY
 {
   FLASH (rx) : ORIGIN = 0x26000, LENGTH = 0x10000
-  RAM (rwx) :  ORIGIN = 0x20002250, LENGTH = 0xddb0
+  RAM (rwx) :  ORIGIN = 0x20003000, LENGTH = 0xd000
 }
 
 SECTIONS

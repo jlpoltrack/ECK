@@ -1,6 +1,6 @@
 /* ECK Bluetooth bridge for the HHKB Professional Hybrid's nRF52832.
  * Runs on Nordic's S132 v7.2.0, app at 0x26000. Receives HID reports from the STM32 over SPI
- * (common/ble_link.h) and sends them as a BLE HID keyboard. */
+ * (common/ble_link.h) and sends them as a BLE HID keyboard; relays VIA requests to the STM32. */
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -71,7 +71,12 @@
 #define REPORT_ID_CONSUMER 2
 #define OUTPUT_REPORT_LEN 1
 
+/* VIA raw HID: its own HID service, appended last (bonded hosts keep their handles), so its
+ * reports carry no report ID, as on USB. */
+#define RAW_REPORT_LEN BLE_LINK_RAW_LEN
+
 BLE_HIDS_DEF(m_hids, NRF_SDH_BLE_TOTAL_LINK_COUNT, KB_REPORT_LEN, CONSUMER_REPORT_LEN, OUTPUT_REPORT_LEN);
+BLE_HIDS_DEF(m_raw, NRF_SDH_BLE_TOTAL_LINK_COUNT, RAW_REPORT_LEN, RAW_REPORT_LEN);
 BLE_BAS_DEF(m_bas);
 NRF_BLE_GATT_DEF(m_gatt);
 NRF_BLE_QWR_DEF(m_qwr);
@@ -111,6 +116,18 @@ static bool m_host_rejected;        /* the slot's host failed security (it forgo
 APP_TIMER_DEF(m_off_timer);
 #define OFF_CHECK_MS 100
 #define OFF_CONN_WAITS 30 /* give up waiting for the disconnect after 3 s */
+
+/* VIA over Bluetooth: the host's request waits here until the STM32 replies (ble_link.h v8). */
+static uint8_t m_raw_req[RAW_REPORT_LEN];
+static uint8_t m_raw_resp[RAW_REPORT_LEN];
+static uint8_t m_raw_id;          /* id of the newest request, 1..31 */
+static bool m_raw_waiting;        /* shown to the STM32 in the status until both reply halves came */
+static uint8_t m_raw_halves;      /* reply halves received for m_raw_id */
+static uint8_t m_raw_part;        /* request part the next status shows */
+static bool m_raw_resp_ready;     /* reply waiting for a notification slot */
+static bool m_latency_off;
+APP_TIMER_DEF(m_raw_timer);
+#define RAW_SESSION_MS 5000 /* slave latency stays off this long after a request; unanswered requests expire */
 
 /* SPI buffers: the status for the next transaction is prepared after each one. */
 static ble_link_frame_t m_rx;
@@ -163,6 +180,39 @@ static void queue_drain(void) {
         m_q_head = (m_q_head + 1) % QUEUE_LEN;
         m_q_count--;
     }
+}
+
+/* ---------- VIA over Bluetooth ---------- */
+
+static void raw_drain(void) {
+    if (!m_raw_resp_ready || m_conn_handle == BLE_CONN_HANDLE_INVALID) return;
+    ret_code_t err = ble_hids_inp_rep_send(&m_raw, 0, RAW_REPORT_LEN, m_raw_resp, m_conn_handle);
+    if (err == NRF_ERROR_RESOURCES) return; /* retried on BLE_GATTS_EVT_HVN_TX_COMPLETE */
+    if (err == NRF_SUCCESS) m_inflight++;
+    m_raw_resp_ready = false; /* other errors: not subscribed or gone; the host asks again */
+}
+
+static void latency_set(bool off) {
+    if (off == m_latency_off || m_conn_handle == BLE_CONN_HANDLE_INVALID) return;
+    ble_opt_t opt;
+    memset(&opt, 0, sizeof(opt));
+    opt.gap_opt.slave_latency_disable.conn_handle = m_conn_handle;
+    opt.gap_opt.slave_latency_disable.disable = off;
+    if (sd_ble_opt_set(BLE_GAP_OPT_SLAVE_LATENCY_DISABLE, &opt) == NRF_SUCCESS) m_latency_off = off;
+}
+
+/* Slave latency would hold each host write up to 30 connection intervals. */
+static void raw_session_end(void *p_context) {
+    (void)p_context;
+    latency_set(false);
+    m_raw_waiting = false;
+}
+
+static void raw_reset(void) {
+    (void)app_timer_stop(m_raw_timer);
+    m_raw_waiting = false;
+    m_raw_resp_ready = false;
+    m_latency_off = false; /* per connection */
 }
 
 /* ---------- battery ---------- */
@@ -394,7 +444,7 @@ static void status_prepare(bool refused) {
     m_tx.magic = BLE_LINK_MAGIC_TO_STM;
     m_tx.seq = m_last_seq;
     m_tx.type = BLE_LINK_STATUS;
-    m_tx.len = 17;
+    m_tx.len = 26;
     m_tx.data[0] = (m_secured ? BLE_LINK_ST_CONNECTED : 0) | (m_advertising_on ? BLE_LINK_ST_ADVERTISING : 0) |
                    (refused ? BLE_LINK_ST_QUEUE_FULL : 0) | (m_pairing ? BLE_LINK_ST_PAIRING : 0) |
                    (m_passkey_wait ? BLE_LINK_ST_PASSKEY : 0) | (m_recovery ? BLE_LINK_ST_RECOVERY : 0) |
@@ -409,6 +459,11 @@ static void status_prepare(bool refused) {
     memcpy(&m_tx.data[7], &staged, sizeof(staged));
     uint16_t granted[3] = {m_granted.max_conn_interval, m_granted.slave_latency, m_granted.conn_sup_timeout};
     memcpy(&m_tx.data[11], granted, sizeof(granted));
+    if (m_raw_waiting) {
+        m_tx.data[17] = (uint8_t)(BLE_LINK_RAW_VALID | (m_raw_id << 2) | m_raw_part);
+        memcpy(&m_tx.data[18], &m_raw_req[m_raw_part * BLE_LINK_RAW_PART], BLE_LINK_RAW_PART);
+        m_raw_part = (uint8_t)((m_raw_part + 1U) & 3U);
+    }
     m_tx.check = ble_link_check(&m_tx);
 }
 
@@ -506,6 +561,8 @@ static void update_begin(void) {
     m_updating = true;
     app_timer_stop_all();
     m_q_count = 0;
+    m_raw_waiting = false;
+    m_raw_resp_ready = false;
     m_secured = false;
     m_advertising_on = false;
     m_pairing = false;
@@ -574,6 +631,20 @@ static bool frame_handle(const ble_link_frame_t *f) {
     case BLE_LINK_BATTERY:
         if (f->len == 1) battery_update(f->data[0]);
         return true;
+    case BLE_LINK_RAW: {
+        if (f->len != 1 + BLE_LINK_RAW_HALF) return true;
+        if (!m_raw_waiting || (f->data[0] >> 1) != m_raw_id) return true; /* stale: the host asked again */
+        if (m_raw_resp_ready) return false; /* the previous reply still waits for a notification slot */
+        uint8_t half = f->data[0] & 1U;
+        memcpy(&m_raw_resp[half * BLE_LINK_RAW_HALF], &f->data[1], BLE_LINK_RAW_HALF);
+        m_raw_halves |= (uint8_t)(1U << half);
+        if (m_raw_halves == 3U) {
+            m_raw_waiting = false;
+            m_raw_resp_ready = true;
+            raw_drain();
+        }
+        return true;
+    }
     case BLE_LINK_COMMAND:
         if (f->len < 1) return true;
         uint8_t slot = f->len >= 2 && f->data[1] >= 1 && f->data[1] <= BLE_LINK_SLOTS ? f->data[1] : 0;
@@ -626,7 +697,10 @@ static void link_process(void) {
             refused = true;
         }
     }
-    if (!m_updating) queue_drain();
+    if (!m_updating) {
+        queue_drain();
+        raw_drain();
+    }
     status_prepare(refused);
     spis_arm();
 }
@@ -670,6 +744,7 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context) {
         m_host_leds = 0;
         m_q_count = 0;
         m_inflight = 0;
+        raw_reset();
         m_disc_pending = false;
         (void)app_timer_stop(m_disc_timer);
         (void)app_timer_stop(m_sec_timer);
@@ -697,6 +772,7 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context) {
         uint8_t done = p_ble_evt->evt.gatts_evt.params.hvn_tx_complete.count;
         m_inflight = done < m_inflight ? (uint8_t)(m_inflight - done) : 0;
         queue_drain();
+        raw_drain();
         disconnect_try();
         break;
     }
@@ -722,6 +798,27 @@ static void on_hids_evt(ble_hids_t *p_hids, ble_hids_evt_t *p_evt) {
     if (ble_hids_outp_rep_get(p_hids, 0, OUTPUT_REPORT_LEN, 0, m_conn_handle, &leds) == NRF_SUCCESS) {
         m_host_leds = leds;
     }
+}
+
+/* A VIA request from the host: shown to the STM32 in the status until it replies. A newer
+ * request replaces a waiting one (a host that timed out and asked again). */
+static void on_raw_evt(ble_hids_t *p_hids, ble_hids_evt_t *p_evt) {
+    (void)p_hids;
+    if (p_evt->evt_type != BLE_HIDS_EVT_REP_CHAR_WRITE ||
+        p_evt->params.char_write.char_id.rep_type != BLE_HIDS_REP_TYPE_OUTPUT || m_updating ||
+        p_evt->params.char_write.offset != 0 || p_evt->params.char_write.len == 0) {
+        return;
+    }
+    uint16_t len = p_evt->params.char_write.len;
+    memset(m_raw_req, 0, sizeof(m_raw_req));
+    memcpy(m_raw_req, p_evt->params.char_write.data, len < RAW_REPORT_LEN ? len : RAW_REPORT_LEN);
+    m_raw_id = (uint8_t)(m_raw_id % 31U + 1U);
+    m_raw_halves = 0;
+    m_raw_part = 0;
+    m_raw_waiting = true;
+    latency_set(true);
+    (void)app_timer_stop(m_raw_timer);
+    APP_ERROR_CHECK(app_timer_start(m_raw_timer, APP_TIMER_TICKS(RAW_SESSION_MS), NULL));
 }
 
 /* ---------- init ---------- */
@@ -841,12 +938,52 @@ static void hids_init(void) {
     APP_ERROR_CHECK(ble_hids_init(&m_hids, &init));
 }
 
+static void raw_hids_init(void) {
+    static const uint8_t report_map[] = {
+        0x06, 0x60, 0xFF, 0x09, 0x61, 0xA1, 0x01, /* Vendor 0xFF60, usage 0x61: as ECK's USB VIA interface */
+        0x09, 0x62, 0x15, 0x00, 0x26, 0xFF, 0x00, 0x75, 0x08, 0x95, RAW_REPORT_LEN, 0x81, 0x02,
+        0x09, 0x63, 0x15, 0x00, 0x26, 0xFF, 0x00, 0x75, 0x08, 0x95, RAW_REPORT_LEN, 0x91, 0x02,
+        0xC0,
+    };
+    static ble_hids_inp_rep_init_t input;
+    static ble_hids_outp_rep_init_t output;
+    memset(&input, 0, sizeof(input));
+    memset(&output, 0, sizeof(output));
+    input.max_len = RAW_REPORT_LEN;
+    input.rep_ref.report_type = BLE_HIDS_REP_TYPE_INPUT;
+    input.sec.cccd_wr = SEC_JUST_WORKS;
+    input.sec.rd = SEC_JUST_WORKS;
+    input.sec.wr = SEC_JUST_WORKS;
+    output.max_len = RAW_REPORT_LEN;
+    output.rep_ref.report_type = BLE_HIDS_REP_TYPE_OUTPUT;
+    output.sec.rd = SEC_JUST_WORKS;
+    output.sec.wr = SEC_JUST_WORKS;
+
+    ble_hids_init_t init;
+    memset(&init, 0, sizeof(init));
+    init.evt_handler = on_raw_evt;
+    init.error_handler = error_handler;
+    init.inp_rep_count = 1;
+    init.p_inp_rep_array = &input;
+    init.outp_rep_count = 1;
+    init.p_outp_rep_array = &output;
+    init.rep_map.data_len = sizeof(report_map);
+    init.rep_map.p_data = (uint8_t *)report_map;
+    init.rep_map.rd_sec = SEC_JUST_WORKS;
+    init.hid_information.bcd_hid = 0x0111;
+    init.hid_information.flags = HID_INFO_FLAG_NORMALLY_CONNECTABLE_MSK;
+    init.hid_information.rd_sec = SEC_JUST_WORKS;
+    init.ctrl_point_wr_sec = SEC_JUST_WORKS;
+    APP_ERROR_CHECK(ble_hids_init(&m_raw, &init));
+}
+
 static void services_init(void) {
     nrf_ble_qwr_init_t qwr = {.error_handler = error_handler};
     APP_ERROR_CHECK(nrf_ble_qwr_init(&m_qwr, &qwr));
     dis_init();
     bas_init();
     hids_init();
+    raw_hids_init();
 }
 
 /* Re-run before each start: the advertising module never restores the discoverable flag itself. */
@@ -965,6 +1102,7 @@ int main(void) {
     APP_ERROR_CHECK(app_timer_create(&m_off_timer, APP_TIMER_MODE_REPEATED, off_timer_tick));
     APP_ERROR_CHECK(app_timer_create(&m_disc_timer, APP_TIMER_MODE_SINGLE_SHOT, disc_timeout));
     APP_ERROR_CHECK(app_timer_create(&m_reject_timer, APP_TIMER_MODE_SINGLE_SHOT, reject_hold_end));
+    APP_ERROR_CHECK(app_timer_create(&m_raw_timer, APP_TIMER_MODE_SINGLE_SHOT, raw_session_end));
     bonded_slots_refresh(); /* the first status reply, prepared in link_init, reports the bonds */
     link_init();
     NRF_LOG_INFO("ECK BLE bridge started, link v%d", BLE_LINK_VERSION);

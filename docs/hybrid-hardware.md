@@ -132,7 +132,7 @@ As ECK configures them; "stock" items come from PFU's firmware.
 | Recovery request | PB6 | P0.18 | High while the nRF52 starts: recovery mode |
 | Reset | PD2 | P0.21 via inverter | ~5 ms pulse |
 
-Wiring tested with `tools/bench/pin_map.py --drive`. SPI clock PCLK/16: 2 MHz on USB, 1 MHz on batteries. Frames: 32 bytes each way (magic, sequence, type, length, 27 data bytes, check byte; `common/ble_link.h`). Stock is reversed: the nRF52 is master (SPI0, mode 3, ~125 kbit/s), driven by PB6 pulses.
+Wiring tested with `tools/bench/pin_map.py --drive`. SPI clock PCLK/16: 2 MHz on USB, 1 MHz on batteries. Frames: 32 bytes each way (magic, sequence, type, length, 27 data bytes, check byte; `common/ble_link.h`; VIA over Bluetooth: [Hybrid port](hybrid-port.md#bluetooth)). Stock is reversed: the nRF52 is master (SPI0, mode 3, ~125 kbit/s), driven by PB6 pulses.
 
 The STM32 resets the nRF52 when it doesn't answer within 500 ms of boot (it may be in System OFF), after 5 s without a valid reply (at most once per 30 s), and after an aborted update (`hybrid_ble.c`).
 

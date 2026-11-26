@@ -16,7 +16,7 @@ Open firmware for the HHKB Professional Hybrid and Hybrid Type-S, Classic and Cl
 - Two base/Fn layer pairs (System 1 and System 2 keycodes).
 - Two LEDs, each assignable in VIA.
 - DIP switches SW1–SW5 as stock ([details](config.md#dip-switches)); SW6 is Bank 1 recovery on the Classic ([SW6 recovery](backup-restore.md#sw6-recovery)) and auto power-off on the Hybrid.
-- Hybrid: Bluetooth LE with four host slots, the stock key combinations, power switch and battery handling.
+- Hybrid: Bluetooth LE with four host slots, the stock key combinations, power switch and battery handling; VIA and Vial over Bluetooth too ([VIA](via.md)).
 
 The 32 MHz clock and all scan rates are normal MCU operating modes, not overclocking. Classic current from aroum/dmk (not re-measured): stock 7.5 mA, 1000 Hz 12 mA. While the computer sleeps (USB suspended), every model scans at 50 Hz, about stock current; a key press still wakes it where SW6 allows.
 

@@ -5,6 +5,8 @@ import sys
 import time
 
 PRODUCT = os.environ.get("ECK_PRODUCT", "HHKB")
+# ECK_BLUETOOTH=1: the Hybrid's Bluetooth VIA interface instead of USB (bench checks only: it refuses updates)
+BLUETOOTH = os.environ.get("ECK_BLUETOOTH") == "1"
 
 
 def open_keyboard(required=True, wait=0.0):
@@ -15,15 +17,16 @@ def open_keyboard(required=True, wait=0.0):
         sys.exit("run with: uv run --with hidapi python3 ...")
     deadline = time.monotonic() + wait
     while True:
+        # USB unless asked: the Hybrid's Bluetooth VIA interface refuses updates (hidapi bus type 2)
         devs = [d for d in hid.enumerate() if d["usage_page"] == 0xFF60 and d["usage"] == 0x61
-                and PRODUCT in (d["product_string"] or "")]
+                and PRODUCT in (d["product_string"] or "") and (d.get("bus_type") == 2) == BLUETOOTH]
         if devs:
             h = hid.device()
             h.open_path(devs[0]["path"])
             return h
         if time.monotonic() >= deadline:
             if required:
-                sys.exit(f"no {PRODUCT} running ECK found on USB")
+                sys.exit(f"no {PRODUCT} running ECK found on {'Bluetooth' if BLUETOOTH else 'USB'}")
             return None
         time.sleep(0.5)
 
