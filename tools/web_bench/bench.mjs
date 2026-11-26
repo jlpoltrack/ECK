@@ -4,6 +4,7 @@
 //   update FILE.rfb    from ECK (VIA jump to ST's DFU loader) or from the loader
 //   backup OUT.bin     data EEPROM through the loader;  restore IN.bin: write it back, boot tag kept
 //   guards HYBRID.hfb  the HHKB flows must refuse the R3S in the loader before writing anything
+//   ble HYBRID.hfb     the Hybrid's Bluetooth update (keyboard, then Bluetooth firmware if changed)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import * as eck from '../../web/eck.js';
@@ -114,8 +115,20 @@ if (cmd === 'install') {
     await refuses('HHKB settings restore', eck.restoreEeprom(d, await eck.backup(d), { log }));
     await d.leave();
     await back();
+} else if (cmd === 'ble') {
+    // The Hybrid over Bluetooth (its update service, else VIA's): keyboard firmware, then Bluetooth firmware
+    const devs = (await hidDevices()).filter((d) => eck.isBluetooth(d) && d.collections[0].usagePage === 0xff60);
+    const dev = devs.find((d) => d.collections[0].usage === 0x62) || devs.find((d) => d.collections[0].usage === 0x61);
+    if (!dev) throw new Error('no HHKB on Bluetooth');
+    await dev.open();
+    const ble = new eck.BleUpdate(dev);
+    const data = new Uint8Array(readFileSync(file));
+    await eck.stm32UpdateBle(ble, data, { log, progress });
+    tenth = 0;
+    await eck.nrfUpdateBle(ble, data, { log, progress });
+    await ble.close();
 } else {
-    console.log('usage: node tools/web_bench/bench.mjs install|update|backup|restore|guards FILE');
+    console.log('usage: node tools/web_bench/bench.mjs install|update|backup|restore|guards|ble FILE');
     process.exit(2);
 }
 process.exit(0);

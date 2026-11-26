@@ -1,12 +1,18 @@
 """Find an HHKB running ECK by its VIA raw HID interface and exchange 32-byte VIA reports (hidapi).
 ECK_PRODUCT (default "HHKB") picks another ECK keyboard by its product string, e.g. ECK_PRODUCT=R3S."""
 import os
+import re
 import sys
 import time
 
 PRODUCT = os.environ.get("ECK_PRODUCT", "HHKB")
 # ECK_BLUETOOTH=1: the Hybrid's Bluetooth VIA interface instead of USB (bench checks only: it refuses updates)
 BLUETOOTH = os.environ.get("ECK_BLUETOOTH") == "1"
+
+
+def is_bluetooth(d):
+    """hidapi bus type 2, or (older hidapi without bus_type) the nRF52's name HHKB-Hybrid_n."""
+    return d.get("bus_type") == 2 or re.match(r"HHKB-Hybrid_\d", d["product_string"] or "") is not None
 
 
 def open_keyboard(required=True, wait=0.0):
@@ -19,7 +25,7 @@ def open_keyboard(required=True, wait=0.0):
     while True:
         # USB unless asked: the Hybrid's Bluetooth VIA interface refuses updates (hidapi bus type 2)
         devs = [d for d in hid.enumerate() if d["usage_page"] == 0xFF60 and d["usage"] == 0x61
-                and PRODUCT in (d["product_string"] or "") and (d.get("bus_type") == 2) == BLUETOOTH]
+                and PRODUCT in (d["product_string"] or "") and is_bluetooth(d) == BLUETOOTH]
         if devs:
             h = hid.device()
             h.open_path(devs[0]["path"])

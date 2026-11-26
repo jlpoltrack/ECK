@@ -101,7 +101,7 @@ def chords(pos):
     """Chords by key position, whatever the keymap holds: flat index -> (label, group)."""
     c = {pos["1"]: ("BT 1", "link"), pos["1"] + 1: ("BT 2", "link"), pos["1"] + 2: ("BT 3", "link"),
          pos["4"]: ("BT 4", "link"), pos["0"]: ("USB", "link"), pos["Q"]: ("Pairing", "pair"),
-         pos["X"]: ("Cancel", "pair"), pos["Z"]: ("Forget\nall", "pair"), pos["DEL"]: ("Forget", "pair"),
+         pos["X"]: ("Cancel", "pair"), pos["U"]: ("Allow\nupdate", "link"), pos["Z"]: ("Forget\nall", "pair"), pos["DEL"]: ("Forget", "pair"),
          pos["W"]: ("Win/\nMac", "mode"), pos["V"]: ("VIA\nmode", "mode"), pos["CTRL"]: ("Ctrl", "hold"),
          pos["FN"]: ("Fn", "fn")}
     if "FN_LEFT" in pos:  # JIS: either Fn key
@@ -131,7 +131,8 @@ def notes(delete):
              "• Pair a slot: Fn + Ctrl + Q (blue blinks twice a second), then Fn + Ctrl + 1-4.",
              "• Cancel pairing: Fn + Ctrl + X.",
              f"• Forget a slot: Fn + Ctrl + Q, then hold Fn + Ctrl + {delete} and press 1-4.",
-             f"• Forget all: Fn + Ctrl + Q, then hold Fn + Ctrl + {delete} and press Z."]]
+             f"• Forget all: Fn + Ctrl + Q, then hold Fn + Ctrl + {delete} and press Z.",
+             "• Allow firmware updates over Bluetooth for 5 minutes: Fn + Ctrl + U (not on low batteries)."]]
 # DIP switches (docs/config.md), read at power-on: (switch, OFF, ON)
 MODES = [("OFF", "OFF", "HHK (default)", "Fn + right ◇ sends Stop"),
          ("ON", "OFF", "Win", "No extras"),
@@ -311,7 +312,9 @@ LEDS = [(BLUE, [("Turning on", "Lit while the power switch is held, then 1 s", [
                   ("Batteries low", "One blink every ~33 s (on batteries, using Bluetooth)", blinks(1, 600)),
                   ("Replace batteries", "Two blinks every ~16.5 s (on batteries, using Bluetooth)", blinks(2, 600)),
                   ("Batteries empty", "At power-on, then the keyboard turns off", [(0, 2000)]),
-                  ("Firmware update", "Solid while the main chip is being updated", [(0, SPAN)]),
+                  ("Updates allowed", "Fn + Ctrl + U: Bluetooth updates may start for 5 minutes", blinks(2, 300)),
+                  ("Updates refused", "Fn + Ctrl + U on low batteries (level 2-3): plug in USB or replace them", [(0, 1000)]),
+                  ("Firmware update", "Solid while the main chip is being updated (USB or Bluetooth)", [(0, SPAN)]),
                   ("Bluetooth update", "Two blinks a second while the Bluetooth chip updates or recovers", blinks(6, 250))])]
 TX, TW = 470, 200  # timeline x and width (px for SPAN ms)
 text(20, 28, "LED Patterns", size=17, ink="#222", bold=True)

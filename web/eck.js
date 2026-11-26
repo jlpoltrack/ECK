@@ -96,11 +96,18 @@ function checkVectors(sec, base, what) {
         throw new Error(`${what} vectors look wrong (SP ${hex(sp)}, reset ${hex(reset)})`);
 }
 
-/** First 8 KB of Bank 1: the ECK boot stub's vectors point into its first 4 KB and the rest is erased. */
+/** Start of Bank 1: the ECK boot stub (under 3 KB) has its vectors in its first 4 KB, padded with 0xFF
+ * from STUB_MAX; Bluetooth updates stage images from 0x1000, so the rest may hold data. */
+const STUB_MAX = 0xc00;
+const STAGE_HDR = 0x0800ff80, STAGE_MAGIC = 0x55534345; // stm32/hybrid/bank1_stage.h
+const stubInstalls = (b) => {
+    for (let i = 0; i + 4 <= Math.min(b.length, STUB_MAX); i += 4) if (u32(b, i) === STAGE_MAGIC) return true;
+    return false;
+};
 export function hasBootStub(head) {
-    if (head.length < 0x2000) return false;
+    if (head.length < 0x1000) return false;
     const sp = u32(head, 0), reset = u32(head, 4);
-    return sp >>> 24 === 0x20 && reset >= BANK1 && reset < BANK1 + 0x1000 && head.subarray(0x1000).every((b) => b === 0xff);
+    return sp >>> 24 === 0x20 && reset >= BANK1 && reset < BANK1 + 0x1000 && head.subarray(STUB_MAX, 0x1000).every((b) => b === 0xff);
 }
 
 /** Bank 1 of a Realforce R3S (Topre's updater) holds "Topre"; an HHKB's (PFU's updater or ECK's stub) doesn't. */
@@ -558,7 +565,7 @@ export async function detectLayout(dfu) {
 
 /** Checks a boot stub image before anything is written. */
 export function checkBootStub(stub) {
-    if (stub.length > 0x1000) throw new Error('boot stub larger than 4 KB');
+    if (stub.length > STUB_MAX) throw new Error('boot stub larger than 3 KB');
     checkVectors(stub, BANK1, 'boot stub');
 }
 
@@ -576,6 +583,16 @@ export async function stm32Update(dfu, data, { log, progress, stub = null, save,
         if (!stub) throw new Error("ECK's boot stub is not installed: finish setup first");
         await writeBootStub(dfu, stub, bank1, { log, save, confirm });
     }
+    // An ECK stub without Bluetooth installs (no STAGE_MAGIC) gets the bundled one, its 4 KB page only; never the reverse.
+    if (stub && hasBootStub(bank1) && !stubInstalls(bank1) && stubInstalls(stub)) {
+        checkBootStub(stub);
+        const page = new Uint8Array(0x1000).fill(0xff);
+        page.set(stub);
+        await dfu.writeVerified(ALT.FLASH, BANK1, page, 'boot stub updated', log);
+    }
+    // A Bluetooth install marker the boot stub didn't act on (recovery): this USB write must win.
+    if (bank1.subarray(STAGE_HDR - BANK1, STAGE_HDR - BANK1 + 16).some((b) => b !== 0))
+        await dfu.writeVerified(ALT.FLASH, STAGE_HDR, new Uint8Array(128), 'Bluetooth install marker cleared', log);
     await writeBank2(dfu, stm32, log, progress);
     await dfu.leave();
 }
@@ -640,4 +657,183 @@ export async function r3sUpdate(dfu, data, { log, progress }) {
     await dfu.writeVerified(ALT.FLASH, BANK2, stm32, 'firmware (Bank 2)', log, progress);
     await dfu.writeVerified(ALT.EEPROM, R3S_TAG, tag(crc16mcrf4xx(stm32)), 'boot tag', log);
     await dfu.leave();
+}
+
+// ---------- Hybrid updates over Bluetooth (nrf52/main.c upd_cmd; tools/hybrid_update.py --bluetooth) ----------
+
+// The 244-byte update service (hosts paired since v0.9.0), else the 32-byte VIA service; both carry protocol 0xE6.
+export const BLE_UPD_FILTERS = [
+    { vendorId: 0xcafe, usagePage: 0xff60, usage: 0x62 },
+    { vendorId: 0xcafe, usagePage: 0xff60, usage: 0x61 },
+];
+const BU = { CMD: 0xe6, STATUS: 1, BEGIN: 2, CRC: 3, DATA: 4, COMMIT: 5, FINISH: 6, INSTALL: 7, ABORT: 8, COPY: 9 };
+const BS = { READY: 2, STAGED: 5, ERROR: 6, STM_DONE: 8 };
+const BU_ERRORS = { 1: 'image size refused', 2: 'erase failed', 3: 'write failed', 4: 'MD5 mismatch', 5: 'out of order',
+    6: 'busy', 7: 'the keyboard rejected the image',
+    8: "the boot stub is too old to install it: update the keyboard firmware over USB once (it updates the boot stub)",
+    9: 'not an ECK Bluetooth image', 10: 'the file is for another model or layout',
+    11: 'not allowed yet: press Fn + Ctrl + U on the keyboard (allows updates for 5 minutes), then click again' };
+const BU_PAGE = 0x1000, STM_STAGE_MAX = 0xef80;
+
+export function crc32(data) {
+    let c = ~0;
+    for (const b of data) {
+        c ^= b;
+        for (let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0xedb88320 : c >>> 1;
+    }
+    return ~c >>> 0;
+}
+
+export class BleUpdate {
+    constructor(dev) {
+        this.dev = dev;
+        this.size = dev.collections.some((c) => c.usagePage === 0xff60 && c.usage === 0x62) ? 244 : 32;
+        this.jis = dev.productId === ECK_JIS_PID;
+        this.queue = [];
+        dev.addEventListener('inputreport', (e) => this.queue.push(new Uint8Array(e.data.buffer)));
+    }
+    static async request() {
+        const devs = (await navigator.hid.requestDevice({ filters: BLE_UPD_FILTERS })).filter(isBluetooth);
+        if (!devs.length) throw new Error("pick the HHKB's Bluetooth connection (HHKB-Hybrid_n)");
+        const has = (d, u) => d.collections.some((c) => c.usagePage === 0xff60 && c.usage === u);
+        // The 244-byte update service first; a host that can't write its reports (ATT MTU) gets VIA's.
+        for (const dev of [...devs.filter((d) => has(d, 0x62)), ...devs.filter((d) => !has(d, 0x62))]) {
+            if (!dev.opened) await dev.open();
+            const ble = new BleUpdate(dev);
+            if (await ble.ask(BU.STATUS, [], 2000).then(() => true, () => false)) return ble;
+            await ble.close();
+        }
+        throw new Error('the keyboard did not answer over Bluetooth (needs ECK v0.9.0 or later)');
+    }
+    /** The running STM32's Bank 2 CRC, as it told the nRF52 at start-up, or null. */
+    async stm32Crc() {
+        const r = await this.ask(BU.STATUS);
+        return r.length >= 15 && r[12] ? r[13] | (r[14] << 8) : null;
+    }
+    async close() {
+        if (this.dev.opened) await this.dev.close();
+    }
+    async send(op, payload = []) {
+        const r = new Uint8Array(this.size);
+        r.set([BU.CMD, op, ...payload]);
+        await this.dev.sendReport(0, r);
+    }
+    async ask(op, payload = [], timeout = 3000) {
+        this.queue = [];
+        await this.send(op, payload);
+        for (const end = Date.now() + timeout; Date.now() < end; ) {
+            const r = this.queue.find((q) => q[0] === BU.CMD && q[1] === op);
+            if (r) return r;
+            await sleep(10);
+        }
+        throw new Error(`no reply over Bluetooth (update command ${op})`);
+    }
+    async wait(want, { done = null, timeout = 60000, poll = 20 } = {}) {
+        for (const end = Date.now() + timeout; ; ) {
+            const r = await this.ask(BU.STATUS);
+            const state = r[2], err = r[3], d = r[4] | (r[5] << 8);
+            if (state === BS.ERROR) throw new Error(`update failed: ${BU_ERRORS[err] || err} (page ${d})`);
+            if (state === want && (done === null || d >= done)) return;
+            if (Date.now() > end) throw new Error(`update timed out (state ${state}, page ${d})`);
+            await sleep(poll);
+        }
+    }
+    /** Sends pages in order; unchanged ones (same: a Set) as COPY runs from the live image. */
+    async sendPages(image, same, progress) {
+        const pages = Math.ceil(image.length / BU_PAGE), step = this.size - 6;
+        for (let p = 0; p < pages; ) {
+            let n = 1;
+            if (same.has(p)) {
+                while (same.has(p + n)) n++;
+                await this.send(BU.COPY, [p & 0xff, p >> 8, n & 0xff, n >> 8]);
+                await this.wait(BS.READY, { done: p + n, timeout: 10000 + 1000 * n, poll: 100 });
+            } else {
+                const end = Math.min((p + 1) * BU_PAGE, image.length);
+                for (let off = p * BU_PAGE; off < end; off += step) {
+                    const chunk = image.subarray(off, Math.min(off + step, end));
+                    await this.send(BU.DATA, [off & 0xff, (off >> 8) & 0xff, off >> 16, chunk.length, ...chunk]);
+                }
+                await this.send(BU.COMMIT, [p & 0xff, p >> 8, 0]);
+                await this.wait(BS.READY, { done: p + 1, timeout: 10000, poll: 50 });
+            }
+            p += n;
+            progress(p / pages);
+        }
+    }
+}
+
+/** Keyboard (STM32) firmware over Bluetooth: staged on the nRF52, pulled and checked by the STM32, which
+ * restarts; its boot stub installs it (solid orange LED). Bluetooth stays connected. */
+export async function stm32UpdateBle(ble, data, { log, progress }) {
+    const { stm32, model } = parseHfb(data);
+    if ((model === 'AHJX01') !== ble.jis) throw new Error(`the keyboard is ${ble.jis ? 'JIS' : 'US'}, the file is not`);
+    let end = stm32.length;
+    while (end > 0 && stm32[end - 1] === 0xff) end--;
+    const image = new Uint8Array((end + 3) & ~3).fill(0xff);
+    image.set(stm32.subarray(0, end));
+    if (image.length > STM_STAGE_MAX) throw new Error(`the keyboard firmware is ${image.length} bytes; Bluetooth updates hold ${STM_STAGE_MAX}`);
+    const crc = crc16mcrf4xx(stm32);
+    try {
+        log(`Keyboard firmware: ${image.length} bytes over Bluetooth (${ble.size}-byte reports); typing pauses.`);
+        await ble.ask(BU.BEGIN, [...le32(image.length), ...md5(image), 1, crc & 0xff, crc >> 8]);
+        await ble.wait(BS.READY, { timeout: 120000, poll: 300 });
+        await ble.sendPages(image, new Set(), progress);
+        log('Sent; the keyboard checks it...');
+        await ble.ask(BU.FINISH);
+        await ble.wait(BS.STM_DONE, { timeout: 60000, poll: 200 });
+        await ble.send(BU.INSTALL).catch(() => {}); // it may restart before acknowledging
+        log('Checked. The keyboard restarts and installs it (~6 s, orange LED on)...');
+        await sleep(5000);
+        let got = null;
+        for (const end = Date.now() + 40000; Date.now() < end && got !== crc; ) {
+            got = await ble.stm32Crc().catch(() => null);
+            if (got !== crc) await sleep(1000);
+        }
+        if (got !== crc) throw new Error('the keyboard does not run the new firmware: the install did not happen (USB still updates it)');
+        log('Installed: the keyboard runs the new firmware.');
+    } catch (e) {
+        try {
+            await ble.send(BU.ABORT);
+        } catch {}
+        throw e;
+    }
+}
+
+/** Bluetooth (nRF52) firmware over Bluetooth: only changed 4 KB pages are sent; false when nothing changed.
+ * PFU's bootloader installs it (orange LED blinks); Bluetooth drops for ~10 s. */
+export async function nrfUpdateBle(ble, data, { log, progress }) {
+    const { nrf, nrfMd5, model } = parseHfb(data);
+    if ((model === 'AHJX01') !== ble.jis) throw new Error(`the keyboard is ${ble.jis ? 'JIS' : 'US'}, the file is not`);
+    const pages = Math.ceil(nrf.length / BU_PAGE);
+    const st = await ble.ask(BU.STATUS);
+    if (st[6] !== 1) throw new Error(`the keyboard's update protocol is ${st[6]}; this page speaks 1`);
+    const same = new Set();
+    for (let first = 0; first < pages; first += 6) {
+        const n = Math.min(6, pages - first);
+        const r = await ble.ask(BU.CRC, [first, n]);
+        for (let i = 0; i < n; i++) {
+            const p = first + i, live = (r[8 + 4 * i] | (r[9 + 4 * i] << 8) | (r[10 + 4 * i] << 16) | (r[11 + 4 * i] << 24)) >>> 0;
+            if ((p + 1) * BU_PAGE <= nrf.length && live === crc32(nrf.subarray(p * BU_PAGE, (p + 1) * BU_PAGE))) same.add(p);
+        }
+    }
+    if (same.size === pages) {
+        log('Bluetooth firmware: already up to date.');
+        return false;
+    }
+    try {
+        log(`Bluetooth firmware: ${pages - same.size} of ${pages} pages changed; typing pauses.`);
+        await ble.ask(BU.BEGIN, [...le32(nrf.length), ...nrfMd5, 0, 0, 0]);
+        await ble.wait(BS.READY, { timeout: 120000, poll: 300 });
+        await ble.sendPages(nrf, same, progress);
+        await ble.ask(BU.FINISH);
+        await ble.wait(BS.STAGED, { timeout: 10000 });
+        await ble.send(BU.INSTALL).catch(() => {}); // it restarts within ~1.5 s, often before acknowledging
+    } catch (e) {
+        try {
+            await ble.send(BU.ABORT);
+        } catch {}
+        throw e;
+    }
+    log('Checked. The Bluetooth chip restarts and installs it (orange LED blinks); Bluetooth is back in ~10 s.');
+    return true;
 }

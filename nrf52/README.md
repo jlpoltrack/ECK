@@ -36,7 +36,7 @@ Replaces an app whose Bluetooth side is broken (crashes in SoftDevice or BLE sta
 
 ## Link protocol
 
-`common/ble_link.h` defines the SPI link (32-byte frames, STM32 master, nRF52 slave); both builds include it. Bump `BLE_LINK_VERSION` (now 8) on any frame change. The nRF52 reports its version in every status reply; the STM32 doesn't check it.
+`common/ble_link.h` defines the SPI link (32-byte frames, STM32 master, nRF52 slave); both builds include it. Bump `BLE_LINK_VERSION` (now 9) on any frame change. The nRF52 reports its version in every status reply; the STM32 doesn't check it.
 
 ## Licence
 

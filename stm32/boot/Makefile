@@ -10,7 +10,7 @@ _build/hybrid_boot.bin: _build/hybrid_boot.elf
 	arm-none-eabi-objcopy -O binary $< $@
 	arm-none-eabi-size $<
 
-_build/hybrid_boot.elf: boot.c boot.ld ../hybrid/rom_dfu.h | _build
+_build/hybrid_boot.elf: boot.c boot.ld ../hybrid/rom_dfu.h ../hybrid/bank1_stage.h | _build
 	$(CC) $(CFLAGS) $(LDFLAGS) boot.c -o $@
 
 _build:

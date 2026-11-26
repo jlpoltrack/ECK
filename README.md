@@ -22,7 +22,7 @@ Model numbers, what isn't supported (HHKB Pro 2, Studio) and why: [docs/models.m
 - **[Vial](docs/vial.md)** on every keyboard, no definition file needed: keymap, macros, tap dance, combos, key overrides, Caps Word, one-shot keys, QMK settings.
 - **[VIA](docs/via.md)** with the **HHKB Settings** menu (tap-hold, calibration, Rapid Trigger, LEDs): press Fn + Ctrl + V to switch to VIA mode until the next restart.
 - Mod-Tap and Layer-Tap, two base/Fn layer pairs, assignable LEDs, stock DIP switch behaviour on the HHKB.
-- **Hybrid:** Bluetooth LE with four host slots on Nordic's S132 SoftDevice ([`nrf52/`](nrf52/README.md)), the stock key combinations, VIA and Vial over Bluetooth ([VIA](docs/via.md)), and much lower battery drain ([below](#hybrid-battery-life)).
+- **Hybrid:** Bluetooth LE with four host slots on Nordic's S132 SoftDevice ([`nrf52/`](nrf52/README.md)), the stock key combinations, VIA and Vial over Bluetooth ([VIA](docs/via.md)), firmware updates over Bluetooth ([updates](docs/hybrid-update.md#2-updating-eck)), and much lower battery drain ([below](#hybrid-battery-life)).
 
 Full feature list and day-to-day use: [docs/overview.md](docs/overview.md). Open work: [docs/deferred.md](docs/deferred.md).
 
@@ -32,7 +32,7 @@ Full feature list and day-to-day use: [docs/overview.md](docs/overview.md). Open
 
 **<https://jlpoltrack.github.io/ECK/>** (Chrome or Edge on a desktop, for WebHID and WebUSB). It carries the latest release, with one tab for the HHKB and one for the Realforce R3S. Click **Connect keyboard** and it offers what fits your keyboard: first install from stock (on the Hybrid, followed by ECK's boot stub, which enables USB updates and recovery), updates and settings backup on the Hybrid and the R3S, the SW6 reinstall steps on a Classic, and recovery for a Hybrid or R3S that doesn't start. On the R3S, an update with Topre's own `.rfb` (Advanced) puts the stock firmware back.
 
-Tested on a Hybrid running ECK: keyboard and Bluetooth updates, settings backup and restore, both recovery buttons. First install from stock firmware is not yet tested on an HHKB. On the R3S, the flasher's code passed install from stock, update, backup, restore and the return to stock on the owner's keyboard (driven from Node by `tools/web_bench/bench.mjs`); its buttons haven't been clicked through in Chrome with an R3S yet.
+Tested on a Hybrid running ECK: keyboard and Bluetooth updates (over USB, and both over Bluetooth in Chrome on a Mac), settings backup and restore, both recovery buttons. First install from stock firmware is not yet tested on an HHKB. On the R3S, the flasher's code passed install from stock, update, backup, restore and the return to stock on the owner's keyboard (driven from Node by `tools/web_bench/bench.mjs`); its buttons haven't been clicked through in Chrome with an R3S yet.
 
 > On Windows, ST's DFU loader needs the WinUSB driver once (Zadig, device "DFU in FS Mode").
 

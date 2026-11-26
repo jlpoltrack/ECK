@@ -98,6 +98,13 @@ summary { cursor: pointer; font-weight: 600; }
     <p id="kb-msg" hidden></p>
   </section>
 
+  <section class="card">
+    <h2>Update over Bluetooth (Hybrid)</h2>
+    <p>Updates the keyboard firmware, then the Bluetooth firmware if it changed, without a cable. First press <b>Fn + Ctrl + U</b> on the keyboard (allows updates for 5 minutes; two orange blinks). Then click, and pick <b>HHKB-Hybrid_1</b> (or _2.._4) in the dialog. Typing pauses for about a minute.</p>
+    <div class="row"><button id="b-ble">Update over Bluetooth</button></div>
+    <p class="muted">Needs ECK v0.9.0 or later, installed once over USB. Hosts paired before v0.9.0 work, but slower: forget the keyboard and pair again for full speed. Orange LED: solid while the keyboard firmware installs, blinking for the Bluetooth firmware.</p>
+  </section>
+
   <section class="card" id="via" hidden>
     <h2>Keymap and settings (VIA)</h2>
     <p>Change the keymap, macros and ECK's settings in VIA with this keyboard definition.</p>

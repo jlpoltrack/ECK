@@ -6,7 +6,7 @@
 
 /* Hybrid Bluetooth chords, all Fn+Ctrl (PFU's Q, X and Z+Delete take Fn only): 1..4 select a host
  * slot, 0 USB; Q pairing standby, then 1..4 pairs, Delete+1..4 forgets a host and Delete+Z forgets
- * all; X cancels. */
+ * all; X cancels; U allows Bluetooth firmware updates for 5 minutes. */
 typedef enum {
     CHORD_NONE,
     CHORD_SELECT,    /* *slot */
@@ -16,6 +16,7 @@ typedef enum {
     CHORD_STANDBY,
     CHORD_CANCEL,
     CHORD_CLEAR_ALL,
+    CHORD_ARM_UPDATE, /* U: allow firmware updates over Bluetooth for a while */
 } hybrid_chord_t;
 
 /* Chord for the key at flat index pos pressed while Fn is held (by position, not keycode). */

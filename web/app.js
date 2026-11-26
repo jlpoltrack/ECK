@@ -3,7 +3,7 @@ import * as eck from './eck.js';
 
 const $ = (id) => document.getElementById(id);
 const logEl = $('log'), stateEl = $('state'), bar = $('progress'), gate = $('gate');
-const controls = ['b-connect', 'b-install', 'b-stm32', 'b-nrf', 'b-backup', 'b-recover', 'b-nrf-recover', 'b-restore', 'eepromfile', 'hfbfile',
+const controls = ['b-connect', 'b-ble', 'b-install', 'b-stm32', 'b-nrf', 'b-backup', 'b-recover', 'b-nrf-recover', 'b-restore', 'eepromfile', 'hfbfile',
     'r-connect', 'r-install', 'r-update', 'r-backup', 'r-restore', 'r-eepromfile', 'r-recover-b'].map($);
 const windows = navigator.userAgent.includes('Windows');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -357,6 +357,21 @@ $('b-nrf').onclick = async () => {
         }
     });
     await redetect();
+};
+
+$('b-ble').onclick = async () => {
+    await run('Update over Bluetooth', async () => {
+        say('Select HHKB-Hybrid_1 (or the slot you use) in the next dialog.');
+        const ble = await withGesture('Select keyboard', () => eck.BleUpdate.request());
+        try {
+            const data = await firmware(hybridModel(ble.jis));
+            await eck.stm32UpdateBle(ble, data, { log, progress });
+            progress(0);
+            await eck.nrfUpdateBle(ble, data, { log, progress });
+        } finally {
+            await ble.close().catch(() => {});
+        }
+    });
 };
 
 $('b-backup').onclick = async () => {

@@ -29,6 +29,7 @@
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
+#include "nrf_nvic.h"
 #include "nrf_pwr_mgmt.h"
 #include "nrf_sdh.h"
 #include "nrf_sdh_ble.h"
@@ -77,6 +78,10 @@
 
 BLE_HIDS_DEF(m_hids, NRF_SDH_BLE_TOTAL_LINK_COUNT, KB_REPORT_LEN, CONSUMER_REPORT_LEN, OUTPUT_REPORT_LEN);
 BLE_HIDS_DEF(m_raw, NRF_SDH_BLE_TOTAL_LINK_COUNT, RAW_REPORT_LEN, RAW_REPORT_LEN);
+/* Firmware updates: a third HID service, appended last, with 244-byte output reports (MTU 247 - 3):
+ * the Mac acknowledges each HID write, one per two connection events, so report size sets the speed. */
+#define UPD_REPORT_LEN 244
+BLE_HIDS_DEF(m_upd, NRF_SDH_BLE_TOTAL_LINK_COUNT, RAW_REPORT_LEN, UPD_REPORT_LEN);
 BLE_BAS_DEF(m_bas);
 NRF_BLE_GATT_DEF(m_gatt);
 NRF_BLE_QWR_DEF(m_qwr);
@@ -127,6 +132,20 @@ static uint8_t m_raw_part;        /* request part the next status shows */
 static bool m_raw_resp_ready;     /* reply waiting for a notification slot */
 static bool m_latency_off;
 APP_TIMER_DEF(m_raw_timer);
+static uint8_t m_install;           /* 1: install asked, then counts statuses showing it (INSTALL_SHOWN) */
+#define INSTALL_SHOWN 4             /* repeats cover a corrupted frame: the STM32 must not reset us mid-copy */
+APP_TIMER_DEF(m_install_timer);
+#define INSTALL_WAIT_MS 1500        /* restart even if the STM32 never polls */
+APP_TIMER_DEF(m_bupd_timer);
+APP_TIMER_DEF(m_arm_timer);
+static bool m_upd_armed; /* Fn+Ctrl+U on the keyboard within BLE_LINK_UPD_ARM_MS */
+static uint16_t m_stm_crc; /* the running STM32's Bank 2 CRC (BLE_LINK_CMD_STM_INFO), for the host's check */
+static bool m_stm_crc_known;
+#define BUPD_IDLE_MS 30000          /* an update with no host command for this long is dropped: typing resumes */
+static uint8_t m_stm_restart;       /* 1: asked, then counts statuses showing it; cleared after STM_RESTART_SHOWN */
+#define STM_RESTART_SHOWN 4         /* the STM32 acts on the first it reads; repeats cover a corrupted frame */
+static bool m_pull;                 /* answer the next exchange with staged STM32 data */
+static uint32_t m_pull_off;
 #define RAW_SESSION_MS 5000 /* slave latency stays off this long after a request; unanswered requests expire */
 
 /* SPI buffers: the status for the next transaction is prepared after each one. */
@@ -186,6 +205,10 @@ static void queue_drain(void) {
 
 static void raw_drain(void) {
     if (!m_raw_resp_ready || m_conn_handle == BLE_CONN_HANDLE_INVALID) return;
+    if (nrf_ble_gatt_eff_mtu_get(&m_gatt, m_conn_handle) < RAW_REPORT_LEN + 3U) { /* would go out cut short */
+        m_raw_resp_ready = false;
+        return;
+    }
     ret_code_t err = ble_hids_inp_rep_send(&m_raw, 0, RAW_REPORT_LEN, m_raw_resp, m_conn_handle);
     if (err == NRF_ERROR_RESOURCES) return; /* retried on BLE_GATTS_EVT_HVN_TX_COMPLETE */
     if (err == NRF_SUCCESS) m_inflight++;
@@ -439,16 +462,19 @@ static void foreign_peers_delete(void) {
 
 /* ---------- link ---------- */
 
+static bool bupd_active(void);
+
 static void status_prepare(bool refused) {
     memset(&m_tx, 0, sizeof(m_tx));
     m_tx.magic = BLE_LINK_MAGIC_TO_STM;
     m_tx.seq = m_last_seq;
     m_tx.type = BLE_LINK_STATUS;
-    m_tx.len = 26;
+    m_tx.len = 27;
     m_tx.data[0] = (m_secured ? BLE_LINK_ST_CONNECTED : 0) | (m_advertising_on ? BLE_LINK_ST_ADVERTISING : 0) |
                    (refused ? BLE_LINK_ST_QUEUE_FULL : 0) | (m_pairing ? BLE_LINK_ST_PAIRING : 0) |
                    (m_passkey_wait ? BLE_LINK_ST_PASSKEY : 0) | (m_recovery ? BLE_LINK_ST_RECOVERY : 0) |
-                   (m_host_rejected ? BLE_LINK_ST_HOST_REJECTED : 0);
+                   (m_host_rejected ? BLE_LINK_ST_HOST_REJECTED : 0) | (m_install ? BLE_LINK_ST_INSTALLING : 0);
+    if (m_install && m_install <= INSTALL_SHOWN) m_install++; /* the STM32 reads it on its next exchange */
     m_tx.data[1] = m_host_leds;
     m_tx.data[2] = BLE_LINK_VERSION;
     m_tx.data[3] = (uint8_t)(QUEUE_LEN - m_q_count);
@@ -463,6 +489,33 @@ static void status_prepare(bool refused) {
         m_tx.data[17] = (uint8_t)(BLE_LINK_RAW_VALID | (m_raw_id << 2) | m_raw_part);
         memcpy(&m_tx.data[18], &m_raw_req[m_raw_part * BLE_LINK_RAW_PART], BLE_LINK_RAW_PART);
         m_raw_part = (uint8_t)((m_raw_part + 1U) & 3U);
+    }
+    m_tx.data[26] = (nrf_bupd_state() == NRF_BUPD_STM_READY ? BLE_LINK_STM_READY : 0) |
+                    (m_stm_restart ? BLE_LINK_STM_RESTART : 0) | (bupd_active() ? BLE_LINK_BUPD_ACTIVE : 0) |
+                    (bupd_active() && nrf_bupd_target() == NRF_BUPD_TARGET_STM32 ? BLE_LINK_BUPD_STM32 : 0);
+    if (m_stm_restart && m_stm_restart <= STM_RESTART_SHOWN) m_stm_restart++;
+    m_tx.check = ble_link_check(&m_tx);
+}
+
+/* Staged STM32 image bytes (or its size and CRC) for the STM32's BLE_LINK_PULL. */
+static void data_prepare(void) {
+    memset(&m_tx, 0, sizeof(m_tx));
+    m_tx.magic = BLE_LINK_MAGIC_TO_STM;
+    m_tx.seq = m_last_seq;
+    m_tx.type = BLE_LINK_DATA;
+    m_tx.len = 3 + BLE_LINK_PULL_LEN;
+    uint32_t echo = nrf_bupd_state() == NRF_BUPD_STM_READY ? m_pull_off : BLE_LINK_PULL_GONE; /* ends the pull */
+    memcpy(m_tx.data, &echo, 3);
+    uint32_t size = nrf_bupd_size();
+    if (nrf_bupd_state() != NRF_BUPD_STM_READY) {
+        /* nothing staged: zeros, which the STM32's CRC check rejects */
+    } else if (m_pull_off == BLE_LINK_PULL_INFO) {
+        uint16_t crc = nrf_bupd_stm_crc();
+        memcpy(&m_tx.data[3], &size, sizeof(size));
+        memcpy(&m_tx.data[7], &crc, sizeof(crc));
+    } else if (m_pull_off < size) {
+        uint32_t n = size - m_pull_off < BLE_LINK_PULL_LEN ? size - m_pull_off : BLE_LINK_PULL_LEN;
+        memcpy(&m_tx.data[3], (const void *)(NRF_BUPD_STAGE_BASE + m_pull_off), n);
     }
     m_tx.check = ble_link_check(&m_tx);
 }
@@ -573,6 +626,7 @@ static bool update_frame(const ble_link_frame_t *f) {
     uint32_t word = 0;
     if (f->len >= 5) memcpy(&word, &f->data[1], sizeof(word));
     if (f->data[0] == BLE_LINK_UPD_START && f->len >= 21) {
+        if (bupd_active()) return true; /* a Bluetooth update owns the staging area */
         update_begin();
         nrf_update_start(word, &f->data[5]);
     } else if (!m_updating) {
@@ -616,6 +670,12 @@ static void power_off_try(void) {
     for (;;) (void)sd_app_evt_wait(); /* only reached in emulated System OFF under a debugger */
 }
 
+/* Typing pauses during a Bluetooth update (owner): flash erases stall the chip. */
+static bool bupd_active(void) {
+    uint8_t s = nrf_bupd_state();
+    return s != NRF_BUPD_IDLE && s != NRF_BUPD_ERROR;
+}
+
 /* Returns false when the frame could not be taken and must be resent. */
 static bool frame_handle(const ble_link_frame_t *f) {
     if (f->type == BLE_LINK_UPDATE && f->len >= 1) return update_frame(f);
@@ -624,10 +684,11 @@ static bool frame_handle(const ble_link_frame_t *f) {
     case BLE_LINK_KEYBOARD:
         if (f->len != KB_REPORT_LEN) return true;
         /* drop while not connected, or after the release reports of a disconnect */
-        return !m_secured || m_disc_pending || queue_push(REPORT_KB, f->data, KB_REPORT_LEN);
+        return !m_secured || m_disc_pending || bupd_active() || queue_push(REPORT_KB, f->data, KB_REPORT_LEN);
     case BLE_LINK_CONSUMER:
         if (f->len != CONSUMER_REPORT_LEN) return true;
-        return !m_secured || m_disc_pending || queue_push(REPORT_CONSUMER, f->data, CONSUMER_REPORT_LEN);
+        return !m_secured || m_disc_pending || bupd_active() ||
+               queue_push(REPORT_CONSUMER, f->data, CONSUMER_REPORT_LEN);
     case BLE_LINK_BATTERY:
         if (f->len == 1) battery_update(f->data[0]);
         return true;
@@ -678,6 +739,21 @@ static bool frame_handle(const ble_link_frame_t *f) {
             power_off_start();
         } else if (f->data[0] == BLE_LINK_CMD_DISCONNECT) {
             disconnect();
+        } else if (f->data[0] == BLE_LINK_CMD_UPD_ARM) {
+            m_upd_armed = true;
+            (void)app_timer_stop(m_arm_timer);
+            APP_ERROR_CHECK(app_timer_start(m_arm_timer, APP_TIMER_TICKS(BLE_LINK_UPD_ARM_MS), NULL));
+        } else if (f->data[0] == BLE_LINK_CMD_STM_INFO && f->len >= 3) {
+            m_stm_crc = (uint16_t)(f->data[1] | f->data[2] << 8);
+            m_stm_crc_known = true;
+        } else if (f->data[0] == BLE_LINK_CMD_STM_RESULT && f->len >= 2) {
+            nrf_bupd_stm_result(f->data[1]);
+        }
+        return true;
+    case BLE_LINK_PULL:
+        if (f->len >= 3) {
+            m_pull_off = (uint32_t)f->data[0] | (uint32_t)f->data[1] << 8 | (uint32_t)f->data[2] << 16;
+            m_pull = true;
         }
         return true;
     default:
@@ -688,6 +764,11 @@ static bool frame_handle(const ble_link_frame_t *f) {
 static void link_process(void) {
     if (!m_rx_pending) return;
     m_rx_pending = false;
+    if (m_install > INSTALL_SHOWN) sd_nvic_SystemReset(); /* the STM32 has read the installing flag */
+    if (m_stm_restart > STM_RESTART_SHOWN) { /* the STM32 has read its restart: done here */
+        m_stm_restart = 0;
+        nrf_bupd_abort();
+    }
     bool refused = false;
     if (m_rx_amount == sizeof(m_rx) && m_rx.magic == BLE_LINK_MAGIC_TO_NRF && m_rx.check == ble_link_check(&m_rx) && m_rx.seq != 0 &&
         m_rx.seq != m_last_seq && m_rx.len <= BLE_LINK_DATA_MAX) {
@@ -701,7 +782,12 @@ static void link_process(void) {
         queue_drain();
         raw_drain();
     }
-    status_prepare(refused);
+    if (m_pull) {
+        m_pull = false;
+        data_prepare();
+    } else {
+        status_prepare(refused);
+    }
     spis_arm();
 }
 
@@ -745,6 +831,7 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context) {
         m_q_count = 0;
         m_inflight = 0;
         raw_reset();
+        if (!m_install) nrf_bupd_abort(); /* typing resumes; a written record is erased */
         m_disc_pending = false;
         (void)app_timer_stop(m_disc_timer);
         (void)app_timer_stop(m_sec_timer);
@@ -800,22 +887,154 @@ static void on_hids_evt(ble_hids_t *p_hids, ble_hids_evt_t *p_evt) {
     }
 }
 
+/* ---------- firmware updates over Bluetooth ----------
+ * Packets starting UPD_CMD, on the update service (244 bytes) or the VIA one (32), stay on the
+ * nRF52. [1] op; replies (32 bytes, on the same service): UPD_CMD, op, state, error, pages done (u16),
+ * then op data. The host waits for each page's commit (state READY) before sending the next. */
+#define UPD_CMD 0xE6
+enum {
+    UPD_STATUS = 1, /* reply: protocol, image max (u32), page KB, STM32 CRC known, its CRC (u16) */
+    UPD_BEGIN = 2,  /* [2..5] image size (u32), [6..21] MD5, [22] target (NRF_BUPD_TARGET_*),
+                     * [23..24] STM32: the .hfb's Bank 2 CRC; erases with slave latency on */
+    UPD_CRC = 3,    /* [2] first page, [3] count (<= 6): reply CRC-32s of the installed pages */
+    UPD_DATA = 4,   /* [2..4] offset (u24), [5] n, [6..] n bytes, all in the page being assembled */
+    UPD_COMMIT = 5, /* [2..3] page (u16), [4] 1 = copy the installed page instead */
+    UPD_FINISH = 6, /* check the MD5, write the record for PFU's bootloader */
+    UPD_INSTALL = 7, /* nRF52: restart into PFU's bootloader, which installs the staged image;
+                      * STM32 (checked): tell the STM32 to restart into its boot stub */
+    UPD_ABORT = 8,
+    UPD_COPY = 9, /* [2..3] first page, [4..5] count: copy unchanged pages from the installed image */
+};
+#define UPD_PROTOCOL 1
+#define UPD_IMAGE_MAX 0x35000UL
+
+static void upd_reply(ble_hids_t *src, uint8_t op, const uint8_t *extra, uint8_t n) {
+    uint8_t r[RAW_REPORT_LEN] = {UPD_CMD, op, nrf_bupd_state(), nrf_bupd_error()};
+    uint16_t done = nrf_bupd_done();
+    memcpy(&r[4], &done, sizeof(done));
+    if (n > RAW_REPORT_LEN - 6U) n = RAW_REPORT_LEN - 6U;
+    if (n) memcpy(&r[6], extra, n);
+    if (ble_hids_inp_rep_send(src, 0, RAW_REPORT_LEN, r, m_conn_handle) == NRF_SUCCESS) m_inflight++;
+}
+
+static void install_timeout(void *p_context) {
+    (void)p_context;
+    sd_nvic_SystemReset();
+}
+
+static void arm_end(void *p_context) {
+    (void)p_context;
+    m_upd_armed = false;
+}
+
+static void bupd_idle(void *p_context) {
+    (void)p_context;
+    if (m_install || m_stm_restart) return; /* restarting anyway */
+    nrf_bupd_abort();
+    latency_set(false);
+}
+
+/* Slave latency stays on while flash is erased or written (its skipped events give flash work gaps),
+ * off while the host sends data (else each report waits up to 30 events). */
+static void upd_cmd(ble_hids_t *src, const uint8_t *d, uint16_t len) {
+    if (len < 2) return;
+    uint8_t op = d[1];
+    (void)app_timer_stop(m_bupd_timer);
+    APP_ERROR_CHECK(app_timer_start(m_bupd_timer, APP_TIMER_TICKS(BUPD_IDLE_MS), NULL));
+    if (op == UPD_BEGIN) {
+        if (len < 25) return;
+        if (!m_upd_armed) { /* a host alone can't start one: Fn+Ctrl+U on the keyboard first */
+            nrf_bupd_refuse(NRF_BUPD_E_ARM);
+            upd_reply(src, op, NULL, 0);
+            return;
+        }
+        uint32_t size;
+        memcpy(&size, &d[2], sizeof(size));
+        static const uint8_t released[KB_REPORT_LEN > CONSUMER_REPORT_LEN ? KB_REPORT_LEN : CONSUMER_REPORT_LEN];
+        if (m_secured && !bupd_active()) { /* keys held now would stay down: their releases are dropped */
+            (void)queue_push(REPORT_KB, released, KB_REPORT_LEN);
+            (void)queue_push(REPORT_CONSUMER, released, CONSUMER_REPORT_LEN);
+            queue_drain();
+        }
+        (void)app_timer_stop(m_raw_timer);
+        latency_set(false);
+        nrf_bupd_begin(size, &d[6], d[22], (uint16_t)(d[23] | d[24] << 8));
+        upd_reply(src, op, NULL, 0);
+        return;
+    }
+    if (op == UPD_COMMIT || op == UPD_COPY) {
+        (void)app_timer_stop(m_raw_timer);
+        latency_set(false);
+    } else if (op == UPD_DATA || op == UPD_CRC || op == UPD_FINISH) {
+        latency_set(true);
+        (void)app_timer_stop(m_raw_timer);
+        APP_ERROR_CHECK(app_timer_start(m_raw_timer, APP_TIMER_TICKS(RAW_SESSION_MS), NULL));
+    }
+    if (op == UPD_DATA && len >= 6 && d[5] <= len - 6U) {
+        nrf_bupd_data((uint32_t)d[2] | (uint32_t)d[3] << 8 | (uint32_t)d[4] << 16, &d[6], d[5]);
+    } else if (op == UPD_COMMIT && len >= 5) {
+        nrf_bupd_commit((uint32_t)d[2] | (uint32_t)d[3] << 8, d[4] != 0);
+    } else if (op == UPD_COPY && len >= 6) {
+        nrf_bupd_copy((uint32_t)d[2] | (uint32_t)d[3] << 8, (uint16_t)(d[4] | d[5] << 8));
+    } else if (op == UPD_CRC && len >= 4) {
+        uint8_t out[2 + 6 * 4] = {d[2], d[3] < 6 ? d[3] : 6}; /* pages past the image read as CRC 0 */
+        for (uint8_t i = 0; i < out[1]; i++) {
+            uint32_t crc = nrf_bupd_live_crc((uint32_t)d[2] + i);
+            memcpy(&out[2 + 4 * i], &crc, sizeof(crc));
+        }
+        upd_reply(src, op, out, (uint8_t)(2 + 4 * out[1]));
+    } else if (op == UPD_STATUS) {
+        uint32_t max = UPD_IMAGE_MAX;
+        uint8_t out[9] = {UPD_PROTOCOL, (uint8_t)max, (uint8_t)(max >> 8), (uint8_t)(max >> 16), (uint8_t)(max >> 24),
+                          (uint8_t)(NRF_BUPD_PAGE >> 10), m_stm_crc_known, (uint8_t)m_stm_crc, (uint8_t)(m_stm_crc >> 8)};
+        upd_reply(src, op, out, sizeof(out));
+    } else if (op == UPD_FINISH) {
+        nrf_bupd_finish();
+        upd_reply(src, op, NULL, 0);
+    } else if (op == UPD_INSTALL) {
+        if (nrf_bupd_state() == NRF_BUPD_STAGED && !m_install) {
+            m_install = 1;
+            APP_ERROR_CHECK(app_timer_start(m_install_timer, APP_TIMER_TICKS(INSTALL_WAIT_MS), NULL));
+        } else if (nrf_bupd_state() == NRF_BUPD_STM_DONE && !m_stm_restart) {
+            m_stm_restart = 1;
+        }
+        upd_reply(src, op, NULL, 0);
+    } else if (op == UPD_ABORT) {
+        nrf_bupd_abort();
+        latency_set(false);
+        upd_reply(src, op, NULL, 0);
+    }
+}
+
+static bool output_write(ble_hids_evt_t const *p_evt) {
+    return p_evt->evt_type == BLE_HIDS_EVT_REP_CHAR_WRITE &&
+           p_evt->params.char_write.char_id.rep_type == BLE_HIDS_REP_TYPE_OUTPUT && !m_updating &&
+           p_evt->params.char_write.offset == 0 && p_evt->params.char_write.len != 0;
+}
+
+static void on_upd_evt(ble_hids_t *p_hids, ble_hids_evt_t *p_evt) {
+    if (output_write(p_evt) && p_evt->params.char_write.data[0] == UPD_CMD) {
+        upd_cmd(p_hids, p_evt->params.char_write.data, p_evt->params.char_write.len);
+    }
+}
+
 /* A VIA request from the host: shown to the STM32 in the status until it replies. A newer
  * request replaces a waiting one (a host that timed out and asked again). */
 static void on_raw_evt(ble_hids_t *p_hids, ble_hids_evt_t *p_evt) {
-    (void)p_hids;
-    if (p_evt->evt_type != BLE_HIDS_EVT_REP_CHAR_WRITE ||
-        p_evt->params.char_write.char_id.rep_type != BLE_HIDS_REP_TYPE_OUTPUT || m_updating ||
-        p_evt->params.char_write.offset != 0 || p_evt->params.char_write.len == 0) {
+    if (!output_write(p_evt)) return;
+    uint16_t len = p_evt->params.char_write.len;
+    if (p_evt->params.char_write.data[0] == UPD_CMD) {
+        upd_cmd(p_hids, p_evt->params.char_write.data, len);
         return;
     }
-    uint16_t len = p_evt->params.char_write.len;
     memset(m_raw_req, 0, sizeof(m_raw_req));
     memcpy(m_raw_req, p_evt->params.char_write.data, len < RAW_REPORT_LEN ? len : RAW_REPORT_LEN);
     m_raw_id = (uint8_t)(m_raw_id % 31U + 1U);
     m_raw_halves = 0;
     m_raw_part = 0;
     m_raw_waiting = true;
+    m_raw_resp_ready = false; /* a late reply to an earlier request must not answer this one */
+    if (bupd_active()) return; /* slave latency stays as the update set it (erases need its gaps) */
     latency_set(true);
     (void)app_timer_stop(m_raw_timer);
     APP_ERROR_CHECK(app_timer_start(m_raw_timer, APP_TIMER_TICKS(RAW_SESSION_MS), NULL));
@@ -951,13 +1170,15 @@ static void raw_hids_init(void) {
     memset(&output, 0, sizeof(output));
     input.max_len = RAW_REPORT_LEN;
     input.rep_ref.report_type = BLE_HIDS_REP_TYPE_INPUT;
-    input.sec.cccd_wr = SEC_JUST_WORKS;
-    input.sec.rd = SEC_JUST_WORKS;
-    input.sec.wr = SEC_JUST_WORKS;
+    /* Passkey (MITM) bonds only: VIA reads macros, changes settings and installs firmware; a host bonded
+     * without the passkey (claiming no input or display) gets typing only. */
+    input.sec.cccd_wr = SEC_MITM;
+    input.sec.rd = SEC_MITM;
+    input.sec.wr = SEC_MITM;
     output.max_len = RAW_REPORT_LEN;
     output.rep_ref.report_type = BLE_HIDS_REP_TYPE_OUTPUT;
-    output.sec.rd = SEC_JUST_WORKS;
-    output.sec.wr = SEC_JUST_WORKS;
+    output.sec.rd = SEC_MITM;
+    output.sec.wr = SEC_MITM;
 
     ble_hids_init_t init;
     memset(&init, 0, sizeof(init));
@@ -977,6 +1198,48 @@ static void raw_hids_init(void) {
     APP_ERROR_CHECK(ble_hids_init(&m_raw, &init));
 }
 
+/* Usage 0x62, not VIA's 0x61, so VIA and Vial never list it. */
+static void upd_hids_init(void) {
+    static const uint8_t report_map[] = {
+        0x06, 0x60, 0xFF, 0x09, 0x62, 0xA1, 0x01, /* Vendor 0xFF60, usage 0x62: ECK firmware updates */
+        0x09, 0x63, 0x15, 0x00, 0x26, 0xFF, 0x00, 0x75, 0x08, 0x95, RAW_REPORT_LEN, 0x81, 0x02,
+        0x09, 0x64, 0x15, 0x00, 0x26, 0xFF, 0x00, 0x75, 0x08, 0x95, UPD_REPORT_LEN, 0x91, 0x02,
+        0xC0,
+    };
+    static ble_hids_inp_rep_init_t input;
+    static ble_hids_outp_rep_init_t output;
+    memset(&input, 0, sizeof(input));
+    memset(&output, 0, sizeof(output));
+    input.max_len = RAW_REPORT_LEN;
+    input.rep_ref.report_type = BLE_HIDS_REP_TYPE_INPUT;
+    /* Passkey (MITM) bonds only: VIA reads macros, changes settings and installs firmware; a host bonded
+     * without the passkey (claiming no input or display) gets typing only. */
+    input.sec.cccd_wr = SEC_MITM;
+    input.sec.rd = SEC_MITM;
+    input.sec.wr = SEC_MITM;
+    output.max_len = UPD_REPORT_LEN;
+    output.rep_ref.report_type = BLE_HIDS_REP_TYPE_OUTPUT;
+    output.sec.rd = SEC_MITM;
+    output.sec.wr = SEC_MITM;
+
+    ble_hids_init_t init;
+    memset(&init, 0, sizeof(init));
+    init.evt_handler = on_upd_evt;
+    init.error_handler = error_handler;
+    init.inp_rep_count = 1;
+    init.p_inp_rep_array = &input;
+    init.outp_rep_count = 1;
+    init.p_outp_rep_array = &output;
+    init.rep_map.data_len = sizeof(report_map);
+    init.rep_map.p_data = (uint8_t *)report_map;
+    init.rep_map.rd_sec = SEC_JUST_WORKS;
+    init.hid_information.bcd_hid = 0x0111;
+    init.hid_information.flags = HID_INFO_FLAG_NORMALLY_CONNECTABLE_MSK;
+    init.hid_information.rd_sec = SEC_JUST_WORKS;
+    init.ctrl_point_wr_sec = SEC_JUST_WORKS;
+    APP_ERROR_CHECK(ble_hids_init(&m_upd, &init));
+}
+
 static void services_init(void) {
     nrf_ble_qwr_init_t qwr = {.error_handler = error_handler};
     APP_ERROR_CHECK(nrf_ble_qwr_init(&m_qwr, &qwr));
@@ -984,6 +1247,7 @@ static void services_init(void) {
     bas_init();
     hids_init();
     raw_hids_init();
+    upd_hids_init();
 }
 
 /* Re-run before each start: the advertising module never restores the discoverable flag itself. */
@@ -1103,6 +1367,10 @@ int main(void) {
     APP_ERROR_CHECK(app_timer_create(&m_disc_timer, APP_TIMER_MODE_SINGLE_SHOT, disc_timeout));
     APP_ERROR_CHECK(app_timer_create(&m_reject_timer, APP_TIMER_MODE_SINGLE_SHOT, reject_hold_end));
     APP_ERROR_CHECK(app_timer_create(&m_raw_timer, APP_TIMER_MODE_SINGLE_SHOT, raw_session_end));
+    APP_ERROR_CHECK(app_timer_create(&m_bupd_timer, APP_TIMER_MODE_SINGLE_SHOT, bupd_idle));
+    APP_ERROR_CHECK(app_timer_create(&m_arm_timer, APP_TIMER_MODE_SINGLE_SHOT, arm_end));
+    APP_ERROR_CHECK(app_timer_create(&m_install_timer, APP_TIMER_MODE_SINGLE_SHOT, install_timeout));
+    nrf_bupd_init();
     bonded_slots_refresh(); /* the first status reply, prepared in link_init, reports the bonds */
     link_init();
     NRF_LOG_INFO("ECK BLE bridge started, link v%d", BLE_LINK_VERSION);

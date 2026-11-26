@@ -1,0 +1,126 @@
+diff --git a/nrf52/config/app_config.h b/nrf52/config/app_config.h
+index 9928ccd..4f53cb1 100644
+--- a/nrf52/config/app_config.h
++++ b/nrf52/config/app_config.h
+@@ -24,7 +24,9 @@
+ 
+ /* VIA raw HID: 32-byte reports need an ATT MTU of at least 35; a second HID service needs room.
+  * Never enable NRF_SDH_BLE_SERVICE_CHANGED: it stopped Bluetooth typing on the Mac (2026-11-26). */
+-#define NRF_SDH_BLE_GATT_MAX_MTU_SIZE 65
++#define NRF_SDH_BLE_GATT_MAX_MTU_SIZE 247 /* probe build; release: 65 */
++#define NRF_SDH_BLE_GAP_DATA_LENGTH 251   /* probe build */
++#define NRF_SDH_BLE_GAP_EVENT_LENGTH 320  /* probe build: 400 ms, clipped to the interval */
+ #define NRF_SDH_BLE_GATTS_ATTR_TAB_SIZE 1920
+ 
+ /* LE Secure Connections through the peer manager: P-256 ECDH in Nordic's Oberon library,
+diff --git a/nrf52/main.c b/nrf52/main.c
+index 5453c74..1ba6bbf 100644
+--- a/nrf52/main.c
++++ b/nrf52/main.c
+@@ -215,6 +215,10 @@ static void raw_reset(void) {
+     m_latency_off = false; /* per connection */
+ }
+ 
++/* probe build (below) */
++static void probe_count(ble_gatts_evt_write_t const *w);
++static uint8_t m_pr_tx_phy = 1, m_pr_rx_phy = 1;
++
+ /* ---------- battery ---------- */
+ 
+ /* A failed notification is not worth a restart: the host reads the level on its next update or
+@@ -763,6 +767,15 @@ static void ble_evt_handler(ble_evt_t const *p_ble_evt, void *p_context) {
+     case BLE_GAP_EVT_AUTH_STATUS:
+         m_passkey_wait = false;
+         break;
++    case BLE_GATTS_EVT_WRITE:
++        probe_count(&p_ble_evt->evt.gatts_evt.params.write);
++        break;
++    case BLE_GAP_EVT_PHY_UPDATE:
++        if (p_ble_evt->evt.gap_evt.params.phy_update.status == BLE_HCI_STATUS_CODE_SUCCESS) {
++            m_pr_tx_phy = p_ble_evt->evt.gap_evt.params.phy_update.tx_phy;
++            m_pr_rx_phy = p_ble_evt->evt.gap_evt.params.phy_update.rx_phy;
++        }
++        break;
+     case BLE_GAP_EVT_PHY_UPDATE_REQUEST: {
+         ble_gap_phys_t const phys = {.rx_phys = BLE_GAP_PHY_AUTO, .tx_phys = BLE_GAP_PHY_AUTO};
+         APP_ERROR_CHECK(sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys));
+@@ -800,6 +813,57 @@ static void on_hids_evt(ble_hids_t *p_hids, ble_hids_evt_t *p_evt) {
+     }
+ }
+ 
++/* ---------- THROUGHPUT PROBE (test build, not committed) ----------
++ * VIA packets starting 0xE5 stay on the nRF52: [1] 1 = reset, 2 = data (counted), 3 = stats reply,
++ * 4 = request 2M PHY. Counts write requests vs commands and the link parameters the host grants. */
++#define PROBE_CMD 0xE5
++static uint32_t m_pr_writes, m_pr_req, m_pr_cmd, m_pr_bytes, m_pr_first, m_pr_last;
++
++static void probe_count(ble_gatts_evt_write_t const *w) {
++    if (w->handle != m_raw.outp_rep_array[0].char_handles.value_handle || w->len < 2 ||
++        w->data[0] != PROBE_CMD || w->data[1] != 2) {
++        return;
++    }
++    uint32_t now = app_timer_cnt_get();
++    if (!m_pr_writes) m_pr_first = now;
++    m_pr_last = now;
++    m_pr_writes++;
++    m_pr_bytes += w->len;
++    if (w->op == BLE_GATTS_OP_WRITE_REQ) m_pr_req++;
++    else if (w->op == BLE_GATTS_OP_WRITE_CMD) m_pr_cmd++;
++}
++
++static void probe_cmd(const uint8_t *d) {
++    latency_set(true);
++    (void)app_timer_stop(m_raw_timer);
++    APP_ERROR_CHECK(app_timer_start(m_raw_timer, APP_TIMER_TICKS(RAW_SESSION_MS), NULL));
++    if (d[1] == 1) {
++        m_pr_writes = m_pr_req = m_pr_cmd = m_pr_bytes = m_pr_first = m_pr_last = 0;
++    } else if (d[1] == 4) {
++        ble_gap_phys_t const phys = {.tx_phys = BLE_GAP_PHY_2MBPS, .rx_phys = BLE_GAP_PHY_2MBPS};
++        (void)sd_ble_gap_phy_update(m_conn_handle, &phys);
++    } else if (d[1] == 3) {
++        uint8_t r[RAW_REPORT_LEN] = {PROBE_CMD, 3};
++        uint32_t ticks = app_timer_cnt_diff_compute(m_pr_last, m_pr_first);
++        uint16_t mtu = nrf_ble_gatt_eff_mtu_get(&m_gatt, m_conn_handle);
++        uint8_t dl = 0;
++        (void)nrf_ble_gatt_data_length_get(&m_gatt, m_conn_handle, &dl);
++        memcpy(&r[2], &m_pr_writes, 4);
++        memcpy(&r[6], &m_pr_req, 4);
++        memcpy(&r[10], &m_pr_cmd, 4);
++        memcpy(&r[14], &m_pr_bytes, 4);
++        memcpy(&r[18], &ticks, 4);
++        memcpy(&r[22], &mtu, 2);
++        r[24] = dl;
++        r[25] = m_pr_tx_phy;
++        r[26] = m_pr_rx_phy;
++        memcpy(&r[27], &m_granted.max_conn_interval, 2);
++        memcpy(&r[29], &m_granted.slave_latency, 2);
++        r[31] = m_latency_off;
++        (void)ble_hids_inp_rep_send(&m_raw, 0, RAW_REPORT_LEN, r, m_conn_handle);
++    }
++}
++
+ /* A VIA request from the host: shown to the STM32 in the status until it replies. A newer
+  * request replaces a waiting one (a host that timed out and asked again). */
+ static void on_raw_evt(ble_hids_t *p_hids, ble_hids_evt_t *p_evt) {
+@@ -810,6 +874,10 @@ static void on_raw_evt(ble_hids_t *p_hids, ble_hids_evt_t *p_evt) {
+         return;
+     }
+     uint16_t len = p_evt->params.char_write.len;
++    if (p_evt->params.char_write.data[0] == PROBE_CMD) {
++        if (len >= 2) probe_cmd(p_evt->params.char_write.data);
++        return;
++    }
+     memset(m_raw_req, 0, sizeof(m_raw_req));
+     memcpy(m_raw_req, p_evt->params.char_write.data, len < RAW_REPORT_LEN ? len : RAW_REPORT_LEN);
+     m_raw_id = (uint8_t)(m_raw_id % 31U + 1U);
+@@ -830,6 +898,10 @@ static void ble_stack_init(void) {
+     uint32_t ram_start = 0;
+     APP_ERROR_CHECK(nrf_sdh_ble_default_cfg_set(APP_BLE_CONN_CFG_TAG, &ram_start));
+     APP_ERROR_CHECK(nrf_sdh_ble_enable(&ram_start));
++    ble_opt_t ext; /* probe: let a connection event carry as many packets as fit */
++    memset(&ext, 0, sizeof(ext));
++    ext.common_opt.conn_evt_ext.enable = 1;
++    (void)sd_ble_opt_set(BLE_COMMON_OPT_CONN_EVT_EXT, &ext);
+     NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
+ }
+ 

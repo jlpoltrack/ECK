@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
-import { crc16mcrf4xx, md5, parseHfb, hasBootStub, deviceModel, isTopreBank1, bank2Layout, eepromLayout, stm32Update, isEck, RFB_SIZE } from './eck.js';
+import { crc32, crc16mcrf4xx, md5, parseHfb, hasBootStub, deviceModel, isTopreBank1, bank2Layout, eepromLayout, stm32Update, isEck, RFB_SIZE } from './eck.js';
 
 const repo = fileURLToPath(new URL('..', import.meta.url));
 const py = (code) => execFileSync('python3', ['-c', code], { cwd: repo }).toString().trim();
@@ -16,7 +16,9 @@ for (const len of [0, 1, 55, 56, 63, 64, 65, 1000, 70000]) {
 const stub = new Uint8Array(0x2000).fill(0xff);
 stub.set([0x00, 0x40, 0x00, 0x20, 0x75, 0x00, 0x00, 0x08]);
 assert.ok(hasBootStub(stub));
-stub[0x1500] = 0;
+stub[0x1500] = 0; // a Bluetooth update staged from 0x1000
+assert.ok(hasBootStub(stub));
+stub[0xd00] = 0; // code above the stub's 3 KB: PFU's Bank 1
 assert.ok(!hasBootStub(stub));
 // R3S: an .rfb from tools/make_hfb.py parses with its model and version; the Bank 1 check
 const rfb = Buffer.from(py(`import sys;sys.path.insert(0,'tools');from make_hfb import wrap_binary_to_rfb as w;` +
@@ -77,4 +79,5 @@ for (const f of process.argv.slice(2)) {
     const h = parseHfb(new Uint8Array(readFileSync(f)));
     console.log(f, h.model, h.version, h.hybrid ? 'hybrid' : 'classic');
 }
+assert.equal(crc32(new TextEncoder().encode('123456789')), 0xcbf43926); // zlib's check value (nRF52 page CRCs)
 console.log('eck.js checks passed');

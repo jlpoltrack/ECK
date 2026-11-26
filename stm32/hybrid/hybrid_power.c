@@ -84,6 +84,17 @@ void hybrid_power_confirm_forget(void) {
     pwr_blink_start(&s_orange, 3, SLOT_BLINK_HALF);
 }
 
+static volatile uint8_t s_level; /* latched battery level, 0 fine .. 3 empty */
+
+bool hybrid_power_update_ok(void) {
+    return usb_power() || s_level < 2U;
+}
+
+void hybrid_power_update_armed(bool ok) {
+    if (ok) pwr_blink_start(&s_orange, 2, SLOT_BLINK_HALF);
+    else pwr_blink_start(&s_orange, 1, USB_FLASH_STEPS);
+}
+
 static volatile bool s_host_rejected; /* set by the link task, shown by step() (it owns s_orange) */
 
 void hybrid_power_host_rejected(void) {
@@ -271,6 +282,7 @@ void hybrid_power_show_slot(void) {
 
 static void step(TickType_t now, bool usb) {
     uint8_t level = pwr_batt_filter_update(&s_batt, batt_raw());
+    s_level = level;
     uint8_t percent = pwr_batt_percent(level, usb);
     if (percent != s_percent) {
         s_percent = percent;
@@ -384,8 +396,9 @@ void hybrid_power_leds(bool *blue, bool *orange) {
         *orange = !s_quiet_off;
     } else {
         if (pwr_blink_busy(&s_blue)) *blue = s_blue_on;
-        /* nRF52 update in progress: orange 2 blinks/s */
-        if (hybrid_ble_update_active()) *orange = (xTaskGetTickCount() / pdMS_TO_TICKS(250)) & 1U;
+        /* updates: nRF52 orange 2 blinks/s; STM32 over Bluetooth solid, as in ST's loader and the stub */
+        if (hybrid_ble_update_active())
+            *orange = hybrid_ble_stm32_updating() || ((xTaskGetTickCount() / pdMS_TO_TICKS(250)) & 1U);
         if (pwr_blink_busy(&s_warn.blink)) *orange = s_warn_on;
         if (pwr_blink_busy(&s_orange)) *orange = s_orange_on;
     }

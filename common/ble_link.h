@@ -13,7 +13,7 @@
 
 #define BLE_LINK_FRAME_LEN 32U
 #define BLE_LINK_DATA_MAX  27U
-#define BLE_LINK_VERSION   8U
+#define BLE_LINK_VERSION   9U
 
 #define BLE_LINK_MAGIC_TO_NRF 0xA5U
 #define BLE_LINK_MAGIC_TO_STM 0x5AU
@@ -27,11 +27,24 @@ enum {
     BLE_LINK_COMMAND = 4,  /* one of BLE_LINK_CMD_* */
     BLE_LINK_UPDATE = 5,   /* data[0] = BLE_LINK_UPD_*: stage a new nRF52 image */
     BLE_LINK_RAW = 6,      /* v8: VIA reply, data[0] = request id << 1 | half, data[1..16] = 16 bytes */
+    BLE_LINK_PULL = 7,     /* v9: data[0..2] offset (u24) into a staged STM32 image, or BLE_LINK_PULL_INFO;
+                            * the nRF52 answers the next exchange with a BLE_LINK_DATA frame */
 };
 
-/* v8 VIA over Bluetooth. A host's 32-byte request rides in status data[17..25] while it waits:
- * data[17] = BLE_LINK_RAW_VALID | id << 2 | part, data[18..25] = bytes part * 8 .. +7. The nRF52
- * cycles the four parts until both reply halves for that id arrive; ids 1..31 wrap. */
+/* v9 STM32 images staged over Bluetooth. Status data[26]: BLE_LINK_STM_READY = an image waits to be
+ * pulled, BLE_LINK_STM_RESTART = restart into the boot stub, which installs it. */
+#define BLE_LINK_DATA 0x81U /* nRF52 -> STM32: data[0..2] offset, data[3..26] 24 bytes */
+#define BLE_LINK_PULL_INFO 0xFFFFFFU /* DATA reply: data[3..6] size (u32), data[7..8] Bank 2 CRC (u16) */
+#define BLE_LINK_PULL_GONE 0xFFFFFEU /* DATA reply's offset when nothing is staged any more (aborted) */
+#define BLE_LINK_PULL_LEN 24U
+#define BLE_LINK_UPD_ARM_MS 300000U /* a key press on the keyboard, so a host alone can't install firmware */
+#define BLE_LINK_STM_READY 0x01U
+#define BLE_LINK_STM_RESTART 0x02U
+#define BLE_LINK_BUPD_ACTIVE 0x04U /* a Bluetooth update is in progress: orange blinks (nRF52) */
+#define BLE_LINK_BUPD_STM32 0x08U  /* ... and it is for the STM32: orange solid, as in ST's loader */
+
+/* v8 VIA: one waiting request (a newer one replaces it) in status data[17] = VALID | id << 2 | part,
+ * data[18..25] = bytes part * 8 .. +7; parts cycle until both reply halves for the id arrive (ids 1..31). */
 #define BLE_LINK_RAW_LEN 32U
 #define BLE_LINK_RAW_PART 8U
 #define BLE_LINK_RAW_HALF 16U
@@ -65,6 +78,9 @@ enum {
     BLE_LINK_CMD_DELETE_SLOT = 6, /* data[1] = slot: forget its host */
     BLE_LINK_CMD_PASSKEY = 7,     /* data[1..6] = ASCII digits typed for the host's passkey */
     BLE_LINK_CMD_POWER_OFF = 8,   /* disconnect, stop advertising, System OFF; PD2 reset restarts it */
+    BLE_LINK_CMD_STM_RESULT = 9,  /* v9: data[1] = 0 when the pulled STM32 image checked out, else an error */
+    BLE_LINK_CMD_UPD_ARM = 10,    /* v9: Fn+Ctrl+U: Bluetooth updates may start for BLE_LINK_UPD_ARM_MS */
+    BLE_LINK_CMD_STM_INFO = 11,   /* v9: data[1..2] = the STM32's Bank 2 boot tag CRC (u16), after each link start */
 };
 #define BLE_LINK_SLOTS 4U
 
@@ -81,6 +97,8 @@ enum {
     BLE_LINK_ST_RECOVERY = 1U << 5,   /* v6: recovery mode (PB6 high at start): no Bluetooth */
     BLE_LINK_ST_HOST_REJECTED = 1U << 6, /* v7: the slot's host failed our keys (forgot us); cleared by
                                           * a secured link, pairing or a slot change */
+    BLE_LINK_ST_INSTALLING = 1U << 7,    /* v9: restarting to install a Bluetooth-staged image: don't
+                                          * reset it for NRF_INSTALL_QUIET_MS */
 };
 
 /* Status payload: data[0] flags, data[1] host LED report, data[2] version, data[3] free queue slots,

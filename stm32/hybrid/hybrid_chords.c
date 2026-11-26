@@ -11,6 +11,7 @@ hybrid_chord_t hybrid_chord(int pos, bool ctrl, bool delete_held, bool standby, 
     }
     if (pos == POS_0) return CHORD_USB;
     if (pos == POS_Q) return CHORD_STANDBY;
+    if (pos == POS_U) return CHORD_ARM_UPDATE;
     if (pos == POS_X) return (standby || pairing) ? CHORD_CANCEL : CHORD_NONE;
     if (pos == POS_Z && standby && delete_held) return CHORD_CLEAR_ALL;
     return CHORD_NONE;

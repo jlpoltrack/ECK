@@ -23,6 +23,7 @@ bool hybrid_ble_status_led(TickType_t now);
 /* nRF52 update: queue one BLE_LINK_UPDATE payload (false while the previous one is in flight). */
 bool hybrid_ble_update_submit(const uint8_t *data, uint8_t len);
 bool hybrid_ble_update_active(void);
+bool hybrid_ble_stm32_updating(void); /* a Bluetooth update for the STM32 is in progress */
 void hybrid_ble_update_status(uint8_t *state, uint32_t *staged, bool *pending, bool *failed);
 /* Reset the nRF52 and pause the link watchdog for quiet_ms (PFU's bootloader copying);
  * recovery: hold PB6 high so it starts in recovery mode (until the next normal restart). */

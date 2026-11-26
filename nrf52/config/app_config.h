@@ -22,10 +22,13 @@
 /* No vendor-specific UUIDs: only standard services */
 #define NRF_SDH_BLE_VS_UUID_COUNT 0
 
-/* VIA raw HID: 32-byte reports need an ATT MTU of at least 35; a second HID service needs room.
- * Never enable NRF_SDH_BLE_SERVICE_CHANGED: it stopped Bluetooth typing on the Mac (2026-11-26). */
-#define NRF_SDH_BLE_GATT_MAX_MTU_SIZE 65
-#define NRF_SDH_BLE_GATTS_ATTR_TAB_SIZE 1920
+/* 244-byte update reports need MTU 247 (the Mac grants it, data length 251, 2M PHY: ble_probe.py).
+ * Never enable NRF_SDH_BLE_SERVICE_CHANGED: it stopped Bluetooth typing on the Mac (AGENTS.md). */
+#define NRF_SDH_BLE_GATT_MAX_MTU_SIZE 247
+#define NRF_SDH_BLE_GAP_DATA_LENGTH 251
+#define NRF_SDH_BLE_GATTS_ATTR_TAB_SIZE 2560
+/* Bluetooth updates write flash while connected: small writes fit between connection events. */
+#define NRF_FSTORAGE_SD_MAX_WRITE_SIZE 1024
 
 /* LE Secure Connections through the peer manager: P-256 ECDH in Nordic's Oberon library,
  * random numbers straight from the RNG (no mbed TLS DRBG) */

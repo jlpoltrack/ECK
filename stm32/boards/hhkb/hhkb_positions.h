@@ -11,6 +11,7 @@ enum {
     POS_DEL = 14, /* top-right BS: the ANSI Delete key's place */
     POS_Q = 16,
     POS_W = 17,
+    POS_U = 22,
     POS_CTRL = 29,
     POS_F = 33,
     POS_Z = 43,
@@ -38,6 +39,7 @@ enum {
     POS_0 = 10,
     POS_Q = 16,
     POS_W = 17,
+    POS_U = 22,
     POS_DEL = 28, /* top-right Delete */
     POS_CTRL = 29,
     POS_F = 33,

@@ -4,6 +4,8 @@
 
 #include "ble_link.h"
 #include "nrf.h"
+#include "nrf_fstorage.h"
+#include "nrf_fstorage_sd.h"
 #include "nrf_sdh.h"
 
 /* PFU's bootloader copies image bytes from STAGE_BASE to 0x1000 when the record at RECORD_ADDR
@@ -12,6 +14,8 @@
 #define STAGE_BASE 0x37000UL
 #define IMAGE_MAX 0x35000UL /* the bootloader erases 0x1000..0x36000 only */
 #define PAGE 0x1000UL
+#define IMAGE_BASE 0x1000UL /* where the bootloader copies the staged image to */
+#define APP_ADDR 0x26000UL   /* ECK's app (hybrid_ble_gcc_nrf52.ld) */
 
 static uint8_t m_state;
 static uint32_t m_size, m_staged, m_erase_next, m_erase_end;
@@ -203,4 +207,198 @@ static void finish_now(void) {
     rec[6] = crc16_modbus((const uint8_t *)rec, 24);
     for (unsigned i = 0; i < 7; i++) flash_word(RECORD_ADDR + 4U * i, rec[i]);
     m_state = BLE_LINK_UPD_ST_STAGED;
+}
+
+/* ---------- Bluetooth updates (SoftDevice running) ---------- */
+
+static void fs_evt(nrf_fstorage_evt_t *p_evt);
+NRF_FSTORAGE_DEF(nrf_fstorage_t m_bupd_fs) = {
+    .evt_handler = fs_evt,
+    .start_addr = RECORD_ADDR,
+    .end_addr = STAGE_BASE + IMAGE_MAX,
+};
+
+static uint8_t m_b_state, m_b_err;
+static uint32_t m_b_size;
+static uint8_t m_b_md5[16];
+static uint16_t m_b_done;                 /* pages committed */
+static uint8_t m_b_target;                /* NRF_BUPD_TARGET_* */
+static uint16_t m_b_stm_crc;
+static uint32_t m_b_page = 0xFFFFFFFFUL;  /* page assembled in m_b_buf */
+static bool m_b_busy;                     /* an fstorage operation is pending */
+static uint32_t m_b_buf[PAGE / 4];        /* fstorage writes from it asynchronously */
+static uint32_t m_b_rec[7];
+static uint16_t m_b_copy_left; /* pages still to copy from live flash after the current one */
+
+static void b_write_page(uint32_t page);
+
+static void b_fail(uint8_t err) {
+    m_b_state = NRF_BUPD_ERROR;
+    m_b_err = err;
+    m_b_copy_left = 0;
+}
+
+static void fs_evt(nrf_fstorage_evt_t *p_evt) {
+    m_b_busy = false;
+    if (m_b_state == NRF_BUPD_IDLE) return; /* aborted meanwhile */
+    if (p_evt->result != NRF_SUCCESS) {
+        b_fail(p_evt->id == NRF_FSTORAGE_EVT_ERASE_RESULT ? NRF_BUPD_E_ERASE : NRF_BUPD_E_WRITE);
+    } else if (m_b_state == NRF_BUPD_ERASING) {
+        m_b_state = NRF_BUPD_READY;
+    } else if (m_b_state == NRF_BUPD_WRITING) {
+        m_b_done++;
+        m_b_state = NRF_BUPD_READY;
+        if (m_b_copy_left) {
+            m_b_copy_left--;
+            memcpy(m_b_buf, (const void *)(IMAGE_BASE + m_b_done * PAGE), PAGE);
+            b_write_page(m_b_done);
+        }
+    } else if (m_b_state == NRF_BUPD_RECORDING) {
+        m_b_state = NRF_BUPD_STAGED;
+    }
+}
+
+void nrf_bupd_init(void) {
+    (void)nrf_fstorage_init(&m_bupd_fs, &nrf_fstorage_sd, NULL);
+}
+
+uint8_t nrf_bupd_state(void) {
+    return m_b_state;
+}
+
+uint8_t nrf_bupd_error(void) {
+    return m_b_err;
+}
+
+uint16_t nrf_bupd_done(void) {
+    return m_b_done;
+}
+
+uint8_t nrf_bupd_target(void) {
+    return m_b_target;
+}
+
+uint32_t nrf_bupd_size(void) {
+    return m_b_size;
+}
+
+uint16_t nrf_bupd_stm_crc(void) {
+    return m_b_stm_crc;
+}
+
+void nrf_bupd_stm_result(uint8_t err) {
+    if (m_b_state != NRF_BUPD_STM_READY) return;
+    if (err) b_fail(err == 7 ? NRF_BUPD_E_STUB : err == 8 ? NRF_BUPD_E_MODEL : NRF_BUPD_E_STM32);
+    else m_b_state = NRF_BUPD_STM_DONE;
+}
+
+/* Erases the record page and the staging pages in one go: an 85 ms page erase fits only between
+ * connection events skipped through slave latency, which the caller leaves on meanwhile. */
+void nrf_bupd_begin(uint32_t size, const uint8_t md5[16], uint8_t target, uint16_t stm_crc) {
+    m_b_target = target;
+    m_b_stm_crc = stm_crc;
+    if (m_b_busy) { b_fail(NRF_BUPD_E_BUSY); return; }
+    if (size == 0 || size > IMAGE_MAX || (size & 3U)) { b_fail(NRF_BUPD_E_SIZE); return; }
+    m_b_size = size;
+    memcpy(m_b_md5, md5, sizeof(m_b_md5));
+    m_b_done = 0;
+    m_b_page = 0xFFFFFFFFUL;
+    m_b_err = 0;
+    uint32_t pages = 1U + (size + PAGE - 1U) / PAGE;
+    if (nrf_fstorage_erase(&m_bupd_fs, RECORD_ADDR, pages, NULL) != NRF_SUCCESS) { b_fail(NRF_BUPD_E_ERASE); return; }
+    m_b_busy = true;
+    m_b_state = NRF_BUPD_ERASING;
+}
+
+/* Data for the page being assembled (page `done`); a new page starts blank. */
+void nrf_bupd_data(uint32_t offset, const uint8_t *data, uint8_t len) {
+    if (m_b_state != NRF_BUPD_READY) return;
+    uint32_t page = offset / PAGE;
+    if (page != m_b_done || offset % PAGE + len > PAGE || offset + len > m_b_size) { b_fail(NRF_BUPD_E_ORDER); return; }
+    if (page != m_b_page) {
+        memset(m_b_buf, 0xFF, sizeof(m_b_buf));
+        m_b_page = page;
+    }
+    memcpy((uint8_t *)m_b_buf + offset % PAGE, data, len);
+}
+
+static void b_write_page(uint32_t page) {
+    uint32_t len = m_b_size - page * PAGE;
+    if (len > PAGE) len = PAGE;
+    if (nrf_fstorage_write(&m_bupd_fs, STAGE_BASE + page * PAGE, m_b_buf, len, NULL) != NRF_SUCCESS) {
+        b_fail(NRF_BUPD_E_WRITE);
+        return;
+    }
+    m_b_busy = true;
+    m_b_state = NRF_BUPD_WRITING;
+}
+
+void nrf_bupd_commit(uint32_t page, bool from_live) {
+    nrf_bupd_copy(page, from_live ? 1 : 0);
+}
+
+/* count 0: commit the assembled page; else copy `count` pages from live flash, one after another. */
+void nrf_bupd_copy(uint32_t page, uint16_t count) {
+    if (m_b_state != NRF_BUPD_READY) return;
+    uint32_t last = page + (count ? count : 1U) - 1U;
+    if (page != m_b_done || last * PAGE >= m_b_size) { b_fail(NRF_BUPD_E_ORDER); return; }
+    if (count) memcpy(m_b_buf, (const void *)(IMAGE_BASE + page * PAGE), PAGE);
+    else if (m_b_page != page) memset(m_b_buf, 0xFF, sizeof(m_b_buf));
+    m_b_page = 0xFFFFFFFFUL;
+    m_b_copy_left = count ? (uint16_t)(count - 1U) : 0;
+    b_write_page(page);
+}
+
+void nrf_bupd_finish(void) {
+    if (m_b_state != NRF_BUPD_READY) return;
+    if ((uint32_t)m_b_done * PAGE < m_b_size) { b_fail(NRF_BUPD_E_ORDER); return; }
+    uint8_t sum[16];
+    md5((const uint8_t *)STAGE_BASE, m_b_size, sum);
+    if (memcmp(sum, m_b_md5, sizeof(sum)) != 0) { b_fail(NRF_BUPD_E_MD5); return; }
+    if (m_b_target == NRF_BUPD_TARGET_STM32) { /* no record: PFU's bootloader must never install it */
+        m_b_state = NRF_BUPD_STM_READY;
+        return;
+    }
+    /* An ECK image: SoftDevice and app, the app's vectors where PFU's MBR jumps (0x26000). A wrong
+     * image with a matching MD5 would otherwise leave Bluetooth to SWD. */
+    const uint32_t *app = (const uint32_t *)(STAGE_BASE + APP_ADDR - IMAGE_BASE);
+    if (m_b_size < APP_ADDR - IMAGE_BASE + 0x1000U || (app[0] >> 24) != 0x20U || app[1] < APP_ADDR ||
+        app[1] >= IMAGE_BASE + IMAGE_MAX) {
+        b_fail(NRF_BUPD_E_IMAGE);
+        return;
+    }
+    memset(m_b_rec, 0, sizeof(m_b_rec));
+    m_b_rec[0] = m_b_size;
+    memcpy(&m_b_rec[2], sum, sizeof(sum));
+    m_b_rec[6] = crc16_modbus((const uint8_t *)m_b_rec, 24);
+    if (nrf_fstorage_write(&m_bupd_fs, RECORD_ADDR, m_b_rec, sizeof(m_b_rec), NULL) != NRF_SUCCESS) {
+        b_fail(NRF_BUPD_E_WRITE);
+        return;
+    }
+    m_b_busy = true;
+    m_b_state = NRF_BUPD_RECORDING;
+}
+
+void nrf_bupd_refuse(uint8_t err) {
+    if (m_b_state == NRF_BUPD_IDLE || m_b_state == NRF_BUPD_ERROR) b_fail(err);
+}
+
+/* Back to idle; a written record is erased (PFU's bootloader would install it at some reset). */
+void nrf_bupd_abort(void) {
+    if (m_b_state == NRF_BUPD_RECORDING || m_b_state == NRF_BUPD_STAGED) /* else PFU installs it at some reset */
+        (void)nrf_fstorage_erase(&m_bupd_fs, RECORD_ADDR, 1, NULL);
+    m_b_state = NRF_BUPD_IDLE;
+    m_b_err = 0;
+    m_b_copy_left = 0;
+}
+
+uint32_t nrf_bupd_live_crc(uint32_t page) {
+    if (page >= IMAGE_MAX / PAGE) return 0; /* only the image: not the bootloader's or the bond pages */
+    const uint8_t *p = (const uint8_t *)(IMAGE_BASE + page * PAGE);
+    uint32_t crc = 0xFFFFFFFFUL;
+    for (uint32_t i = 0; i < PAGE; i++) {
+        crc ^= p[i];
+        for (unsigned b = 0; b < 8; b++) crc = (crc >> 1) ^ (0xEDB88320UL & (0U - (crc & 1U)));
+    }
+    return ~crc;
 }

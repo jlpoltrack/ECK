@@ -17,6 +17,7 @@ Reason: renaming orphans data in keyboards' EEPROM or breaks tool matching.
 
 - EEPROM magics: `VIAL` record tag (`EEPROM_VIAL_ADDR`), `ECK3` keymap slot tag, `CMIT`, `HKCx` settings records, settings words, nRF52 bond slot tag. To change one, keep reading the old value and rewrite it (as `hhkb_keymap_storage.c` does for `ECK2`).
 - Vial keyboard IDs (`BOARD_VIAL_UID`): `.vil` files record it.
+- Bluetooth updates: `STAGE_MAGIC` and the header at `0x0800FF80` (`bank1_stage.h`; installed boot stubs read them), the update service usage `0xFF60`/`0x62` and protocol `0xE6` (tools and the web flasher match them), `KEYBOARD_NAME` (the STM32 checks staged images for it).
 - "HHKB" in the USB product string: `hybrid_update.py` and bench tools match it.
 - **USB serial = `vial:f64c2b3c-` + chip unique ID, constant across versions.** Reason: Chrome ties WebHID permission (Windows its driver) to the serial; a version serial lost the keyboard after every web update (2026-11-17). VIA setting 28 reports the version.
 - **EEPROM keymaps hold internal 32-bit keycodes:** never change an existing value's meaning; use unused values or flag bits (K_NULL = 0x01, `HT_MODS_FLAG` bit 23). Reason: saved keymaps would silently change.
@@ -53,12 +54,13 @@ Reason: renaming orphans data in keyboards' EEPROM or breaks tool matching.
 
 - **Hybrid timing never uses counted loops**; SysTick delays. Reason: flash prefetch changed loop timing and broke Bluetooth.
 - After compiler-flag or hot-path changes, re-measure `noise` and per-key rest readings: scan speed moves them.
-- **Data EEPROM writes go through `eeprom_write_word`** (`stm32/board/eeprom.c`). Reason: tasks locked the EEPROM under each other. Exception: Classic SW6 erase, before the scheduler.
+- **Data EEPROM writes go through `eeprom_write_word`** (`stm32/board/eeprom.c`). Reason: tasks locked the EEPROM under each other. Exceptions: Classic SW6 erase, before the scheduler; the Hybrid boot stub's boot tags, before the app runs.
 - **Task stack depth is `sizeof(stack) / sizeof(StackType_t)`, never a literal.** Reason: a stale `512` reset-looped v0.4.4 until DFU flash (2026-11-17).
 - **Never read a struct through a `uint32_t *` cast** (strict aliasing): `memcpy`. Reason: GCC dropped stores, corrupting a saved settings record (2026-11-16).
 - Unrecoverable errors call `platform_system_reset()`. Reason: a hung Hybrid on batteries needs them pulled.
 - `hybrid_update.py stm32` refuses unless Bank 1 holds the boot stub (`--force`). Reason: otherwise a failed write has no USB recovery.
 - **nRF52 GATT changes only append services; Service Changed stays off.** Reason: appending kept bonded hosts typing; enabling `NRF_SDH_BLE_SERVICE_CHANGED` shifted handles and stopped Bluetooth typing on the Mac, even after re-pairing (2026-11-26).
+- **The VIA and update GATT services require passkey (MITM) bonds (`SEC_MITM` on their reports); the keyboard service stays `SEC_JUST_WORKS`.** Reason: over Bluetooth, VIA reads macros and changes settings, and the update service installs firmware; a host bonded without the passkey must get typing only (v0.8.0 review, 2026-11-26).
 - **The `.hfb` never rewrites the nRF52 MBR** (`0x0-0xFFF`); app stays at `0x26000`. Reason: PFU's bootloader copies only `0x1000-0x35FFF` and jumps there.
 - **Power-switch recovery needs the batteries out:** the stub reads the switch only at reset, and plugging USB doesn't reset a battery-powered keyboard (2026-11-17).
 - **JIS positions reach 68:** per-position bits in a `uint64_t` (`dip_modes.c`) need two words under `HHKB_JIS`. JIS facts come from PFU's JIS images and manuals ([JIS](docs/models.md#jis)). Reason: JIS port (2026-11-19).

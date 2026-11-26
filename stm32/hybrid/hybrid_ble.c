@@ -13,6 +13,7 @@
 
 #include "FreeRTOS.h"
 #include "app_usb_hid.h"
+#include "bank1_stage.h"
 #include "ble_link.h"
 #include "events.h"
 #include "keys.h"
@@ -33,6 +34,7 @@
 /* While a host is connected, so a VIA request waits at most this long: Vial gives up after
  * 500 ms, and the Mac's slave latency alone can hold the request ~330 ms (~1-2 % battery). */
 #define POLL_BLE_MS 50U
+#define INSTALL_QUIET_MS 30000U /* as NRF_INSTALL_QUIET_MS for USB updates (hhkb_via_controls.c) */
 #define ACK_POLLS 20U       /* status polls per send attempt */
 #define SEND_ATTEMPTS 10U
 
@@ -51,19 +53,21 @@ static QueueHandle_t s_queue;
 static link_msg_t s_held[2];
 static volatile bool s_held_set[2];
 static StaticTask_t s_task_tcb;
-static StackType_t s_task_stack[128]; /* static worst case 312 B (tools/stack_depth.py, 2026-11-26) */
+static StackType_t s_task_stack[128]; /* static worst case 336 B (tools/stack_depth.py, 2026-11-26) */
 
 static volatile uint8_t s_flags;
 static uint8_t s_host_leds;
 static uint8_t s_seq;
 static bool s_ready; /* nRF52 is answering */
+static bool s_info_dirty; /* tell the nRF52 our Bank 2 CRC (BLE_LINK_CMD_STM_INFO) */
 static uint8_t s_bad_replies; /* consecutive invalid replies */
 /* Link health since boot, shown with the Polling Rate Monitor: frames sent, invalid replies,
  * frames given up on (their report never reached the nRF52). */
 static uint32_t s_stat_frames, s_stat_bad, s_stat_lost;
 static TickType_t s_last_good;   /* last valid nRF52 reply */
 static TickType_t s_last_active; /* last report or status change */
-#define LINK_DOWN_REPLIES 20U
+#define LINK_DOWN_REPLIES 20U /* and LINK_DOWN_MS: at 1 kHz polling 20 replies is only 20 ms */
+#define LINK_DOWN_MS 500U
 static uint8_t s_nrf_slot; /* host slot the nRF52 reports */
 static uint8_t s_bonded = 0xFF; /* bit n-1: slot n has a host (link v3+); 0xFF until known */
 static uint16_t s_conn[3];      /* granted interval (1.25 ms), latency, timeout (10 ms); 0 unconnected */
@@ -95,6 +99,17 @@ static uint8_t s_raw_reply[BLE_LINK_RAW_LEN];
 static uint8_t s_raw_id;
 static volatile bool s_raw_req_ready;   /* for the USB task */
 static volatile bool s_raw_reply_ready; /* for the link task */
+
+/* STM32 images staged on the nRF52 over Bluetooth (ble_link.h v9): pulled 24 bytes at a time. */
+#define BANK2_SIZE 0x10000U
+static uint8_t s_pull_rx[BLE_LINK_DATA_MAX];
+static bool s_pull_got;
+static uint8_t s_stm_flags;   /* status data[26]: BLE_LINK_STM_* */
+static bool s_stm_checked;    /* the waiting image was pulled (until the nRF52 stops offering it) */
+static volatile bool s_stm_restart; /* the nRF52 asked for the install restart */
+static bool s_stage_ok;       /* Bank 1 holds a checked image: */
+static uint32_t s_stage_size;
+static uint16_t s_stage_crc;
 
 /* Host slot (1..4) and whether Bluetooth wins over a connected USB host (bit 8), kept in one
  * EEPROM word past ECK's settings (all zero in the stock Hybrid EEPROM). Bits 16-18 held the
@@ -176,11 +191,14 @@ static bool transact(const ble_link_frame_t *tx, ble_link_frame_t *rx) {
     for (unsigned i = 0; i < BLE_LINK_FRAME_LEN; i++) in[i] = spi_byte(out[i]);
     while (SPI1->SR & SPI_SR_BSY) {}
     GPIOA->BSRR = 1U << CS_PIN;
-    if (rx->magic != BLE_LINK_MAGIC_TO_STM || rx->type != BLE_LINK_STATUS || rx->check != ble_link_check(rx)) {
+    if (rx->magic != BLE_LINK_MAGIC_TO_STM || (rx->type != BLE_LINK_STATUS && rx->type != BLE_LINK_DATA) ||
+        rx->check != ble_link_check(rx)) {
         /* nRF52 busy (answers 0xFF) or absent: after a run of these, stop routing keys to it. */
         s_stat_bad++;
         s_raw_shown = false; /* a silent nRF52 must not keep the 1 kHz VIA polling going */
-        if (s_bad_replies < LINK_DOWN_REPLIES && ++s_bad_replies == LINK_DOWN_REPLIES) {
+        if (s_bad_replies < LINK_DOWN_REPLIES) s_bad_replies++;
+        if (s_ready && s_bad_replies == LINK_DOWN_REPLIES &&
+            (TickType_t)(xTaskGetTickCount() - s_last_good) >= pdMS_TO_TICKS(LINK_DOWN_MS)) {
             s_ready = false;
             s_flags = 0;
         }
@@ -188,6 +206,11 @@ static bool transact(const ble_link_frame_t *tx, ble_link_frame_t *rx) {
     }
     s_bad_replies = 0;
     s_last_good = xTaskGetTickCount();
+    if (rx->type == BLE_LINK_DATA) { /* the answer to a BLE_LINK_PULL */
+        memcpy(s_pull_rx, rx->data, sizeof(s_pull_rx));
+        s_pull_got = true;
+        return true;
+    }
     static bool boot_status = true;
     if (boot_status) {
         boot_status = false;
@@ -203,10 +226,16 @@ static bool transact(const ble_link_frame_t *tx, ble_link_frame_t *rx) {
         s_seq = rx->seq; /* continue after the nRF52's last accepted frame */
         if (s_battery >= 0) s_battery_dirty = true;
         s_release_all = true;
+        s_info_dirty = true;
     }
     s_ready = true;
     if (rx->data[0] != s_flags) s_last_active = xTaskGetTickCount();
     if (rx->data[0] & ~s_flags & BLE_LINK_ST_HOST_REJECTED) hybrid_power_host_rejected();
+    if ((rx->data[0] & BLE_LINK_ST_INSTALLING) && !s_installing) {
+        /* A Bluetooth update restarts it into PFU's bootloader: don't reset it while that installs. */
+        s_quiet_until = xTaskGetTickCount() + pdMS_TO_TICKS(INSTALL_QUIET_MS);
+        s_installing = true;
+    }
     s_flags = rx->data[0];
     s_nrf_slot = rx->data[4];
     if (rx->data[2] >= 3 && !first && !(s_flags & BLE_LINK_ST_RECOVERY)) s_bonded = rx->data[5];
@@ -220,6 +249,8 @@ static bool transact(const ble_link_frame_t *tx, ble_link_frame_t *rx) {
         taskEXIT_CRITICAL();
     }
     raw_collect(rx);
+    s_stm_flags = rx->len >= 27 ? rx->data[26] : 0;
+    if (s_stm_flags & BLE_LINK_STM_RESTART) s_stm_restart = true;
     if (rx->data[1] != s_host_leds) {
         s_host_leds = rx->data[1];
         if ((s_flags & BLE_LINK_ST_CONNECTED) && (s_prefer_ble || !tud_mounted())) events_hid_leds(s_host_leds);
@@ -293,6 +324,126 @@ static void send(const link_msg_t *m) {
     (void)send_frame(m->type, m->data, m->len);
 }
 
+/* One BLE_LINK_PULL: the nRF52 answers the exchange after it with a DATA frame (the frame's
+ * acknowledgement); a lost one is asked for again. */
+static bool pull(uint32_t off, uint8_t out[BLE_LINK_PULL_LEN]) {
+    uint8_t d[3] = {(uint8_t)off, (uint8_t)(off >> 8), (uint8_t)(off >> 16)};
+    for (unsigned attempt = 0; attempt < 3; attempt++) {
+        s_pull_got = false;
+        if (!send_frame(BLE_LINK_PULL, d, sizeof(d))) continue;
+        if (s_pull_got && memcmp(s_pull_rx, d, sizeof(d)) == 0) {
+            memcpy(out, &s_pull_rx[3], BLE_LINK_PULL_LEN);
+            return true;
+        }
+    }
+    return false;
+}
+
+static uint16_t crc16_mcrf4xx(uint16_t crc, const uint8_t *p, uint32_t n) {
+    while (n--) {
+        crc ^= *p++;
+        for (unsigned b = 0; b < 8; b++) crc = (crc & 1U) ? (uint16_t)((crc >> 1) ^ 0x8408U) : (uint16_t)(crc >> 1);
+    }
+    return crc;
+}
+
+/* Bank 1 staging (eeprom.h): the image from FLASH_STAGE_MIN; the boot stub copies it to Bank 2. */
+static bool stage_erase(void) {
+    for (uint32_t a = FLASH_STAGE_MIN; a < FLASH_STAGE_END; a += 128U) {
+        if (!flash_stage_erase_page(a)) return false;
+    }
+    return true;
+}
+
+/* The staged image names this model and layout (KEYBOARD_NAME with its NUL, as in USB descriptors). */
+static bool stage_same_model(uint32_t size) {
+    static const char name[] = KEYBOARD_NAME;
+    const uint8_t *p = (const uint8_t *)FLASH_STAGE_MIN;
+    for (uint32_t i = 0; i + sizeof(name) <= size; i++) {
+        if (p[i] == (uint8_t)name[0] && memcmp(&p[i], name, sizeof(name)) == 0) return true;
+    }
+    return false;
+}
+
+/* A boot stub that installs staged images holds STAGE_MAGIC (its header check); older ones don't. */
+static bool stub_installs(void) {
+    for (uint32_t a = 0x08000000UL; a < 0x08000C00UL; a += 4U) {
+        if (*(const uint32_t *)a == STAGE_MAGIC) return true;
+    }
+    return false;
+}
+
+/* Pulls the staged image into Bank 1, then checks Bank 1 against the .hfb's Bank 2 CRC (image +
+ * 0xFF padding to 64 KB, as the boot stub checks Bank 2); reports the result to the nRF52. */
+static void stm_image_check(void) {
+    s_stage_ok = false;
+    static uint8_t buf[BLE_LINK_PULL_LEN]; /* static: the link task's stack is small (link task only) */
+    static uint32_t half[16];
+    /* 1 no info, 2 size, 3 transfer, 4 CRC, 5 erase, 6 write, 7 stub, 8 model or layout */
+    uint8_t res[2] = {BLE_LINK_CMD_STM_RESULT, 7};
+    if (!stub_installs()) goto done;
+    res[1] = 1;
+    if (!pull(BLE_LINK_PULL_INFO, buf)) goto done;
+    uint32_t size;
+    uint16_t want;
+    memcpy(&size, buf, sizeof(size));
+    memcpy(&want, &buf[4], sizeof(want));
+    res[1] = 2;
+    if (!size || size > STAGE_MAX || (size & 3U)) goto done; /* the stub copies whole words */
+    res[1] = 5;
+    if (!stage_erase()) goto done;
+    uint32_t fill = 0, at = FLASH_STAGE_MIN;
+    for (uint32_t off = 0; off < size; off += BLE_LINK_PULL_LEN) {
+        res[1] = 3;
+        if (!pull(off, buf)) goto done;
+        uint32_t n = size - off < BLE_LINK_PULL_LEN ? size - off : BLE_LINK_PULL_LEN;
+        for (uint32_t i = 0; i < n; i++) {
+            ((uint8_t *)half)[fill++] = buf[i];
+            if (fill == sizeof(half) || off + i + 1U == size) {
+                memset((uint8_t *)half + fill, 0xFF, sizeof(half) - fill);
+                res[1] = 6;
+                if (!flash_stage_write_half(at, half)) goto done;
+                at += sizeof(half);
+                fill = 0;
+            }
+        }
+    }
+    uint16_t crc = crc16_mcrf4xx(0xFFFF, (const uint8_t *)FLASH_STAGE_MIN, size);
+    memset(buf, 0xFF, sizeof(buf));
+    for (uint32_t pad = BANK2_SIZE - size; pad;) {
+        uint32_t n = pad < sizeof(buf) ? pad : sizeof(buf);
+        crc = crc16_mcrf4xx(crc, buf, n);
+        pad -= n;
+    }
+    res[1] = crc != want ? 4 : !stage_same_model(size) ? 8 : 0;
+    s_stage_ok = res[1] == 0;
+    s_stage_size = size;
+    s_stage_crc = crc;
+done:
+    (void)send_frame(BLE_LINK_COMMAND, res, sizeof(res));
+}
+
+/* Install restart: the header tells the boot stub to copy Bank 1 to Bank 2 (bank1_stage.h). */
+static void stage_install(void) {
+    static uint32_t hdr[16]; /* static: the link task's stack is small */
+    hdr[0] = STAGE_MAGIC;
+    hdr[1] = s_stage_size;
+    hdr[2] = s_stage_crc;
+    hdr[3] = stage_hdr_check(s_stage_size, s_stage_crc);
+    for (unsigned i = 4; i < 16U; i++) hdr[i] = 0xFFFFFFFFU;
+    if (flash_stage_write_half(STAGE_HDR, hdr)) platform_system_reset();
+    (void)flash_stage_erase_page(STAGE_HDR); /* a partial header never installs */
+    s_stage_ok = false;
+}
+
+/* A header an older ECK stub didn't act on: never install it later. Only ours (magic) or under a stub
+ * that installs: PFU's Bank 1 may hold code in that page (its only boot path between install steps). */
+static void stage_clear_stale(void) {
+    const volatile uint32_t *h = (const volatile uint32_t *)STAGE_HDR;
+    if (h[0] == STAGE_MAGIC || (stub_installs() && (h[0] | h[1] | h[2] | h[3])))
+        (void)flash_stage_erase_page(STAGE_HDR);
+}
+
 /* The USB task's VIA reply, in two halves; a lost one makes the host ask again. */
 static void raw_reply_send(void) {
     uint8_t buf[1 + BLE_LINK_RAW_HALF];
@@ -364,6 +515,7 @@ volatile uint8_t g_hybrid_test_cmd[3];
 static void link_task(void *arg) {
     (void)arg;
     spi_init();
+    stage_clear_stale();
     bool first_use_checked = false;
     link_boot();
     TickType_t stats_at = xTaskGetTickCount();
@@ -416,6 +568,13 @@ static void link_task(void *arg) {
             send(&c);
             vTaskDelay(pdMS_TO_TICKS(1));
         }
+        if (s_ready && s_info_dirty) { /* hosts confirm a Bluetooth install by it */
+            s_info_dirty = false;
+            uint32_t tag = *(const volatile uint32_t *)BOOT_TAG_CRC;
+            link_msg_t info = {.type = BLE_LINK_COMMAND, .len = 3,
+                               .data = {BLE_LINK_CMD_STM_INFO, (uint8_t)tag, (uint8_t)(tag >> 8)}};
+            send(&info);
+        }
         if (s_ready && s_battery_dirty) {
             s_battery_dirty = false;
             link_msg_t b = {.type = BLE_LINK_BATTERY, .len = 1, .data = {(uint8_t)s_battery}};
@@ -424,6 +583,16 @@ static void link_task(void *arg) {
         if (s_raw_reply_ready) {
             raw_reply_send();
             continue;
+        }
+        if (!(s_stm_flags & BLE_LINK_STM_READY)) s_stm_checked = false;
+        if (s_ready && (s_stm_flags & BLE_LINK_STM_READY) && !s_stm_checked) {
+            s_stm_checked = true;
+            stm_image_check();
+            continue;
+        }
+        if (s_stm_restart) {
+            s_stm_restart = false;
+            if (s_stage_ok) stage_install();
         }
         link_msg_t m;
         if ((s_held_set[0] || s_held_set[1]) && uxQueueMessagesWaiting(s_queue) == 0) {
@@ -493,9 +662,14 @@ bool hybrid_ble_update_submit(const uint8_t *data, uint8_t len) {
     return true;
 }
 
+bool hybrid_ble_stm32_updating(void) {
+    return s_ready && (s_stm_flags & BLE_LINK_BUPD_STM32);
+}
+
 bool hybrid_ble_update_active(void) {
     if (s_installing && (int32_t)(s_quiet_until - xTaskGetTickCount()) <= 0) s_installing = false;
-    return s_upd_pending || s_upd_state != BLE_LINK_UPD_ST_IDLE || s_installing;
+    return s_upd_pending || s_upd_state != BLE_LINK_UPD_ST_IDLE || s_installing ||
+           (s_ready && (s_stm_flags & BLE_LINK_BUPD_ACTIVE));
 }
 
 void hybrid_ble_update_status(uint8_t *state, uint32_t *staged, bool *pending, bool *failed) {
@@ -734,6 +908,10 @@ static bool chord(int pos) {
         command(BLE_LINK_CMD_CLEAR_BONDS, NULL, 0);
         hybrid_power_confirm_forget();
         break;
+    case CHORD_ARM_UPDATE: /* not on low batteries: an update must not run them flat */
+        if (hybrid_power_update_ok()) command(BLE_LINK_CMD_UPD_ARM, NULL, 0);
+        hybrid_power_update_armed(hybrid_power_update_ok());
+        return true; /* nothing to save */
     default:
         return false;
     }

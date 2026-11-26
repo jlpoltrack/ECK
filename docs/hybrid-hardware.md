@@ -58,7 +58,8 @@ Flash: two 64 KB banks, 128-byte pages. Data EEPROM: 6 KB at `0x08080000` in two
 
 | Range | Content | Source |
 | --- | --- | --- |
-| `0x08000000` Bank 1 | ECK boot stub (~720 B); PFU's updater and fallback firmware on stock | `boot/boot.ld`, `boot/README.md` |
+| `0x08000000` Bank 1 | ECK boot stub (1.4 KB, under 3 KB, `0xFF` to `0x08000FFF`); PFU's updater and fallback firmware on stock | `boot/boot.ld`, `boot/README.md` |
+| `0x08001000` Bank 1 | Bluetooth-staged STM32 image (up to `0xEF80` bytes); install header at `0x0800FF80` | `hybrid/bank1_stage.h` |
 | `0x08010000` Bank 2 | ECK app (64 KB) | `board/stm32l072_bank2.ld` |
 | `0x20000000` | SRAM, 20 KB | same |
 | `0x1FF00000` | System memory: ST's USB DFU loader (`0483:DF11`, "STM32 BOOTLOADER") | `hybrid/rom_dfu.h` |
@@ -81,6 +82,8 @@ Data EEPROM. `0x08080000-0x080805FF` and `0x08081000-0x080813FF` are PFU's (keep
 | `0x080817F8` | Bluetooth settings (slot, transport; bits 16-18, the retired Bluetooth scan rate, written 0) | `hybrid/hybrid_ble.c` |
 
 Boot: ECK's stub starts the ROM DFU loader if PC5 is held while PC13 shows USB power, or if Bank 2 fails its check (sane vectors, `0x360` = 1, CRC at `0x370` matches); otherwise it jumps to Bank 2 (tested). Option bytes: RDP 0, no write protection, BFB2 off.
+
+**Programming flash from code** (RM0376 ch. 3; ECK's Bluetooth updates and boot stub): 128-byte pages, 64-byte half pages; erased flash reads 0 and a non-zero word can't be programmed (NOTZEROERR), so erase first. Page erase, word and half-page program take ~3.2 ms each. One bank erases or programs while code runs from the other. Between a half page's 1st and 16th word nothing may touch flash in either bank (a fetch aborts it with FWWERR, a data read hard-faults): the loop and its source run from RAM with interrupts masked. Keys: PEKEYR `0x89ABCDEF`, `0x02030405`; PRGKEYR `0x8C9DAEBF`, `0x13141516` (a wrong key hard-faults); setting PELOCK relocks all; EOP is set only when not aborted.
 
 ### Pin table
 
@@ -142,7 +145,7 @@ The STM32 resets the nRF52 when it doesn't answer within 500 ms of boot (it may 
 | --- | --- |
 | `0x00000` | MBR |
 | `0x01000-0x25FFF` | S132 (v7.2.0 with ECK, v6.0.0 stock; `.hfb` nRF section starts here) |
-| `0x26000` | App (ECK linked for up to 64 KB; PFU's is 45 KB); RAM from `0x20002250` |
+| `0x26000` | App (ECK linked for up to 64 KB; PFU's is 45 KB); RAM from `0x20003800` (was `0x20002250` before VIA and updates over Bluetooth) |
 | `0x36000` | Update record (size, MD5, CRC-16/MODBUS), `nrf52/nrf_update.c` |
 | `0x37000` | Staged image of `0x1000-0x35FFF` (max `0x35000` bytes) |
 | `0x70000-0x77FFF` | Stock: PFU app data (likely bonds) |

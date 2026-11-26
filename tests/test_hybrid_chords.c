@@ -34,6 +34,8 @@ int main(void) {
     // Fn+Ctrl+Q standby, Fn+Ctrl+X cancels only while pairing or in standby, Fn+Ctrl+Z+Delete in standby
     // clears. Without Ctrl, Q, X and Z are the keymap's (PFU's chords took Fn alone).
     assert(hybrid_chord(POS_Q, true, false, false, false, &slot) == CHORD_STANDBY);
+    assert(hybrid_chord(POS_U, true, false, false, false, &slot) == CHORD_ARM_UPDATE);
+    assert(hybrid_chord(POS_U, false, false, false, false, &slot) == CHORD_NONE);
     assert(hybrid_chord(POS_X, true, false, false, false, &slot) == CHORD_NONE);
     assert(hybrid_chord(POS_X, true, false, true, false, &slot) == CHORD_CANCEL);
     assert(hybrid_chord(POS_X, true, false, false, true, &slot) == CHORD_CANCEL);

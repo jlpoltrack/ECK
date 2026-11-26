@@ -34,10 +34,23 @@ uv run --with hidapi python3 tools/hybrid_update.py nrf $H     # Bluetooth firmw
 - **STM32:** ECK starts ST's USB DFU loader (in the chip's ROM). The tool writes and verifies the image, and only then writes the tag that lets it boot. It refuses unless Bank 1 holds the boot stub (`--force` overrides), since otherwise a failed write has no USB recovery.
 - **nRF52:** ECK's nRF52 app stores the image and checks its MD5; PFU's nRF52 bootloader installs it at the next restart. Pairings are kept. Update it only when it changed; order doesn't matter.
 
+**Over Bluetooth** (from v0.9.0, which installs its boot stub over USB once: don't unplug during that update), with the keyboard connected to this computer by Bluetooth. First press **Fn + Ctrl + U** on the keyboard: it allows Bluetooth updates for 5 minutes (two orange blinks), so a computer alone can't install firmware; on low batteries (level 2-3) it refuses with one long orange blink: plug in USB or replace them.
+
+```sh
+uv run --with hidapi python3 tools/hybrid_update.py stm32 --bluetooth $H   # ~25 s, orange LED solid
+uv run --with hidapi python3 tools/hybrid_update.py nrf --bluetooth $H     # 15-25 s, orange LED blinks
+```
+
+Typing pauses meanwhile. The nRF52 stores the image (only changed 4 KB pages for its own; unchanged ones it copies), checks it, then:
+- **STM32:** the STM32 pulls it into Bank 1 above the boot stub, checks its CRC and restarts; the boot stub copies it to Bank 2 (~5 s). A power cut repeats the copy; a bad image is dropped and the old firmware boots. The tool (and the web flasher) then waits until the keyboard reports the new firmware's CRC, which the STM32 tells the nRF52 at each start. An older boot stub can't install it: the update stops with a message before the restart.
+- **nRF52:** PFU's bootloader installs it at the restart, as over USB; Bluetooth drops for ~10 s.
+
+Hosts paired before v0.9.0 use the 32-byte VIA channel (~75 s for the STM32): forget the keyboard and pair again for the 244-byte update channel. The web flasher's **Update over Bluetooth** does both chips (the Bluetooth firmware only when it changed). How it works and timings: [Hybrid port](hybrid-port.md#updates).
+
 Back up keymap, macros and settings (data EEPROM) and Bank 2, and restore the EEPROM later (the boot tag is kept, so the installed firmware still boots):
 
 ```sh
-uv run --with hidapi python3 tools/hybrid_update.py backup backups/mine/   # eeprom.bin, bank2.bin
+uv run --with hidapi python3 tools/hybrid_update.py backup backups/mine/   # eeprom.bin, bank1.bin, bank2.bin
 uv run --with hidapi python3 tools/hybrid_update.py restore-eeprom backups/mine/eeprom.bin
 ```
 

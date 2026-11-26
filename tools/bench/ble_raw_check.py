@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Checks VIA over Bluetooth (Hybrid): lists every 0xFF60 interface, then sends VIA's
-get-protocol-version to the Bluetooth one (hidapi bus type 2) and times round trips.
+"""Checks VIA over Bluetooth (Hybrid): lists every 0xFF60 interface, then times round trips on the
+Bluetooth one (hidapi bus type 2), alternating VIA's get-protocol-version with keycode reads at varying
+positions, each reply checked against its request (a shifted or duplicated reply fails).
 Run: uv run -q --with hidapi python3 tools/bench/ble_raw_check.py [-n COUNT] [--cold K]"""
 import argparse
 import statistics
@@ -31,7 +32,9 @@ def main():
     try:
         times = []
         for i in range(a.n):
-            req = bytes([0x01]) + bytes(31)
+            # even: protocol version (0x01 -> 00 09); odd: dynamic_keymap_get_keycode layer 0, row, col
+            req = bytes([0x01]) if i % 2 == 0 else bytes([0x04, 0, (i // 2) % 8, (i * 3) % 8])
+            req += bytes(32 - len(req))
             t0 = time.perf_counter()
             h.write(b"\x00" + req)
             resp = bytes(h.read(32, 2000))
@@ -40,13 +43,16 @@ def main():
                 sys.exit(f"round trip {i}: no reply within 2 s")
             if i == 0:
                 print(f"reply: {resp[:4].hex(' ')} ... ({len(resp)} bytes)")
-                if resp[0] != 0x01 or resp[1:3] != b"\x00\x09":
-                    sys.exit("unexpected reply")
+            want = req[:4] if req[0] == 0x04 else b"\x01\x00\x09"
+            if resp[:len(want)] != want:
+                sys.exit(f"round trip {i}: reply {resp[:4].hex(' ')} does not answer request {req[:4].hex(' ')}")
             times.append(dt)
         # an unknown command must come back as VIA's "unhandled" (0xFF)
         h.write(b"\x00" + bytes([0x77]) + bytes(31))
         resp = bytes(h.read(32, 2000))
         print(f"unknown command reply: {resp[:2].hex(' ') if resp else 'none'}")
+        if resp[:1] != b"\xff":
+            sys.exit("an unknown command must get VIA's unhandled reply (0xFF)")
         cold = []
         for i in range(a.cold):
             time.sleep(6)
