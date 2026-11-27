@@ -13,6 +13,7 @@ Run with: uv run -q --with hidapi python3 tools/r3s/r3s_backup.py ...
 """
 import argparse
 import os
+import pathlib
 import subprocess
 import sys
 import tempfile
@@ -56,21 +57,21 @@ def check_rfb(data):
 
 
 def wrap(stock_path, image_path, out_path):
-    stock = open(stock_path, "rb").read()
+    stock = pathlib.Path(stock_path).read_bytes()
     check_rfb(stock)
-    image = open(image_path, "rb").read()
+    image = pathlib.Path(image_path).read_bytes()
     if len(image) > SECTION:
         sys.exit("image larger than 64 KB")
     payload = image + b"\xff" * (SECTION - len(image))
     body = crc16(payload).to_bytes(2, "little") + payload + stock[4 + SECTION:]
     out = crc16(body).to_bytes(2, "little") + body
     check_rfb(out)
-    open(out_path, "wb").write(out)
+    pathlib.Path(out_path).write_bytes(out)
     print(f"wrote {out_path} (trailer {stock[4 + SECTION:].hex()})")
 
 
 def install(path):
-    data = open(path, "rb").read()
+    data = pathlib.Path(path).read_bytes()
     check_rfb(data)
     # hhkb_flasher speaks the same updater protocol; point its lookups at Topre's VID and size.
     flasher.find_hhkb_device = find_r3s
@@ -106,18 +107,27 @@ def read(out_dir):
                                capture_output=True, text=True, timeout=120)
             if r.returncode != 0:
                 sys.exit(f"{name}: dfu-util failed:\n{r.stdout}{r.stderr}")
-            data = open(tmp, "rb").read()
+            data = pathlib.Path(tmp).read_bytes()
         if len(data) != n:
             sys.exit(f"{name}: read {len(data)} bytes, expected {n}")
-        open(os.path.join(out_dir, name), "wb").write(data)
+        pathlib.Path(out_dir, name).write_bytes(data)
         print(f"saved {os.path.join(out_dir, name)} ({n} bytes)")
 
 
+def is_topre_bank1(bank1):
+    """Topre's updater in Bank 1 names Topre; an HHKB's (PFU's updater or ECK's stub) doesn't (eck.js isTopreBank1)."""
+    return b"Topre" in bank1
+
+
 def restore(path):
-    data = open(path, "rb").read()
+    data = pathlib.Path(path).read_bytes()
     check_rfb(data)
     if not dfu_present():
         sys.exit("ST's DFU loader not found")
+    # In ST's loader an HHKB and the R3S look alike (0483:df11): never write an R3S image to an HHKB
+    if not is_topre_bank1(dfu.read(0, 0x08000000, SECTION)):
+        sys.exit("the keyboard in ST's DFU loader has no Topre updater in Bank 1, so it is not the R3S "
+                 "(an HHKB?); nothing written. To restart it, unplug USB (a Hybrid on batteries: take them out too)")
     image = data[4:4 + SECTION]
     word = bytearray(dfu.read(2, TAG_WORD, 4))
     word[2:4] = b"\0\0"

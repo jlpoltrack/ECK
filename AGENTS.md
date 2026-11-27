@@ -48,7 +48,7 @@ Reason: renaming orphans data in keyboards' EEPROM or breaks tool matching.
 - Bench scripts close their HID handle before running another tool that opens the keyboard, or it fails.
 - **Never use `hybrid_update.py` on the R3S:** Topre's Bank 2 tag is at EEPROM `0x17E0`, and `enter_dfu` opens the first "HHKB" (the Hybrid). Use `tools/r3s/`.
 - After changing an R3S or shared flow in `web/eck.js`, run `tools/web_bench/bench.mjs` (back up EEPROM first). Reason: agents can't click browser device dialogs (2026-11-20).
-- **In ST's DFU loader HHKB and R3S look alike** (`0483:df11`): every DFU flow keeps `eck.js`'s `isTopreBank1` check before writing. Reason: Recover could find the other keyboard and replace Topre's updater (2026-11-20).
+- **In ST's DFU loader HHKB and R3S look alike** (`0483:df11`): every DFU flow keeps `eck.js`'s `isTopreBank1` check before writing, as does `tools/r3s/r3s_backup.py` (`is_topre_bank1`). Reason: Recover could find the other keyboard and replace Topre's updater (2026-11-20); the R3S tool had no check until 2026-11-26.
 
 ## Firmware rules
 
