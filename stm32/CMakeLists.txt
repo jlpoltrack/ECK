@@ -5,7 +5,7 @@ get_filename_component(STM32_ROOT "${CMAKE_CURRENT_LIST_DIR}" ABSOLUTE)
 get_filename_component(REPO_ROOT "${STM32_ROOT}/.." ABSOLUTE)
 set(VENDOR_DIR "${STM32_ROOT}/vendor")
 set(ST_DIR "${VENDOR_DIR}/st")
-# FreeRTOS Kernel V11.3.3 (44031977); its GCC/ARM_CM0 port is in board/freertos_port.
+# FreeRTOS Kernel V11.3.3 (44031977); its GCC/ARM_CM0 port is in platform/freertos_port.
 set(FREERTOS_DIR "${VENDOR_DIR}/freertos")
 # TinyUSB 0.21.0 (dae3f9a36), only the files this build uses.
 set(TINYUSB_DIR "${VENDOR_DIR}/tinyusb")
@@ -154,7 +154,7 @@ add_compile_definitions(
 )
 
 # Flash layout: Bank 2 starts at 0x08010000 (64 KB)
-set(LINKER_SCRIPT "${STM32_ROOT}/board/stm32l072_bank2.ld")
+set(LINKER_SCRIPT "${STM32_ROOT}/platform/stm32l072_bank2.ld")
 
 if(HHKB_VARIANT MATCHES "^hybrid")
     set(HHKB_HYBRID ON)
@@ -183,13 +183,13 @@ set_target_properties(${TARGET_NAME} PROPERTIES SUFFIX ".elf")
 
 target_include_directories(${TARGET_NAME} PRIVATE
     "${BOARD_DIR}"
-    "${STM32_ROOT}/board"
+    "${STM32_ROOT}/platform"
     "${STM32_ROOT}/usb"
     "${ST_DIR}/cmsis_core/Include"
     "${ST_DIR}/cmsis_device_l0/Include"
     "${ST_DIR}/stm32l0xx_hal_driver/Inc"
     "${FREERTOS_DIR}/include"
-    "${STM32_ROOT}/board/freertos_port"
+    "${STM32_ROOT}/platform/freertos_port"
     "${TINYUSB_DIR}/src"
     "${STM32_ROOT}/app"
     "${STM32_ROOT}/keys"
@@ -215,12 +215,12 @@ target_sources(${TARGET_NAME} PRIVATE
     "${FREERTOS_DIR}/list.c"
     "${FREERTOS_DIR}/queue.c"
     "${FREERTOS_DIR}/tasks.c"
-    "${STM32_ROOT}/board/freertos_port/port.c"
-    "${STM32_ROOT}/board/freertos_port/portasm.c"
+    "${STM32_ROOT}/platform/freertos_port/port.c"
+    "${STM32_ROOT}/platform/freertos_port/portasm.c"
     # Board support and start-up (STM32L0 Low-Layer drivers are header-only here)
-    "${STM32_ROOT}/board/platform.c"
-    "${STM32_ROOT}/board/eeprom.c"
-    "${STM32_ROOT}/board/syscalls.c"
+    "${STM32_ROOT}/platform/platform.c"
+    "${STM32_ROOT}/platform/eeprom.c"
+    "${STM32_ROOT}/platform/syscalls.c"
     "${ST_DIR}/cmsis_device_l0/Source/Templates/gcc/startup_stm32l072xx.s"
     "${ST_DIR}/cmsis_device_l0/Source/Templates/system_stm32l0xx.c"
     # TinyUSB stack
@@ -241,7 +241,7 @@ target_sources(${TARGET_NAME} PRIVATE
     "${STM32_ROOT}/ec/matrix.c"
     "${STM32_ROOT}/ec/rapid_trigger.c"
     ${BOARD_SOURCES_HYBRID}
-    "${STM32_ROOT}/board/indicators_system.c"
+    "${STM32_ROOT}/platform/indicators_system.c"
     "${STM32_ROOT}/via/hhkb_keymap_storage.c"
     "${STM32_ROOT}/via/hhkb_via_controls.c"
 )

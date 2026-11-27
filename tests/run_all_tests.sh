@@ -21,7 +21,7 @@ clang -Wall -Wextra \
     -I "${SCRIPT_DIR}/stm32/app" \
     -I "${SCRIPT_DIR}/stm32/keys" \
     -I "${SCRIPT_DIR}/stm32/via" \
-    -I "${SCRIPT_DIR}/stm32/board" -I "${SCRIPT_DIR}/stm32/boards/hhkb" \
+    -I "${SCRIPT_DIR}/stm32/platform" -I "${SCRIPT_DIR}/stm32/boards/hhkb" \
     -I "${SCRIPT_DIR}/stm32/usb" \
     "${SCRIPT_DIR}/tests/test_core.c" -o "${SCRIPT_DIR}/tests/test_core"
 "${SCRIPT_DIR}/tests/test_core"
@@ -36,14 +36,14 @@ clang -Wall -Wextra -I "${SCRIPT_DIR}/tests/mocks" \
 "${SCRIPT_DIR}/tests/test_memory_hooks"
 rm -f "${SCRIPT_DIR}/tests/test_memory_hooks"
 clang -Wall -Wextra -I "${SCRIPT_DIR}/tests/mocks" -I "${SCRIPT_DIR}/stm32/app" \
-    -I "${SCRIPT_DIR}/stm32/board" -I "${SCRIPT_DIR}/stm32/boards/hhkb" -I "${SCRIPT_DIR}/stm32/usb" -I "${SCRIPT_DIR}/stm32/keys" \
+    -I "${SCRIPT_DIR}/stm32/platform" -I "${SCRIPT_DIR}/stm32/boards/hhkb" -I "${SCRIPT_DIR}/stm32/usb" -I "${SCRIPT_DIR}/stm32/keys" \
     -I "${SCRIPT_DIR}/stm32/via" "${SCRIPT_DIR}/tests/test_features.c" "${SCRIPT_DIR}/stm32/keys/oneshot.c" \
     "${SCRIPT_DIR}/stm32/keys/macros.c" -o "${SCRIPT_DIR}/tests/test_features"
 "${SCRIPT_DIR}/tests/test_features"
 rm -f "${SCRIPT_DIR}/tests/test_features"
 
 clang -Wall -Wextra -Wno-unused-variable -DconfigTICK_RATE_HZ=1000 \
-    -I "${SCRIPT_DIR}/stm32/board" -I "${SCRIPT_DIR}/stm32/boards/hhkb" -I "${SCRIPT_DIR}/tests/mocks" -I "${SCRIPT_DIR}/stm32/app" \
+    -I "${SCRIPT_DIR}/stm32/platform" -I "${SCRIPT_DIR}/stm32/boards/hhkb" -I "${SCRIPT_DIR}/tests/mocks" -I "${SCRIPT_DIR}/stm32/app" \
     -I "${SCRIPT_DIR}/stm32/keys" -I "${SCRIPT_DIR}/stm32/usb" \
     "${SCRIPT_DIR}/tests/test_via_keycodes.c" "${SCRIPT_DIR}/stm32/via/via.c" \
     -o "${SCRIPT_DIR}/tests/test_via_keycodes"
@@ -52,7 +52,7 @@ rm -f "${SCRIPT_DIR}/tests/test_via_keycodes"
 
 # USB report routing (app_usb_tinyusb.c with FreeRTOS/TinyUSB mocks)
 clang -std=c11 -Wall -Wextra -Werror -I "${SCRIPT_DIR}/tests/usb_mocks" -I "${SCRIPT_DIR}/stm32/usb" \
-    -I "${SCRIPT_DIR}/stm32/app" -I "${SCRIPT_DIR}/stm32/board" -I "${SCRIPT_DIR}/stm32/boards/hhkb" \
+    -I "${SCRIPT_DIR}/stm32/app" -I "${SCRIPT_DIR}/stm32/platform" -I "${SCRIPT_DIR}/stm32/boards/hhkb" \
     "${SCRIPT_DIR}/tests/test_usb_routing.c" "${SCRIPT_DIR}/stm32/usb/app_usb_tinyusb.c" \
     -o "${SCRIPT_DIR}/tests/test_usb_routing"
 "${SCRIPT_DIR}/tests/test_usb_routing"
@@ -65,7 +65,7 @@ STM32_DIR="${SCRIPT_DIR}/stm32"
 # Tests #include module .c files: copied alone so their quoted includes find the mocks, not real headers.
 MODULE_SRC_DIR="$(mktemp -d)"
 trap 'rm -rf "$MODULE_SRC_DIR"' EXIT
-cp "${STM32_DIR}/boards/hhkb/dip_modes.c" "${STM32_DIR}/board/indicators_system.c" \
+cp "${STM32_DIR}/boards/hhkb/dip_modes.c" "${STM32_DIR}/platform/indicators_system.c" \
     "${STM32_DIR}/via/hhkb_keymap_storage.c" "${STM32_DIR}/hybrid/hybrid_power_logic.c" "$MODULE_SRC_DIR"
 clang -std=c11 -Wall -Wextra -Werror -O2 -I "${STM32_DIR}/ec" \
     "${STM32_DIR}/ec/rapid_trigger.c" "${HHKB_TEST_DIR}/test_rapid_trigger.c" \
@@ -76,21 +76,21 @@ clang -std=c11 -Wall -Wextra -Werror -I "${STM32_DIR}/via" \
     "${HHKB_TEST_DIR}/test_settings_storage_guard.c" -o "${HHKB_TEST_DIR}/test_settings_storage_guard"
 "${HHKB_TEST_DIR}/test_settings_storage_guard"
 rm -f "${HHKB_TEST_DIR}/test_settings_storage_guard"
-clang -std=c11 -Wall -Wextra -Werror -I "${HHKB_MOCKS_DIR}" -I "$MODULE_SRC_DIR" -I "${STM32_DIR}/board" -I "${STM32_DIR}/boards/hhkb" \
+clang -std=c11 -Wall -Wextra -Werror -I "${HHKB_MOCKS_DIR}" -I "$MODULE_SRC_DIR" -I "${STM32_DIR}/platform" -I "${STM32_DIR}/boards/hhkb" \
     "${HHKB_TEST_DIR}/test_dip_modes.c" -o "${HHKB_TEST_DIR}/test_dip_modes"
 "${HHKB_TEST_DIR}/test_dip_modes"
-clang -std=c11 -Wall -Wextra -Werror -DVIAL_ENABLE -I "${HHKB_MOCKS_DIR}" -I "$MODULE_SRC_DIR" -I "${STM32_DIR}/board" \
+clang -std=c11 -Wall -Wextra -Werror -DVIAL_ENABLE -I "${HHKB_MOCKS_DIR}" -I "$MODULE_SRC_DIR" -I "${STM32_DIR}/platform" \
     -I "${STM32_DIR}/boards/hhkb" "${HHKB_TEST_DIR}/test_dip_modes.c" -o "${HHKB_TEST_DIR}/test_dip_modes"
 "${HHKB_TEST_DIR}/test_dip_modes" # Vial build: the Fn+Ctrl+V chord
 rm -f "${HHKB_TEST_DIR}/test_dip_modes"
-clang -std=c11 -Wall -Wextra -Werror -DHHKB_JIS -I "${HHKB_MOCKS_DIR}" -I "$MODULE_SRC_DIR" -I "${STM32_DIR}/board" \
+clang -std=c11 -Wall -Wextra -Werror -DHHKB_JIS -I "${HHKB_MOCKS_DIR}" -I "$MODULE_SRC_DIR" -I "${STM32_DIR}/platform" \
     -I "${STM32_DIR}/boards/hhkb" "${HHKB_TEST_DIR}/test_dip_modes_jis.c" -o "${HHKB_TEST_DIR}/test_dip_modes_jis"
 "${HHKB_TEST_DIR}/test_dip_modes_jis"
 rm -f "${HHKB_TEST_DIR}/test_dip_modes_jis"
-clang -std=c11 -Wall -Wextra -Werror -I "${STM32_DIR}/board" -I "${STM32_DIR}/boards/hhkb" -I "${STM32_DIR}/keys" -I "${STM32_DIR}/hybrid" \
+clang -std=c11 -Wall -Wextra -Werror -I "${STM32_DIR}/platform" -I "${STM32_DIR}/boards/hhkb" -I "${STM32_DIR}/keys" -I "${STM32_DIR}/hybrid" \
     "${HHKB_TEST_DIR}/test_hybrid_chords.c" "${STM32_DIR}/hybrid/hybrid_chords.c" -o "${HHKB_TEST_DIR}/test_hybrid_chords"
 "${HHKB_TEST_DIR}/test_hybrid_chords"
-clang -std=c11 -Wall -Wextra -Werror -DHHKB_JIS -I "${STM32_DIR}/board" -I "${STM32_DIR}/boards/hhkb" -I "${STM32_DIR}/keys" \
+clang -std=c11 -Wall -Wextra -Werror -DHHKB_JIS -I "${STM32_DIR}/platform" -I "${STM32_DIR}/boards/hhkb" -I "${STM32_DIR}/keys" \
     -I "${STM32_DIR}/hybrid" "${HHKB_TEST_DIR}/test_hybrid_chords.c" "${STM32_DIR}/hybrid/hybrid_chords.c" \
     -o "${HHKB_TEST_DIR}/test_hybrid_chords"
 "${HHKB_TEST_DIR}/test_hybrid_chords" # JIS positions

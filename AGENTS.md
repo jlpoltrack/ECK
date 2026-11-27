@@ -54,7 +54,7 @@ Reason: renaming orphans data in keyboards' EEPROM or breaks tool matching.
 
 - **Hybrid timing never uses counted loops**; SysTick delays. Reason: flash prefetch changed loop timing and broke Bluetooth.
 - After compiler-flag or hot-path changes, re-measure `noise` and per-key rest readings: scan speed moves them.
-- **Data EEPROM writes go through `eeprom_write_word`** (`stm32/board/eeprom.c`). Reason: tasks locked the EEPROM under each other. Exceptions: Classic SW6 erase, before the scheduler; the Hybrid boot stub's boot tags, before the app runs.
+- **Data EEPROM writes go through `eeprom_write_word`** (`stm32/platform/eeprom.c`). Reason: tasks locked the EEPROM under each other. Exceptions: Classic SW6 erase, before the scheduler; the Hybrid boot stub's boot tags, before the app runs.
 - **Task stack depth is `sizeof(stack) / sizeof(StackType_t)`, never a literal.** Reason: a stale `512` reset-looped v0.4.4 until DFU flash (2026-11-17).
 - **Never read a struct through a `uint32_t *` cast** (strict aliasing): `memcpy`. Reason: GCC dropped stores, corrupting a saved settings record (2026-11-16).
 - Unrecoverable errors call `platform_system_reset()`. Reason: a hung Hybrid on batteries needs them pulled.

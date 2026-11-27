@@ -84,7 +84,7 @@ Options, CI and releases: [docs/build.md](docs/build.md).
 | `stm32/keys/` | Layers, hold-tap, one-shot, macros |
 | `stm32/via/` | Vial and VIA protocols, HHKB Settings menu, keymap/macro storage, HHKB `via.json` |
 | `stm32/usb/` | USB HID (TinyUSB glue, descriptors) |
-| `stm32/board/` | Shared firmware config, clocks, LEDs, EEPROM writer, linker script, FreeRTOS port |
+| `stm32/platform/` | Shared firmware config, clocks, LEDs, EEPROM writer, linker script, FreeRTOS port |
 | `stm32/boards/hhkb/` | HHKB board: matrix, layout and EEPROM map (`board_config.h`), default keymap, matrix scan, DIP switches |
 | `stm32/boards/r3s/` | Realforce R3S board: matrix, layout, EEPROM map, scan, indicators, `via.json` |
 | `stm32/ec/` | Scan timing, calibration, Rapid Trigger |

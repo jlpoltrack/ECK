@@ -1,6 +1,6 @@
 # Open items
 
-Everything not done yet, by what it waits on. Delete an item when it's done. Reviewed for every release (up to v0.9.0). HHKB JIS ships as experimental until a JIS keyboard has run it (owner, 2026-11-23; [JIS](models.md#jis)).
+Everything not done yet, by what it waits on. Delete an item when it's done. Reviewed for every release (up to v0.9.1). HHKB JIS ships as experimental until a JIS keyboard has run it (owner, 2026-11-23; [JIS](models.md#jis)).
 
 ## Planned work
 

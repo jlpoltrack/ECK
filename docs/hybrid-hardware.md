@@ -41,7 +41,7 @@ The STM32 side matches the HHKB Classic: stock pin setup is identical, except th
 
 | Source | Use | Where |
 | --- | --- | --- |
-| HSI16 ×4 /2 = 32 MHz PLL | System clock when booted on USB power (range 1, 1 wait state) | `board/platform.c` |
+| HSI16 ×4 /2 = 32 MHz PLL | System clock when booted on USB power (range 1, 1 wait state) | `platform/platform.c` |
 | HSI16, PLL off | System clock when booted on batteries; the PLL costs ~2.5 mA (measured) | `hybrid/hybrid.c` |
 | HSI48 + CRS (USB SOF) | Crystal-less USB; off on batteries with USB (1.4 mA together, measured) | `platform.c`, `hybrid_power.c` |
 | HSI16 after STOP | Wake clock (`RCC_CFGR.STOPWUCK`) | `hybrid_sleep.c` |
@@ -60,7 +60,7 @@ Flash: two 64 KB banks, 128-byte pages. Data EEPROM: 6 KB at `0x08080000` in two
 | --- | --- | --- |
 | `0x08000000` Bank 1 | ECK boot stub (1.4 KB, under 3 KB, `0xFF` to `0x08000FFF`); PFU's updater and fallback firmware on stock | `boot/boot.ld`, `boot/README.md` |
 | `0x08001000` Bank 1 | Bluetooth-staged STM32 image (up to `0xEF80` bytes); install header at `0x0800FF80` | `hybrid/bank1_stage.h` |
-| `0x08010000` Bank 2 | ECK app (64 KB) | `board/stm32l072_bank2.ld` |
+| `0x08010000` Bank 2 | ECK app (64 KB) | `platform/stm32l072_bank2.ld` |
 | `0x20000000` | SRAM, 20 KB | same |
 | `0x1FF00000` | System memory: ST's USB DFU loader (`0483:DF11`, "STM32 BOOTLOADER") | `hybrid/rom_dfu.h` |
 

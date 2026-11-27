@@ -13,7 +13,7 @@ How the owner's bench keyboards are flashed and checked over USB, and the refere
 
 ## Release check
 
-`tools/bench/release_check.py --perf --nrf`: ~2.5 min (150 s on 2026-11-19), lights the orange LED during the nRF52 steps. Without the nRF5 SDK, pass CI's Hybrid `.hfb` with `--hfb`; the diagnostics build is flashed as a `.bin`. Full output: `release_check.log` in the run's backup folder.
+`uv run --no-project --with hidapi python3 tools/bench/release_check.py --perf --nrf`: ~3 min (187 s on 2026-11-26; Homebrew python3's `hid` is a different module, so the tools need `hidapi`), lights the orange LED during the nRF52 steps. Without the nRF5 SDK, pass CI's Hybrid `.hfb` with `--hfb`; the diagnostics build is flashed as a `.bin`. Full output: `release_check.log` in the run's backup folder.
 
 ## Checks without keypresses
 

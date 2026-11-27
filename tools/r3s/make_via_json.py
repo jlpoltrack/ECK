@@ -43,7 +43,7 @@ def keymap_rows(positions):
     for n, row in enumerate(ROWS):
         out = [{"y": 0.5}] if n == 1 else []  # gap below the function row
         for legend, w, gap in row:
-            props = {k: v for k, v in (("x", gap), ("w", w)) if v not in (0, 1)}
+            props = {k: v for k, v, default in (("x", gap, 0), ("w", w, 1)) if v != default}  # a 1-unit gap is real
             if props:
                 out.append(props)
             r, c = positions[i]
@@ -59,6 +59,7 @@ def menus(hhkb_menus):
     top = m[0]
     top["label"] = "Settings"
     for section in top["content"]:
+        section["content"] = [i for i in section["content"] if "_ble_" not in i["content"][0]]  # no Bluetooth
         if section["label"] == "LED":
             led = next(i for i in section["content"] if i["content"][0] == "id_hhkb_led_1")
             led["label"] = "Simple Mode LED"
