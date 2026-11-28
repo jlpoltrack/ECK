@@ -33,7 +33,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from make_hfb import compute_crc16_mcrf4xx  # noqa: E402
-from via_hid import open_keyboard, send, via as via_request  # noqa: E402
+from via_hid import hid_module, open_keyboard, send, via as via_request  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STUB = os.path.join(ROOT, "stm32/boot/_build/hybrid_boot.bin")
@@ -246,7 +246,7 @@ class BleUpdate:
     discovered it (paired since it was added), else the 32-byte VIA service."""
 
     def __init__(self, quiet=False):
-        import hid
+        hid = hid_module()
         devs = [d for d in hid.enumerate(0xCAFE) if d.get("bus_type") == 2 and d["usage_page"] == 0xFF60]
         upd = [d for d in devs if d["usage"] == 0x62]
         raw = [d for d in devs if d["usage"] == 0x61]
@@ -371,7 +371,7 @@ def nrf_update_ble(path, force=False):
     finally:
         u.h.close()
     print(f"staged and checked in {time.monotonic() - t0:.0f} s; the nRF52 restarts and PFU's bootloader installs it")
-    import hid
+    hid = hid_module()
     end = time.monotonic() + 90
     gone = False
     while time.monotonic() < end:  # Bluetooth drops for the install, then reconnects

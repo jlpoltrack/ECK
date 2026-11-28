@@ -15,12 +15,25 @@ def is_bluetooth(d):
     return d.get("bus_type") == 2 or re.match(r"HHKB-Hybrid_\d", d["product_string"] or "") is not None
 
 
-def open_keyboard(required=True, wait=0.0):
-    """Open the keyboard's VIA interface, retrying for up to wait seconds; None if absent and not required."""
+def hid_module():
+    """hidapi's module. On Linux its hidraw backend: the default libusb backend reports usage page 0
+    for every interface and lists no Bluetooth devices, so the VIA interface can't be found."""
+    if sys.platform.startswith("linux"):
+        try:
+            import hidraw
+            return hidraw
+        except ImportError:
+            pass
     try:
         import hid
     except ImportError:
         sys.exit("run with: uv run --with hidapi python3 ...")
+    return hid
+
+
+def open_keyboard(required=True, wait=0.0):
+    """Open the keyboard's VIA interface, retrying for up to wait seconds; None if absent and not required."""
+    hid = hid_module()
     deadline = time.monotonic() + wait
     while True:
         # USB unless asked: the Hybrid's Bluetooth VIA interface refuses updates (hidapi bus type 2)
