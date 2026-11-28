@@ -2,7 +2,7 @@
 
 # Hybrid: install, update, go back to stock
 
-The Hybrid has two chips: the STM32 (keyboard, USB) and the nRF52 (Bluetooth). One `.hfb` (`./build.sh hybrid`, or from a release) carries both. Every step runs over USB and was tested end to end on a PD-KB800BS. You need `dfu-util` (e.g. `brew install dfu-util`) and `uv`. The [web flasher](https://jlpoltrack.github.io/ECK/) does the same from a page, but hasn't been run on a keyboard yet.
+The Hybrid has two chips: the STM32 (keyboard, USB) and the nRF52 (Bluetooth). One `.hfb` (`./build.sh hybrid`, or from a release) carries both. Every step runs over USB and was tested end to end on a PD-KB800BS. You need `dfu-util` (e.g. `brew install dfu-util`) and `uv`. On Linux the tools use hidapi's hidraw backend and need read/write access to the keyboard's `/dev/hidraw*` nodes: run them with `sudo`, or add a udev rule such as `SUBSYSTEM=="hidraw", KERNELS=="*:CAFE:*", TAG+="uaccess"`. The [web flasher](https://jlpoltrack.github.io/ECK/) does the same from a page, but hasn't been run on a keyboard yet.
 
 ## 1. First install (from stock)
 
